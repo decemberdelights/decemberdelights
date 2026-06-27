@@ -45,3 +45,8 @@ next-env.d.ts
 /backend/
 backend/__pycache__/
 backend/uploads/
+/app/api/
+/app/admin/
+/app/uploads/
+middleware.ts
+lib/db.ts
