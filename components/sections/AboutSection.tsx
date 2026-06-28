@@ -14,6 +14,10 @@ export default function AboutSection() {
         .about-text p { font-family: 'Montserrat', sans-serif; font-size: clamp(14px, 2vw, 19px); font-weight: 500; line-height: 1.8; color: #1a1a1a; margin-bottom: 22px; max-width: 540px; }
         .about-image { width: 45%; position: relative; overflow: hidden; }
         .about-stats { display: flex; align-items: center; justify-content: center; gap: 48px; padding: 48px 80px; flex-wrap: wrap; }
+        @media (max-width: 900px) {
+          .about-text { padding: 80px 40px 30px; }
+          .about-stats { gap: 32px; padding: 40px 40px; }
+        }
         @media (max-width: 768px) {
           .about-content { flex-direction: column; min-height: auto; }
           .about-image { width: 100%; height: 50vh; order: -1; }

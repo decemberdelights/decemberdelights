@@ -29,21 +29,19 @@ export default function Footer() {
         }
         .footer-link:hover { color: #094b3d; }
 
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
           .footer-grid {
             grid-template-columns: 1fr 1fr;
             gap: 2rem;
           }
-          .footer-brand {
-            grid-column: 1 / -1;
-          }
+          .footer-brand img { height: 100px; }
         }
-
         @media (max-width: 480px) {
           .footer-grid {
             grid-template-columns: 1fr;
             gap: 1.75rem;
           }
+          .footer-brand img { height: 80px; }
         }
       `}</style>
 

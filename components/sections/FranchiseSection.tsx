@@ -37,13 +37,13 @@ export default function FranchiseSection() {
         .franchise-text p { font-family: 'Montserrat', sans-serif; font-size: clamp(15px, 3.5vw, 19px); font-weight: 400; line-height: 1.8; color: #3d4a3e; margin-bottom: 36px; max-width: 520px; }
         .franchise-bg-text { position: absolute; top: -80px; right: -120px; font-family: 'Cormorant Garamond', serif; font-size: clamp(40px, 8vw, 120px); font-weight: 700; color: rgba(9,75,61,0.04); line-height: 1; pointer-events: none; white-space: nowrap; }
         @media (max-width: 768px) {
-          .franchise-inner { flex-direction: column; min-height: auto; }
-          .franchise-video { width: 100%; padding: 100px 24px 20px; }
-          .franchise-text { width: 100%; padding: 20px 24px 60px; }
-          .franchise-bg-text { top: -40px; right: -30px; }
+          .franchise-inner { flex-direction: column; }
+          .franchise-video { width: 100%; padding: 20px 24px; }
+          .franchise-text { width: 100%; padding: 20px 24px 40px; }
         }
         @media (max-width: 480px) {
-          .franchise-text { padding: 32px 16px 48px; }
+          .franchise-text { padding: 16px 16px 32px; }
+          .franchise-heading { font-size: clamp(26px, 8vw, 36px); }
         }
       `}</style>
       <div data-bg="light" className="franchise-section">

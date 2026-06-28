@@ -213,6 +213,7 @@ export default function Navbar() {
         @media (max-width: 900px) {
           .dd-nav-links { display: none !important; }
           .dd-hamburger { display: flex !important; }
+          .dd-nav > .dd-logo-icon { display: inline-block !important; }
         }
 
         @media (max-width: 480px) {
@@ -220,6 +221,7 @@ export default function Navbar() {
             top: 8px; left: 10px; right: 10px;
             padding: 8px 16px;
           }
+          .dd-nav > .dd-logo-icon { height: 24px; width: 24px; }
         }
       `}</style>
 

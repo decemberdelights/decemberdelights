@@ -46,9 +46,12 @@ export default function ShopSection() {
         .shop-grid > a { display: flex; flex-direction: column; }
         .shop-grid > a > div { flex: 1; display: flex; flex-direction: column; }
         .shop-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 6vw, 90px); font-weight: 700; color: #094b3d; margin-bottom: 20px; line-height: 1.15; }
+        @media (max-width: 900px) {
+          .shop-section { padding: 80px 40px; }
+          .shop-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        }
         @media (max-width: 768px) {
           .shop-section { padding: 60px 24px; }
-          .shop-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
         }
         @media (max-width: 480px) {
           .shop-section { padding: 40px 16px; }
