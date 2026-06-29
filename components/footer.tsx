@@ -40,8 +40,14 @@ export default function Footer() {
           .footer-grid {
             grid-template-columns: 1fr;
             gap: 1.75rem;
+            text-align: center;
+          }
+          .footer-brand {
+            display: flex;
+            justify-content: center;
           }
           .footer-brand img { height: 80px; }
+          .footer-link { text-align: center; }
         }
       `}</style>
 

@@ -31,7 +31,7 @@ export default function ShopSection() {
   }, []);
 
   return (
-    <div data-bg="light" style={{ position: "relative", zIndex: 25, background: "linear-gradient(180deg, #faf8f5 0%, #f0ebe4 50%, #faf8f5 100%)", minHeight: "100vh", display: "flex", justifyContent: "flex-start", alignItems: "center", overflow: "hidden" }}>
+    <div data-bg="light" style={{ position: "relative", zIndex: 25, marginTop: "100vh", background: "linear-gradient(180deg, #faf8f5 0%, #f0ebe4 50%, #faf8f5 100%)", minHeight: "100vh", display: "flex", justifyContent: "flex-start", alignItems: "center", overflow: "hidden" }}>
       {/* Paper grain texture */}
       <div style={{ position: "absolute", inset: 0, opacity: 0.35, pointerEvents: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.4'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "200px 200px" }} />
       {/* Decorative background shapes */}

@@ -46,12 +46,12 @@ export default function MenuPreviewSection() {
   return (
     <>
       <style>{`
-        .menu-section { position: relative; z-index: 25; background: linear-gradient(180deg, #041a14 0%, #094b3d 50%, #041a14 100%); padding: 100px 80px; min-height: 100vh; display: flex; align-items: center; gap: 60px; isolation: isolate; mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%); }
+        .menu-section { position: relative; z-index: 25; background: #faf8f5; padding: 100px 80px; min-height: 100vh; display: flex; align-items: center; gap: 60px; isolation: isolate; }
         .menu-content { max-width: 750px; width: 100%; position: relative; z-index: 3; margin-left: auto; }
-        .menu-featured { background: rgba(255,255,255,0.04); border: 1px solid rgba(200,169,122,0.12); border-radius: 12px; overflow: hidden; display: flex; }
+        .menu-featured { background: rgba(0,0,0,0.03); border: 1px solid rgba(9,75,61,0.1); border-radius: 12px; overflow: hidden; display: flex; }
         .menu-grid-equal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .menu-card-vert { background: rgba(255,255,255,0.04); border: 1px solid rgba(200,169,122,0.12); border-radius: 12px; overflow: hidden; transition: transform 0.3s ease, border-color 0.3s ease; }
-        .menu-card-vert:hover { transform: translateY(-4px); border-color: rgba(200,169,122,0.3); }
+        .menu-card-vert { background: #094b3d; border: 1px solid rgba(9,75,61,0.2); border-radius: 12px; overflow: hidden; transition: transform 0.3s ease, border-color 0.3s ease; }
+        .menu-card-vert:hover { transform: translateY(-4px); border-color: rgba(9,75,61,0.4); }
         .menu-video-bg { position: absolute; top: 5%; left: 2%; width: 45%; height: 85%; object-fit: contain; z-index: 1; opacity: 1; filter: brightness(1.3); mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%); mask-composite: intersect; -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%); -webkit-mask-composite: source-in; }
         @media (max-width: 768px) {
           .menu-section { flex-direction: column; padding: 60px 24px; min-height: auto; gap: 30px; }
@@ -65,7 +65,7 @@ export default function MenuPreviewSection() {
           .menu-section { padding: 40px 16px; }
         }
       `}</style>
-      <div data-bg="dark" className="menu-section">
+      <div data-bg="light" className="menu-section">
         <video
           ref={videoRef}
           src="/DDespresso.mp4"
@@ -81,10 +81,10 @@ export default function MenuPreviewSection() {
             <ScrollFloat containerClassName="!my-0">What We Serve</ScrollFloat>
           </span>
           <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
-          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(36px, 6vw, 90px)", fontWeight: 700, color: "#fff", marginBottom: "20px", lineHeight: 1.15 }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(36px, 6vw, 90px)", fontWeight: 700, color: "#094b3d", marginBottom: "20px", lineHeight: 1.15 }}>
             <ScrollFloat containerClassName="!my-0" textClassName="pb-1">Must-Try Delights</ScrollFloat>
           </h2>
-          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: 400, fontStyle: "italic", lineHeight: 1.6, color: "rgba(255,255,255,0.7)", maxWidth: "700px", marginBottom: "40px", position: "relative", paddingLeft: "24px", borderLeft: "3px solid rgba(200,169,122,0.4)" }}>
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: 400, fontStyle: "italic", lineHeight: 1.6, color: "#3d4a3e", maxWidth: "700px", marginBottom: "40px", position: "relative", paddingLeft: "24px", borderLeft: "3px solid rgba(200,169,122,0.4)" }}>
             Carefully crafted with the finest ingredients, every dish and drink is designed to delight your senses and create unforgettable moments.
           </p>
           <div style={{ marginBottom: "40px" }}>
@@ -98,13 +98,13 @@ export default function MenuPreviewSection() {
                     <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18px", fontWeight: 700, color: "#c8a97a", marginBottom: "4px" }}>
                       {item.name}
                     </h3>
-                    <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "11px", fontWeight: 400, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>{item.description}</p>
+                    <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "11px", fontWeight: 400, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>{item.description}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <Link href="/menu" style={{ padding: "14px 40px", fontFamily: "'Montserrat', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#094b3d", background: "#fff", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", display: "inline-block" }}>
+          <Link href="/menu" style={{ padding: "14px 40px", fontFamily: "'Montserrat', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#fff", background: "#094b3d", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", display: "inline-block" }}>
             View Full Menu
           </Link>
         </div>

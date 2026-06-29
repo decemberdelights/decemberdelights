@@ -29,13 +29,13 @@ export default function FranchiseSection() {
   return (
     <>
       <style>{`
-        .franchise-section { position: relative; z-index: 25; background: linear-gradient(180deg, #faf8f5 0%, #f0ebe4 50%, #faf8f5 100%); overflow: hidden; padding: 0; }
+        .franchise-section { position: relative; z-index: 25; background: #094b3d; overflow: hidden; padding: 0; }
         .franchise-inner { position: relative; display: flex; align-items: center; }
         .franchise-video { width: 50%; display: flex; align-items: center; justify-content: center; padding: 0px 40px 0px 80px; }
         .franchise-text { width: 50%; padding: 0px 80px 0px 40px; display: flex; flex-direction: column; justify-content: center; }
-        .franchise-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(32px, 4vw, 60px); font-weight: 700; line-height: 0.95; color: #094b3d; margin-bottom: 24px; }
-        .franchise-text p { font-family: 'Montserrat', sans-serif; font-size: clamp(15px, 3.5vw, 19px); font-weight: 400; line-height: 1.8; color: #3d4a3e; margin-bottom: 36px; max-width: 520px; }
-        .franchise-bg-text { position: absolute; top: -80px; right: -120px; font-family: 'Cormorant Garamond', serif; font-size: clamp(40px, 8vw, 120px); font-weight: 700; color: rgba(9,75,61,0.04); line-height: 1; pointer-events: none; white-space: nowrap; }
+        .franchise-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(32px, 4vw, 60px); font-weight: 700; line-height: 0.95; color: #ffffff; margin-bottom: 24px; }
+        .franchise-text p { font-family: 'Montserrat', sans-serif; font-size: clamp(15px, 3.5vw, 19px); font-weight: 400; line-height: 1.8; color: rgba(255,255,255,0.85); margin-bottom: 36px; max-width: 520px; }
+        .franchise-bg-text { position: absolute; top: -80px; right: -120px; font-family: 'Cormorant Garamond', serif; font-size: clamp(40px, 8vw, 120px); font-weight: 700; color: rgba(255,255,255,0.06); line-height: 1; pointer-events: none; white-space: nowrap; }
         @media (max-width: 768px) {
           .franchise-inner { flex-direction: column; }
           .franchise-video { width: 100%; padding: 20px 24px; }
@@ -46,7 +46,7 @@ export default function FranchiseSection() {
           .franchise-heading { font-size: clamp(26px, 8vw, 36px); }
         }
       `}</style>
-      <div data-bg="light" className="franchise-section">
+      <div data-bg="dark" className="franchise-section">
         <div className="franchise-inner">
           <div className="franchise-video">
             <div ref={animRef} style={{ width: "100%", maxWidth: "700px", height: "auto", marginTop: "60px" }} />
@@ -57,11 +57,11 @@ export default function FranchiseSection() {
             <h2 className="franchise-heading">
               <ScrollFloat containerClassName="!my-0">Partner With a Brand</ScrollFloat><br /><ScrollFloat containerClassName="!my-0">Crafted for Excellence</ScrollFloat>
             </h2>
-            <p style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 400, lineHeight: 1.8, color: "#3d4a3e", marginBottom: "36px", maxWidth: "520px" }}>
+            <p style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 400, lineHeight: 1.8, color: "rgba(255,255,255,0.85)", marginBottom: "36px", maxWidth: "520px" }}>
               Born from international culinary expertise and a love for exceptional coffee, December Delights is more than a caf&eacute; — it&apos;s an experience your community will love. We provide the proven systems, training, and support you need to build a thriving business — while you bring the passion to your city.
             </p>
-            <a href="/franchise" style={{ display: "inline-flex", alignItems: "center", gap: "12px", padding: "16px 40px", fontFamily: "'Montserrat', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#fff", background: "#094b3d", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", width: "fit-content", transition: "transform 0.2s ease, box-shadow 0.2s ease" }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(9,75,61,0.25)"; }}
+            <a href="/franchise" style={{ display: "inline-flex", alignItems: "center", gap: "12px", padding: "16px 40px", fontFamily: "'Montserrat', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#094b3d", background: "#ffffff", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", width: "fit-content", transition: "transform 0.2s ease, box-shadow 0.2s ease" }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.25)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
             >
               Contact for Franchise

@@ -49,7 +49,7 @@ export default function HeroSection() {
             transform: "translateZ(0)",
           }}
         >
-          <source src="/DDhero.mp4" type="video/mp4" />
+          <source src="/DDhero.MP4" type="video/mp4" />
         </video>
       </div>
     </>

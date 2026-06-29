@@ -7,7 +7,7 @@ export default function AboutSection() {
   return (
     <>
       <style>{`
-        .about-section { position: relative; z-index: 25; margin-top: 100vh; background: #faf8f5; display: flex; flex-direction: column; min-height: auto; }
+        .about-section { position: relative; z-index: 25; background: #faf8f5; display: flex; flex-direction: column; min-height: auto; }
         .about-content { display: flex; min-height: 70vh; }
         .about-text { flex: 1; padding: 100px 80px 40px; display: flex; flex-direction: column; justify-content: center; }
         .about-text h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px, 5vw, 80px); font-weight: 700; line-height: 0.95; color: #094b3d; margin-bottom: 40px; text-transform: uppercase; }

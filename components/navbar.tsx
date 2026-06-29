@@ -51,8 +51,8 @@ export default function Navbar() {
 
   const links = [
     { label: "Home", href: "/" },
-    { label: "Shop", href: "/shop/" },
     { label: "About Us", href: "/#our-story" },
+    { label: "Shop", href: "/shop/" },
     { label: "Careers", href: "/careers/" },
     { label: "Contact", href: "/contact/" },
     { label: "Track Order", href: "/track/" },
@@ -230,13 +230,15 @@ export default function Navbar() {
         className={`dd-nav ${scrolled ? "scrolled" : ""} ${darkBg ? "dark-bg" : ""}`}
       >
         <div className="dd-nav-links">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className="dd-logo-icon"
-            src="/logo-icon.png"
-            alt="December Delights"
-            style={{ height: "30px", width: "30px", marginRight: "10px", pointerEvents: "none" }}
-          />
+          <a href="/" style={{ display: "flex", alignItems: "center", marginRight: "10px" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="dd-logo-icon"
+              src="/logo-icon.png"
+              alt="December Delights"
+              style={{ height: "30px", width: "30px" }}
+            />
+          </a>
           <div className="dd-nav-center">
             {links.map((link) => (
               <a key={link.label} href={link.href}>{link.label}</a>
@@ -246,18 +248,18 @@ export default function Navbar() {
         </div>
 
         {/* Logo visible on mobile (left side) */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className="dd-logo-icon"
-          src="/logo-icon.png"
-          alt="December Delights"
-          style={{
-            height: "28px", width: "28px",
-            pointerEvents: "none",
-            display: "none",
-          }}
-          // shown via CSS below
-        />
+        <a href="/" style={{ display: "flex", alignItems: "center" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="dd-logo-icon"
+            src="/logo-icon.png"
+            alt="December Delights"
+            style={{
+              height: "28px", width: "28px",
+              display: "none",
+            }}
+          />
+        </a>
 
         <button
           className={`dd-hamburger ${menuOpen ? "open" : ""}`}

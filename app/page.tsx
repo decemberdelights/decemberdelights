@@ -14,12 +14,12 @@ export default function Home() {
   return (
     <div style={{ width: "100%", position: "relative", overflow: "hidden" }}>
       <HeroSection />
-      <AboutSection />
-      <MenuPreviewSection />
       <ShopSection />
-      <VisitSection />
       <FranchiseSection />
+      <MenuPreviewSection />
       <CareerSection />
+      <AboutSection />
+      <VisitSection />
     </div>
   );
 }
