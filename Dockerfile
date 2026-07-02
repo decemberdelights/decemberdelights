@@ -29,7 +29,7 @@ COPY --from=frontend-build /app/components ./components
 COPY --from=frontend-build /app/middleware.ts ./
 COPY --from=frontend-build /app/public ./public
 COPY --from=frontend-build /app/components.json ./
-COPY .env.local ./
+COPY .env.example .env.local
 
 COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
