@@ -32,10 +32,7 @@ const nextConfig: NextConfig = {
         source: "/uploads/:path*",
         destination: `${backendUrl}/uploads/:path*`,
       },
-      {
-        source: "/api/health",
-        destination: `${backendUrl}/api/health`,
-      },
+      // keep backend uploads proxied, but let frontend serve /api/health
     ];
   },
   async headers() {
