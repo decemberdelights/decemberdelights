@@ -23,6 +23,24 @@ python3 -m uvicorn main:app --host 127.0.0.1 --port "$BACKEND_PORT" --workers 1 
 BACKEND_PID=$!
 cd ..
 
+# Wait for backend to become healthy before starting frontend
+echo "Waiting for backend at http://127.0.0.1:$BACKEND_PORT/api/health"
+MAX_RETRIES=30
+SLEEP_SECONDS=2
+HEALTH_OK=1
+for i in $(seq 1 $MAX_RETRIES); do
+	if curl -sS --fail "http://127.0.0.1:$BACKEND_PORT/api/health" >/dev/null 2>&1; then
+		echo "Backend healthy after $i attempts"
+		HEALTH_OK=0
+		break
+	fi
+	echo "Backend not ready (attempt $i/$MAX_RETRIES), sleeping $SLEEP_SECONDS seconds..."
+	sleep $SLEEP_SECONDS
+done
+if [ $HEALTH_OK -ne 0 ]; then
+	echo "Warning: backend did not become healthy after $((MAX_RETRIES * SLEEP_SECONDS)) seconds. Continuing to start frontend."
+fi
+
 # Start Next.js standalone frontend on Railway's assigned port
 export PORT
 node .next/standalone/server.js &
