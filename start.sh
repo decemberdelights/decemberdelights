@@ -13,14 +13,16 @@ Base.metadata.create_all(bind=engine)
 print('Database initialized')
 "
 
-# Start FastAPI backend on port 5000
+PORT=${PORT:-5000}
+
+# Start FastAPI backend on Railway's assigned port
 cd backend
-python3 -m uvicorn main:app --host 0.0.0.0 --port 5000 --workers 1 &
+python3 -m uvicorn main:app --host 0.0.0.0 --port "$PORT" --workers 1 &
 BACKEND_PID=$!
 cd ..
 
-# Start Next.js frontend on port 3000
-npm start &
+# Start Next.js standalone frontend on port 3000
+node .next/standalone/server.js &
 FRONTEND_PID=$!
 
 # Handle shutdown
