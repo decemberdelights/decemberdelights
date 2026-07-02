@@ -1,22 +1,9 @@
 "use client";
 
-import { useRef, useEffect } from "react";
 import ScrollFloat from "@/components/ScrollFloat";
+import LazyVideo from "@/components/LazyVideo";
 
 export default function VisitSection() {
-  const video1Ref = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const v = video1Ref.current;
-    return () => {
-      if (v) {
-        v.pause();
-        v.removeAttribute("src");
-        v.load();
-      }
-    };
-  }, []);
-
   return (
     <>
       <style>{`
@@ -87,7 +74,7 @@ export default function VisitSection() {
         </div>
         <div className="visit-video-wrap">
           <div className="visit-video-inner">
-            <video ref={video1Ref} src="/video.mp4" autoPlay muted loop playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <LazyVideo src="/video.mp4" />
           </div>
         </div>
       </div>

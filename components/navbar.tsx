@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -72,14 +74,14 @@ export default function Navbar() {
           justify-content: space-between;
           padding: 10px 24px;
           border-radius: 999px;
-          transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, backdrop-filter 0.5s ease;
-          will-change: transform, background;
+          transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+          will-change: transform;
           transform: translateZ(0);
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
+          -webkit-backdrop-filter: blur(12px) saturate(150%);
+          backdrop-filter: blur(12px) saturate(150%);
           background: rgba(255, 255, 255, 0.15);
           border: 1px solid rgba(255, 255, 255, 0.25);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
         }
         .dd-nav.scrolled {
           transform: translateZ(0) scale(0.97) translateY(-2px);
@@ -88,13 +90,13 @@ export default function Navbar() {
           background: rgba(0, 0, 0, 0.35);
           border-color: rgba(255, 255, 255, 0.15);
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-          backdrop-filter: blur(24px) saturate(200%);
-          -webkit-backdrop-filter: blur(24px) saturate(200%);
+          -webkit-backdrop-filter: blur(16px) saturate(160%);
+          backdrop-filter: blur(16px) saturate(160%);
         }
         .dd-nav:not(.dark-bg) {
           background: rgba(255, 255, 255, 0.65);
           border-color: rgba(255, 255, 255, 0.7);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
         }
 
         .dd-nav-links { display: contents; }
@@ -180,6 +182,8 @@ export default function Navbar() {
           opacity: 0; pointer-events: none;
           transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
           padding: 2rem;
+          padding-top: calc(2rem + env(safe-area-inset-top, 0px));
+          padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
         }
         .dd-mobile-menu.open { opacity: 1; pointer-events: auto; }
         .dd-mobile-menu a {
@@ -230,36 +234,38 @@ export default function Navbar() {
         className={`dd-nav ${scrolled ? "scrolled" : ""} ${darkBg ? "dark-bg" : ""}`}
       >
         <div className="dd-nav-links">
-          <a href="/" style={{ display: "flex", alignItems: "center", marginRight: "10px" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+          <Link href="/" style={{ display: "flex", alignItems: "center", marginRight: "10px" }}>
+            <Image
               className="dd-logo-icon"
               src="/logo-icon.png"
               alt="December Delights"
+              width={30}
+              height={30}
               style={{ height: "30px", width: "30px" }}
             />
-          </a>
+          </Link>
           <div className="dd-nav-center">
             {links.map((link) => (
-              <a key={link.label} href={link.href}>{link.label}</a>
+              <Link key={link.label} href={link.href}>{link.label}</Link>
             ))}
           </div>
-          <a className="dd-cta" href="/franchise/">Franchise</a>
+          <Link className="dd-cta" href="/franchise/">Franchise</Link>
         </div>
 
         {/* Logo visible on mobile (left side) */}
-        <a href="/" style={{ display: "flex", alignItems: "center" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <Link href="/" style={{ display: "flex", alignItems: "center" }}>
+          <Image
             className="dd-logo-icon"
             src="/logo-icon.png"
             alt="December Delights"
+            width={28}
+            height={28}
             style={{
               height: "28px", width: "28px",
               display: "none",
             }}
           />
-        </a>
+        </Link>
 
         <button
           className={`dd-hamburger ${menuOpen ? "open" : ""}`}
@@ -273,8 +279,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       <div className={`dd-mobile-menu ${menuOpen ? "open" : ""}`} role="dialog" aria-label="Navigation menu">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-icon.png" alt="" style={{ height: "48px", width: "48px", marginBottom: "0.5rem", opacity: 0.9 }} />
+        <Image src="/logo-icon.png" alt="" width={48} height={48} style={{ height: "48px", width: "48px", marginBottom: "0.5rem", opacity: 0.9 }} />
         <div className="dd-mobile-divider" />
         {links.map((link) => (
           <a key={link.label} href={link.href} onClick={() => setMenuOpen(false)}>

@@ -173,7 +173,7 @@ export default function FranchisePage() {
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
             <video
-              src="/expresso.mp4"
+              src="/espresso.mp4"
               autoPlay
               loop
               muted

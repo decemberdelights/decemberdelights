@@ -360,7 +360,7 @@ export default function CareersPage() {
                                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? info.color : "#e0dcd6", display: "flex", alignItems: "center", justifyContent: "center", color: done ? "#fff" : "#bbb", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.6rem", border: current ? `2px solid ${info.color}` : "2px solid transparent", boxShadow: current ? `0 0 0 4px ${info.color}25` : "none", transition: "all 0.3s" }}>
                                     {done ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg> : (i + 1)}
                                   </div>
-                                  <span style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.6rem", color: done ? info.color : "#bbb", fontWeight: current ? 700 : 400, textAlign: "center", lineHeight: 1.2 }}>{info.label}</span>
+                                   <span style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "clamp(0.55rem, 2.5vw, 0.6rem)", color: done ? info.color : "#bbb", fontWeight: current ? 700 : 400, textAlign: "center", lineHeight: 1.2 }}>{info.label}</span>
                                 </div>
                               );
                             })}

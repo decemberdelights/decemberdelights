@@ -40,6 +40,7 @@ export default function HeroSection() {
           muted
           loop
           playsInline
+          preload="metadata"
           style={{
             width: "100%",
             height: "100%",

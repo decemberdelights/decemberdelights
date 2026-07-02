@@ -67,6 +67,7 @@ export default function FranchiseStatusPage() {
     switch (s) {
       case "approved": return "#27ae60";
       case "rejected": return "#e74c3c";
+      case "under_process": return "#2563a8";
       case "submitted": return "#3498db";
       default: return "#eab96a";
     }
@@ -75,6 +76,7 @@ export default function FranchiseStatusPage() {
   const statusLabel = (s: string) => {
     switch (s) {
       case "submitted": return "Under Review";
+      case "under_process": return "Under Process";
       case "approved": return "Approved";
       case "rejected": return "Rejected";
       case "pending": return "Pending";

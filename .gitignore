@@ -41,12 +41,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# backend
-/backend/
-backend/__pycache__/
-backend/uploads/
-/app/api/
-/app/admin/
-/app/uploads/
-middleware.ts
-lib/db.ts
+# backend runtime data
+/backend/database.db
+/backend/database.db-shm
+/backend/database.db-wal
+/backend/__pycache__/
+/backend/uploads/
+/backend/backups/
+/backend/stderr.txt
+/backend/stdout.txt

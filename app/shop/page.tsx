@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { API } from "@/lib/api";
 
 interface Product {
@@ -91,6 +92,7 @@ export default function ShopPage() {
     });
     const data = await r.json();
     if (r.ok) {
+      const phone = form.customer_phone;
       setOrderId(data.id);
       setOrderSuccess(true);
       setCart([]);
@@ -98,7 +100,7 @@ export default function ShopPage() {
       setShowCart(false);
       setForm({ customer_name: "", customer_phone: "", customer_address: "" });
       redirectTimer.current = setTimeout(() => {
-        router.push(`/track?phone=${encodeURIComponent(form.customer_phone)}`);
+        router.push(`/track?phone=${encodeURIComponent(phone)}`);
       }, 3000);
     } else {
       setFormError(data.error || "Order failed");
@@ -189,7 +191,7 @@ export default function ShopPage() {
                   <div key={product.id} style={{ background: "#fff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 16px rgba(27,60,51,0.06)", transition: "transform 0.3s, box-shadow 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(27,60,51,0.12)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 16px rgba(27,60,51,0.06)"; }}>
                     <div style={{ position: "relative", height: "220px", overflow: "hidden", background: "#f5f3ef" }}>
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <Image src={product.image_url} alt={product.name} fill style={{ objectFit: "cover" }} />
                       ) : (
                         <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #1b3c33 0%, #2d5a4a 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <span style={{ fontSize: "3rem" }}>&#9749;</span>
@@ -225,7 +227,7 @@ export default function ShopPage() {
                             <button onClick={() => updateQty(product.id, 1)} disabled={inCart.quantity >= product.stock} style={{ width: "40px", height: "40px", borderRadius: "8px", border: "1.5px solid #1b3c33", background: "#1b3c33", color: "#fff", fontWeight: 700, cursor: inCart.quantity >= product.stock ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem" }}>+</button>
                           </div>
                         ) : (
-                          <button onClick={() => addToCart(product)} disabled={product.stock <= 0} style={{ width: "100%", padding: "0.65rem", borderRadius: "10px", border: "none", background: product.stock > 0 ? "#1b3c33" : "#e0e0e0", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.8rem", cursor: product.stock > 0 ? "pointer" : "not-allowed", letterSpacing: "0.03em" }}>
+                          <button onClick={() => addToCart(product)} disabled={product.stock <= 0} style={{ width: "100%", padding: "0.75rem", borderRadius: "10px", border: "none", background: product.stock > 0 ? "#1b3c33" : "#e0e0e0", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.8rem", cursor: product.stock > 0 ? "pointer" : "not-allowed", letterSpacing: "0.03em", minHeight: "44px" }}>
                             {product.stock > 0 ? "Add to Cart" : "Sold Out"}
                           </button>
                         )}
@@ -241,8 +243,8 @@ export default function ShopPage() {
         {showCart && (
           <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex" }}>
             <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={() => setShowCart(false)} />
-            <div style={{ marginLeft: "auto", width: "420px", maxWidth: "100%", height: "100%", background: "#fff", position: "relative", display: "flex", flexDirection: "column", boxShadow: "-4px 0 24px rgba(0,0,0,0.25)" }}>
-              <div style={{ padding: "1.5rem", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ marginLeft: "auto", width: "420px", maxWidth: "100%", height: "100%", background: "#fff", position: "relative", display: "flex", flexDirection: "column", boxShadow: "-4px 0 24px rgba(0,0,0,0.25)", overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+              <div style={{ padding: "1.5rem", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
                 <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.5rem" }}>Your Cart ({cartCount})</h2>
                 <button onClick={() => setShowCart(false)} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#586159" }}>&times;</button>
               </div>
@@ -251,8 +253,8 @@ export default function ShopPage() {
                   <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", textAlign: "center", padding: "3rem 0" }}>Your cart is empty</p>
                 ) : cart.map((item) => (
                   <div key={item.product.id} style={{ display: "flex", gap: "1rem", padding: "1rem 0", borderBottom: "1px solid #f0f0f0" }}>
-                    <div style={{ width: "60px", height: "60px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "#f5f5f5" }}>
-                      {item.product.image_url ? <img src={item.product.image_url} alt={item.product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>&#9749;</div>}
+                    <div style={{ width: "60px", height: "60px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "#f5f5f5", position: "relative" }}>
+                      {item.product.image_url ? <Image src={item.product.image_url} alt={item.product.name} width={60} height={60} style={{ objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>&#9749;</div>}
                     </div>
                     <div style={{ flex: 1 }}>
                       <h4 style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 700, marginBottom: "0.3rem" }}>{item.product.name}</h4>
@@ -268,7 +270,7 @@ export default function ShopPage() {
                 ))}
               </div>
               {cart.length > 0 && (
-                <div style={{ padding: "1.5rem", borderTop: "1px solid #eee" }}>
+                <div style={{ padding: "1.5rem", borderTop: "1px solid #eee", flexShrink: 0, background: "#fff" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
                     <span style={{ fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, color: "#1b3c33" }}>Total</span>
                     <span style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.3rem" }}>&#8377;{cartTotal}</span>
@@ -283,7 +285,7 @@ export default function ShopPage() {
         {showCheckout && (
           <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={() => setShowCheckout(false)} />
-              <div style={{ background: "#fff", borderRadius: "20px", padding: "2rem", width: "460px", maxWidth: "95%", position: "relative", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}>
+              <div style={{ background: "#fff", borderRadius: "20px", padding: "2rem", width: "460px", maxWidth: "95%", position: "relative", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.3)", paddingBottom: "calc(2rem + env(safe-area-inset-bottom, 0px))" }}>
               <button onClick={() => setShowCheckout(false)} style={{ position: "absolute", top: "1rem", right: "1rem", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#586159" }}>&times;</button>
               <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.5rem", marginBottom: "1.5rem" }}>Checkout</h2>
 

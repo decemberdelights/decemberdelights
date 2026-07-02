@@ -43,18 +43,10 @@ function TrackContent() {
   const [searched, setSearched] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const phoneParam = searchParams.get("phone");
-    if (phoneParam && phoneParam.length >= 5) {
-      setPhone(phoneParam);
-      trackAuto(phoneParam);
-    }
-  }, [searchParams]);
-
   const trackAuto = async (phoneNumber: string) => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/api/orders?phone=${encodeURIComponent(phoneNumber)}`);
+      const r = await fetch(`${API}/api/orders/track/${encodeURIComponent(phoneNumber)}`);
       const data: Order[] = await r.json();
       setOrders(data);
       setSearched(true);
@@ -65,6 +57,13 @@ function TrackContent() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    const phoneParam = searchParams.get("phone");
+    if (phoneParam && phoneParam.length >= 5) {
+      trackAuto(phoneParam);
+    }
+  }, [searchParams]);
 
   const track = async () => {
     if (phone.length < 5) return;
@@ -220,7 +219,7 @@ function TrackContent() {
                                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
                                     ) : (i + 1)}
                                   </div>
-                                  <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "0.55rem", color: done ? info.color : "#ccc", fontWeight: current ? 700 : 400, textAlign: "center", lineHeight: 1.2 }}>{info.label}</span>
+                                   <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "clamp(0.5rem, 2.5vw, 0.55rem)", color: done ? info.color : "#ccc", fontWeight: current ? 700 : 400, textAlign: "center", lineHeight: 1.2 }}>{info.label}</span>
                                 </div>
                               );
                             })}

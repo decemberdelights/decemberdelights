@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function LoadingScreen() {
   const [show, setShow] = useState(true);
@@ -19,9 +20,7 @@ export default function LoadingScreen() {
       position: "fixed",
       inset: 0,
       zIndex: 9999,
-      background: "rgba(7, 31, 26, 0.7)",
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
+      background: "#071f1a",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -33,10 +32,11 @@ export default function LoadingScreen() {
       willChange: "opacity",
       transform: "translateZ(0)",
     }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src="/logo-icon.png"
         alt="December Delights"
+        width={120}
+        height={120}
         style={{
           width: "min(120px, 30vw)",
           height: "auto",

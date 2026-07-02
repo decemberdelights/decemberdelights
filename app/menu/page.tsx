@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import ScrollRevealProvider from "@/components/scroll-reveal-provider";
 import { API } from "@/lib/api";
 
@@ -210,10 +211,11 @@ export default function MenuPage() {
                     >
                       {item.image_url && (
                         <div className="menu-img-wrapper">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <Image
                             src={item.image_url}
                             alt={item.name}
+                            width={400}
+                            height={300}
                             className="menu-card-img"
                             loading="lazy"
                           />

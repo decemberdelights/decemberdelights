@@ -1,22 +1,9 @@
 "use client";
 
-import { useRef, useEffect } from "react";
 import ScrollFloat from "@/components/ScrollFloat";
+import LazyVideo from "@/components/LazyVideo";
 
 export default function CareerSection() {
-  const video2Ref = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const v = video2Ref.current;
-    return () => {
-      if (v) {
-        v.pause();
-        v.removeAttribute("src");
-        v.load();
-      }
-    };
-  }, []);
-
   return (
     <>
       <style>{`
@@ -61,7 +48,10 @@ export default function CareerSection() {
           </a>
         </div>
         <div className="career-video-wrap">
-          <video ref={video2Ref} src="/espresso.mp4" autoPlay muted loop playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: "24px" }} />
+          <LazyVideo
+            src="/espresso.mp4"
+            style={{ borderRadius: "24px" }}
+          />
         </div>
       </div>
     </>
