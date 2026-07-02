@@ -1,3 +1,4 @@
+import logging
 import os
 from dotenv import load_dotenv
 
@@ -12,9 +13,14 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import AdminUser, FranchiseApplication
 
-SECRET_KEY = os.environ.get("JWT_SECRET", "")
-if not SECRET_KEY:
-    raise RuntimeError("JWT_SECRET environment variable is required")
+logger = logging.getLogger(__name__)
+
+SECRET_KEY = os.environ.get("JWT_SECRET", "dev-secret")
+if SECRET_KEY == "dev-secret":
+    logger.warning(
+        "JWT_SECRET environment variable is not set. Using development fallback secret. "
+        "Add JWT_SECRET to your environment for production."
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
