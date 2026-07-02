@@ -23,6 +23,16 @@ python3 -m uvicorn main:app --host 127.0.0.1 --port "$BACKEND_PORT" --workers 1 
 BACKEND_PID=$!
 cd ..
 
+# Diagnostic: show environment, processes and listening ports after starting backend
+echo "--- DIAGNOSTIC: environment ---"
+echo "PORT=$PORT BACKEND_PORT=$BACKEND_PORT"
+echo "--- DIAGNOSTIC: ps aux (top processes) ---"
+ps aux | head -n 20 || true
+echo "--- DIAGNOSTIC: listening ports (ss/netstat/lsof) ---"
+ss -ltnp 2>/dev/null || netstat -tulpn 2>/dev/null || lsof -i -P -n 2>/dev/null || true
+echo "--- DIAGNOSTIC: check Next standalone exists ---"
+ls -l .next/standalone/server.js 2>/dev/null || true
+
 # Wait for backend to become healthy before starting frontend
 echo "Waiting for backend at http://127.0.0.1:$BACKEND_PORT/api/health"
 MAX_RETRIES=120
@@ -40,6 +50,10 @@ done
 if [ $HEALTH_OK -ne 0 ]; then
 	echo "Warning: backend did not become healthy after $((MAX_RETRIES * SLEEP_SECONDS)) seconds. Continuing to start frontend."
 fi
+
+echo "--- DIAGNOSTIC: before starting temporary responder ---"
+ps aux | head -n 20 || true
+ss -ltnp 2>/dev/null || netstat -tulpn 2>/dev/null || lsof -i -P -n 2>/dev/null || true
 
 # Temporary lightweight responder to satisfy Railway healthcheck on $PORT
 echo "Starting temporary responder on PORT=$PORT"
@@ -62,12 +76,16 @@ class Handler(BaseHTTPRequestHandler):
 HTTPServer(('0.0.0.0', PORT), Handler).serve_forever()
 PYRESPOND
 TEMP_PID=$!
+echo "Temporary responder pid=$TEMP_PID"
 
 # Once backend is healthy, stop the temporary responder and start Next.js
 if [ $HEALTH_OK -eq 0 ]; then
 	echo "Stopping temporary responder (pid $TEMP_PID) to start Next.js"
 	kill $TEMP_PID || true
 	sleep 0.5
+	echo "--- DIAGNOSTIC: after stopping temp responder ---"
+	ps aux | head -n 20 || true
+	ss -ltnp 2>/dev/null || netstat -tulpn 2>/dev/null || lsof -i -P -n 2>/dev/null || true
 fi
 
 export PORT
