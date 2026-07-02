@@ -25,7 +25,7 @@ cd ..
 
 # Wait for backend to become healthy before starting frontend
 echo "Waiting for backend at http://127.0.0.1:$BACKEND_PORT/api/health"
-MAX_RETRIES=30
+MAX_RETRIES=120
 SLEEP_SECONDS=2
 HEALTH_OK=1
 for i in $(seq 1 $MAX_RETRIES); do
