@@ -41,7 +41,35 @@ if [ $HEALTH_OK -ne 0 ]; then
 	echo "Warning: backend did not become healthy after $((MAX_RETRIES * SLEEP_SECONDS)) seconds. Continuing to start frontend."
 fi
 
-# Start Next.js standalone frontend on Railway's assigned port
+# Temporary lightweight responder to satisfy Railway healthcheck on $PORT
+echo "Starting temporary responder on PORT=$PORT"
+python3 - <<PYRESPOND &
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import os
+
+PORT = int(os.environ.get('PORT', '8080'))
+
+class Handler(BaseHTTPRequestHandler):
+		def do_GET(self):
+				self.send_response(200)
+				self.send_header('Content-Type', 'application/json')
+				self.end_headers()
+				self.wfile.write(b'{"status":"ok","message":"warming up"}')
+
+		def log_message(self, format, *args):
+				return
+
+HTTPServer(('0.0.0.0', PORT), Handler).serve_forever()
+PYRESPOND
+TEMP_PID=$!
+
+# Once backend is healthy, stop the temporary responder and start Next.js
+if [ $HEALTH_OK -eq 0 ]; then
+	echo "Stopping temporary responder (pid $TEMP_PID) to start Next.js"
+	kill $TEMP_PID || true
+	sleep 0.5
+fi
+
 export PORT
 node .next/standalone/server.js &
 FRONTEND_PID=$!
