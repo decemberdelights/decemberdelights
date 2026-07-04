@@ -4,8 +4,8 @@ sqlalchemy
 pydantic
 pydantic-core
 python-multipart
-passlib
-bcrypt
+passlib[bcrypt]
+bcrypt==4.0.1
 python-jose[cryptography]
 aiofiles
 python-dotenv
