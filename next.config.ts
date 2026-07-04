@@ -1,7 +1,5 @@
 import type { NextConfig } from "next";
 
-const backendUrl = process.env.BACKEND_URL || "";
-
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -21,19 +19,6 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   reactStrictMode: true,
   compress: true,
-  async rewrites() {
-    if (!backendUrl) return [];
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${backendUrl}/api/:path*`,
-      },
-      {
-        source: "/uploads/:path*",
-        destination: `${backendUrl}/uploads/:path*`,
-      },
-    ];
-  },
   async headers() {
     return [
       {
