@@ -191,7 +191,7 @@ export default function ShopPage() {
                   <div key={product.id} style={{ background: "#fff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 16px rgba(27,60,51,0.06)", transition: "transform 0.3s, box-shadow 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(27,60,51,0.12)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 16px rgba(27,60,51,0.06)"; }}>
                     <div style={{ position: "relative", height: "220px", overflow: "hidden", background: "#f5f3ef" }}>
                       {product.image_url ? (
-                        <Image src={product.image_url} alt={product.name} fill style={{ objectFit: "cover" }} />
+                        <Image src={`${API}${product.image_url}`} alt={product.name} fill style={{ objectFit: "cover" }} />
                       ) : (
                         <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #1b3c33 0%, #2d5a4a 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <span style={{ fontSize: "3rem" }}>&#9749;</span>
@@ -254,7 +254,7 @@ export default function ShopPage() {
                 ) : cart.map((item) => (
                   <div key={item.product.id} style={{ display: "flex", gap: "1rem", padding: "1rem 0", borderBottom: "1px solid #f0f0f0" }}>
                     <div style={{ width: "60px", height: "60px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "#f5f5f5", position: "relative" }}>
-                      {item.product.image_url ? <Image src={item.product.image_url} alt={item.product.name} width={60} height={60} style={{ objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>&#9749;</div>}
+                      {item.product.image_url ? <Image src={`${API}${item.product.image_url}`} alt={item.product.name} width={60} height={60} style={{ objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>&#9749;</div>}
                     </div>
                     <div style={{ flex: 1 }}>
                       <h4 style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 700, marginBottom: "0.3rem" }}>{item.product.name}</h4>

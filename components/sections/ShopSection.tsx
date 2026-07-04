@@ -89,7 +89,7 @@ export default function ShopSection() {
                 >
                   <div style={{ position: "relative", height: "260px", overflow: "hidden" }}>
                     {product.image_url ? (
-                      <Image src={product.image_url} alt={product.name} fill loading="lazy" sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit: "cover" }} />
+                      <Image src={`${API}${product.image_url}`} alt={product.name} fill loading="lazy" sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit: "cover" }} />
                     ) : (
                       <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #094b3d, #2d5a4a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span style={{ fontSize: "3rem", opacity: 0.4 }}>&#9749;</span>
