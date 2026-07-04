@@ -86,7 +86,7 @@ export default function ShopPage() {
         customer_name: form.customer_name,
         customer_phone: form.customer_phone,
         customer_address: form.customer_address,
-        items: cart.map((c) => ({ id: c.product.id, name: c.product.name, price: c.product.price, quantity: c.quantity })),
+        items: JSON.stringify(cart.map((c) => ({ id: c.product.id, name: c.product.name, price: c.product.price, quantity: c.quantity }))),
         total: cartTotal,
       }),
     });
