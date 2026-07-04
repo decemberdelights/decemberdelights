@@ -9,6 +9,7 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Cookie, Depends, HTTPException, Request, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from database import get_db
 from models import AdminUser, FranchiseApplication
@@ -25,6 +26,8 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -49,21 +52,7 @@ def decode_token(token: str) -> Optional[dict]:
         return None
 
 
-def get_token_from_request(request: Request, session: Optional[str] = Cookie(None)) -> Optional[str]:
-    if session:
-        return session
-    auth_header = request.headers.get("authorization", "")
-    if auth_header.startswith("Bearer "):
-        return auth_header[7:]
-    return None
-
-
-def get_current_admin(
-    request: Request,
-    db: Session = Depends(get_db),
-    session: Optional[str] = Cookie(None),
-) -> AdminUser:
-    token = get_token_from_request(request, session)
+def _extract_user(token: str, db: Session) -> AdminUser:
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     payload = decode_token(token)
@@ -77,12 +66,30 @@ def get_current_admin(
     return user
 
 
-def require_super_admin(
-    request: Request,
-    db: Session = Depends(get_db),
+def get_current_admin(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     session: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db),
 ) -> AdminUser:
-    user = get_current_admin(request, db, session)
+    token = None
+    if credentials:
+        token = credentials.credentials
+    elif session:
+        token = session
+    return _extract_user(token, db)
+
+
+def require_super_admin(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    session: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db),
+) -> AdminUser:
+    token = None
+    if credentials:
+        token = credentials.credentials
+    elif session:
+        token = session
+    user = _extract_user(token, db)
     if user.role != "super_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
     return user
