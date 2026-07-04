@@ -12,10 +12,15 @@ router = APIRouter()
 
 
 @router.get("/api/auth/check")
-def auth_check(session: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
-    if not session:
+def auth_check(request: Request, session: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
+    token = session
+    if not token:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
         return {"authenticated": False}
-    payload = decode_token(session)
+    payload = decode_token(token)
     if not payload or payload.get("type") != "admin":
         return {"authenticated": False}
     user = db.query(AdminUser).filter(AdminUser.id == payload.get("sub")).first()
@@ -39,7 +44,7 @@ def auth_login(request: Request, creds: AdminLogin, response: Response, db: Sess
 
     token = create_token({"sub": user.id, "type": "admin", "role": user.role})
     response.set_cookie("session", token, httponly=True, samesite="none", max_age=86400, secure=True)
-    return {"ok": True, "role": user.role, "username": user.username}
+    return {"ok": True, "role": user.role, "username": user.username, "token": token}
 
 
 @router.post("/api/auth/logout")

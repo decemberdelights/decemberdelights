@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from database import get_db
 from models import AdminUser, FranchiseApplication
@@ -52,10 +52,16 @@ def decode_token(token: str) -> Optional[dict]:
 def get_current_admin(
     session: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
+    request: Request = None,
 ) -> AdminUser:
-    if not session:
+    token = session
+    if not token and request:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    payload = decode_token(session)
+    payload = decode_token(token)
     if not payload or payload.get("type") != "admin":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
     user = db.query(AdminUser).filter(AdminUser.id == payload.get("sub")).first()
@@ -69,8 +75,9 @@ def get_current_admin(
 def require_super_admin(
     session: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
+    request: Request = None,
 ) -> AdminUser:
-    user = get_current_admin(session, db)
+    user = get_current_admin(session, db, request)
     if user.role != "super_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
     return user
