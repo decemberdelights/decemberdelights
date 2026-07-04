@@ -54,21 +54,27 @@ def decode_token(token: str) -> Optional[dict]:
 
 def _extract_user(token: str, db: Session) -> AdminUser:
     if not token:
+        logger.warning("AUTH DEBUG: No token provided")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     payload = decode_token(token)
     if not payload or payload.get("type") != "admin":
+        logger.warning(f"AUTH DEBUG: Invalid token payload={payload}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
     user = db.query(AdminUser).filter(AdminUser.id == payload.get("sub")).first()
     if not user:
+        logger.warning(f"AUTH DEBUG: User not found for sub={payload.get('sub')}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     if not user.is_active:
+        logger.warning(f"AUTH DEBUG: User {user.username} is not active")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
+    logger.warning(f"AUTH DEBUG: Authenticated user={user.username}, role={user.role}")
     return user
 
 
 def get_current_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     session: Optional[str] = Cookie(None),
+    request: Request = None,
     db: Session = Depends(get_db),
 ) -> AdminUser:
     token = None
@@ -76,6 +82,9 @@ def get_current_admin(
         token = credentials.credentials
     elif session:
         token = session
+    origin = request.headers.get("origin", "none") if request else "no-request"
+    auth_header = request.headers.get("authorization", "none") if request else "no-request"
+    logger.warning(f"AUTH DEBUG: origin={origin}, auth_header={auth_header[:30] if auth_header != 'none' else auth_header}, credentials={bool(credentials)}, session={bool(session)}, token_present={bool(token)}")
     return _extract_user(token, db)
 
 
