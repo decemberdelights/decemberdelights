@@ -21,18 +21,18 @@ admins_to_seed = [
 ]
 
 for a in admins_to_seed:
-    if not db.query(AdminUser).filter(AdminUser.username == a["username"]).first():
+    user = db.query(AdminUser).filter(AdminUser.username == a["username"]).first()
+    if not user:
         db.add(AdminUser(username=a["username"], password_hash=hash_password(a["password"]), role=a["role"]))
         db.commit()
         print(f"Created {a['role']}: {a['username']}")
     else:
-        # Ensure existing admin has correct role
-        user = db.query(AdminUser).filter(AdminUser.username == a["username"]).first()
+        # Always update password hash from env
+        user.password_hash = hash_password(a["password"])
         if user.role != a["role"]:
             user.role = a["role"]
-            db.commit()
-            print(f"Updated {a['username']} role to {a['role']}")
-        print(f"Already exists: {a['username']}")
+        db.commit()
+        print(f"Updated {a['username']} password and role from env")
 
 # Seed sample orders if none exist
 if db.query(Order).count() == 0:
