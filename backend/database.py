@@ -6,13 +6,12 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 if not DATABASE_URL:
     raise RuntimeError(
-        "DATABASE_URL environment variable is not set.\n"
-        "To fix this:\n"
-        "  1. Go to Railway Dashboard → your project\n"
-        "  2. Add a PostgreSQL database plugin\n"
-        "  3. Go to your service → Variables tab\n"
-        "  4. Add: DATABASE_URL = ${Postgres.DATABASE_URL}\n"
-        "  5. Redeploy"
+        "DATABASE_URL is not set.\n"
+        "On Render:\n"
+        "  1. Add a PostgreSQL database to your project\n"
+        "  2. In your web service Variables, add:\n"
+        "     DATABASE_URL = ${december-delights-db.DATABASE_URL}\n"
+        "  3. Redeploy"
     )
 
 if DATABASE_URL.startswith("postgres://"):

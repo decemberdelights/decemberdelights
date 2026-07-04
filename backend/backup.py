@@ -1,6 +1,5 @@
 import os
 import subprocess
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,13 +25,19 @@ def create_backup(reason: str = "auto") -> str:
     backup_name = f"backup_{reason}_{timestamp}.sql"
     backup_path = os.path.join(backup_dir, backup_name)
 
-    result = subprocess.run(
-        ["pg_dump", "--no-owner", "--no-privileges", "-f", backup_path, DATABASE_URL],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"pg_dump failed: {result.stderr}")
+    try:
+        result = subprocess.run(
+            ["pg_dump", "--no-owner", "--no-privileges", "-f", backup_path, DATABASE_URL],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"pg_dump failed: {result.stderr}")
+    except FileNotFoundError:
+        raise RuntimeError("pg_dump not available on this system")
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("pg_dump timed out")
 
     cleanup_old_backups()
     return backup_name
@@ -60,6 +65,7 @@ def restore_backup(backup_name: str) -> bool:
         ["psql", "-d", DATABASE_URL, "-f", backup_path],
         capture_output=True,
         text=True,
+        timeout=120,
     )
     if result.returncode != 0:
         raise RuntimeError(f"psql restore failed: {result.stderr}")
