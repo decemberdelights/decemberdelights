@@ -38,12 +38,11 @@ def auth_login(request: Request, creds: AdminLogin, response: Response, db: Sess
         raise HTTPException(status_code=403, detail="Account disabled")
 
     token = create_token({"sub": user.id, "type": "admin", "role": user.role})
-    secure_flag = os.environ.get("ENV", "development") != "development"
-    response.set_cookie("session", token, httponly=True, samesite="lax", max_age=86400, secure=secure_flag)
+    response.set_cookie("session", token, httponly=True, samesite="none", max_age=86400, secure=True)
     return {"ok": True, "role": user.role, "username": user.username}
 
 
 @router.post("/api/auth/logout")
 def auth_logout(response: Response):
-    response.delete_cookie("session")
+    response.delete_cookie("session", samesite="none", secure=True)
     return {"ok": True}

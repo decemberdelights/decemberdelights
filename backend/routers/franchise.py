@@ -162,11 +162,11 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response,
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_token({"sub": app.id, "type": "franchise"})
     secure_flag = os.environ.get("ENV", "development") != "development"
-    response.set_cookie("franchise_session", token, httponly=True, samesite="lax", max_age=86400, secure=secure_flag)
+    response.set_cookie("franchise_session", token, httponly=True, samesite="none", max_age=86400, secure=True)
     return {"application": FranchiseOut.model_validate(app).model_dump()}
 
 
 @router.post("/api/franchise/logout")
 def franchise_logout(response: Response):
-    response.delete_cookie("franchise_session")
+    response.delete_cookie("franchise_session", samesite="none", secure=True)
     return {"ok": True}
