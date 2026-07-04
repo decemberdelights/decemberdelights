@@ -49,16 +49,21 @@ def decode_token(token: str) -> Optional[dict]:
         return None
 
 
+def get_token_from_request(request: Request, session: Optional[str] = Cookie(None)) -> Optional[str]:
+    if session:
+        return session
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[7:]
+    return None
+
+
 def get_current_admin(
-    session: Optional[str] = Cookie(None),
+    request: Request,
     db: Session = Depends(get_db),
-    request: Request = None,
+    session: Optional[str] = Cookie(None),
 ) -> AdminUser:
-    token = session
-    if not token and request:
-        auth_header = request.headers.get("authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
+    token = get_token_from_request(request, session)
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     payload = decode_token(token)
@@ -73,11 +78,11 @@ def get_current_admin(
 
 
 def require_super_admin(
-    session: Optional[str] = Cookie(None),
+    request: Request,
     db: Session = Depends(get_db),
-    request: Request = None,
+    session: Optional[str] = Cookie(None),
 ) -> AdminUser:
-    user = get_current_admin(session, db, request)
+    user = get_current_admin(request, db, session)
     if user.role != "super_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
     return user
