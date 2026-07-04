@@ -5,7 +5,7 @@ if (!FASTAPI_URL) {
   console.warn("FASTAPI_URL environment variable is not set");
 }
 
-const ALLOWED_PATHS = ["menu", "products", "jobs", "franchise", "careers", "contact", "orders"];
+const ALLOWED_PATHS = ["menu", "products", "jobs", "franchise", "careers", "contact", "orders", "health"];
 const BLOCKED_INTERNAL = ["169.254.169.254"];
 
 function isAllowedPath(path: string): boolean {

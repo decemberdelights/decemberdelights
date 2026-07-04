@@ -13,7 +13,7 @@ RUN npm run build
 
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y nodejs npm curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y nodejs npm curl postgresql-client && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -29,7 +29,6 @@ COPY --from=frontend-build /app/components ./components
 COPY --from=frontend-build /app/middleware.ts ./
 COPY --from=frontend-build /app/public ./public
 COPY --from=frontend-build /app/components.json ./
-COPY .env.example .env.local
 
 COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt

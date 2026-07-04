@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 from dotenv import load_dotenv
 import os
 import sys
@@ -21,31 +21,6 @@ from routers import menu, products, auth_router, admin, franchise, careers, admi
 import backup
 
 Base.metadata.create_all(bind=engine)
-
-# Create indexes for performance
-with engine.connect() as conn:
-    for idx_sql in [
-        "CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)",
-        "CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)",
-        "CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(customer_phone)",
-        "CREATE INDEX IF NOT EXISTS idx_franchise_status ON franchise_applications(status)",
-        "CREATE INDEX IF NOT EXISTS idx_franchise_created ON franchise_applications(created_at)",
-        "CREATE INDEX IF NOT EXISTS idx_careers_status ON career_applications(status)",
-        "CREATE INDEX IF NOT EXISTS idx_contacts_status ON contact_messages(status)",
-        "CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at)",
-    ]:
-        conn.execute(text(idx_sql))
-    conn.commit()
-
-# Migration: ensure all required columns exist in admin_users
-with engine.connect() as conn:
-    result = conn.execute(text("PRAGMA table_info(admin_users)")).fetchall()
-    col_names = {row[1] for row in result}
-    if "role" not in col_names:
-        conn.execute(text("ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin'"))
-    if "is_active" not in col_names:
-        conn.execute(text("ALTER TABLE admin_users ADD COLUMN is_active INTEGER DEFAULT 1"))
-    conn.commit()
 
 app = FastAPI(title="December Delights API", version="1.0.0")
 
@@ -107,7 +82,7 @@ async def startup_event():
         backup_name = backup.create_backup(reason="startup")
         logger.info(f"Auto-backup created: {backup_name}")
     except Exception as e:
-        logger.error(f"Auto-backup failed: {str(e)}")
+        logger.warning(f"Auto-backup skipped: {str(e)}")
 
 
 @app.middleware("http")
@@ -144,11 +119,10 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    import multiprocessing
 
     host = os.environ.get("HOST", "0.0.0.0")
-    port = int(os.environ.get("PORT", "5000"))
+    port = int(os.environ.get("PORT", "10000"))
     reload = os.environ.get("ENV", "development") == "development"
-    workers = 1  # SQLite cannot handle concurrent writes from multiple workers
+    workers = 1
 
     uvicorn.run("main:app", host=host, port=port, reload=reload, workers=workers)

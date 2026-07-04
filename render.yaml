@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: december-delights-api
+    runtime: python
+    plan: free
+    buildCommand: bash render-build.sh
+    startCommand: bash render-start.sh
+    envVars:
+      - key: ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_DEFAULT_PASSWORD
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: december-delights-db
+          property: connectionString
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+databases:
+  - name: december-delights-db
+    plan: free
+    databaseName: december_delights
+    ipAllowList: []

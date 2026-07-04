@@ -12,45 +12,6 @@ import json
 
 Base.metadata.create_all(bind=engine)
 
-# Migration: ensure all required columns exist in admin_users
-with engine.connect() as conn:
-    result = conn.execute(text("PRAGMA table_info(admin_users)")).fetchall()
-    col_names = {row[1] for row in result}
-    if "role" not in col_names:
-        conn.execute(text("ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin'"))
-        print("Migration: added role column to admin_users")
-    if "is_active" not in col_names:
-        conn.execute(text("ALTER TABLE admin_users ADD COLUMN is_active INTEGER DEFAULT 1"))
-        print("Migration: added is_active column to admin_users")
-    conn.commit()
-
-# Migration: ensure orders table has all required columns
-ALLOWED_ORDER_COLS = {
-    "customer_email", "customer_phone", "items", "total",
-    "status", "payment_method", "payment_status", "notes", "updated_at",
-}
-ORDER_COL_TYPES = {
-    "customer_email": "TEXT DEFAULT ''",
-    "customer_phone": "TEXT DEFAULT ''",
-    "items": "TEXT DEFAULT ''",
-    "total": "REAL DEFAULT 0",
-    "status": "TEXT DEFAULT 'pending'",
-    "payment_method": "TEXT DEFAULT 'cash'",
-    "payment_status": "TEXT DEFAULT 'unpaid'",
-    "notes": "TEXT DEFAULT ''",
-    "updated_at": "DATETIME",
-}
-
-with engine.connect() as conn:
-    result = conn.execute(text("PRAGMA table_info(orders)")).fetchall()
-    col_names = {row[1] for row in result}
-    for col_name in ALLOWED_ORDER_COLS:
-        if col_name not in col_names:
-            col_type = ORDER_COL_TYPES[col_name]
-            conn.execute(text(f"ALTER TABLE orders ADD COLUMN {col_name} {col_type}"))
-            print(f"Migration: added {col_name} column to orders")
-    conn.commit()
-
 db = SessionLocal()
 
 # Seed super admin only using environment variables
