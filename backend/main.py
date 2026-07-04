@@ -52,14 +52,14 @@ os.makedirs(uploads_dir, exist_ok=True)
 
 
 @app.get("/uploads/{path:path}")
-async def serve_upload(path: str, request: Request):
-    from auth import decode_token
-    cookie = request.cookies.get("session", "")
-    payload = decode_token(cookie)
-    if not payload or payload.get("type") != "admin":
-        return JSONResponse(status_code=403, content={"detail": "Forbidden"})
+async def serve_upload(path: str):
     import os as _os
-    full_path = _os.path.join(uploads_dir, path)
+    safe_path = _os.path.normpath(path)
+    if ".." in safe_path or safe_path.startswith(("/", "\\")):
+        return JSONResponse(status_code=403, content={"detail": "Invalid path"})
+    full_path = _os.path.join(uploads_dir, safe_path)
+    if not full_path.startswith(_os.path.abspath(uploads_dir)):
+        return JSONResponse(status_code=403, content={"detail": "Invalid path"})
     if not _os.path.isfile(full_path):
         return JSONResponse(status_code=404, content={"detail": "Not found"})
     from fastapi.responses import FileResponse

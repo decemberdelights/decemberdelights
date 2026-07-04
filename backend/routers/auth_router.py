@@ -23,7 +23,7 @@ def auth_check(request: Request, session: Optional[str] = Cookie(None), db: Sess
     payload = decode_token(token)
     if not payload or payload.get("type") != "admin":
         return {"authenticated": False}
-    user = db.query(AdminUser).filter(AdminUser.id == payload.get("sub")).first()
+    user = db.query(AdminUser).filter(AdminUser.id == int(payload.get("sub"))).first()
     if not user or not user.is_active:
         return {"authenticated": False}
     return {"authenticated": True, "role": user.role, "username": user.username}
@@ -42,7 +42,7 @@ def auth_login(request: Request, creds: AdminLogin, response: Response, db: Sess
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
 
-    token = create_token({"sub": user.id, "type": "admin", "role": user.role})
+    token = create_token({"sub": str(user.id), "type": "admin", "role": user.role})
     response.set_cookie("session", token, httponly=True, samesite="none", max_age=86400, secure=True)
     return {"ok": True, "role": user.role, "username": user.username, "token": token}
 

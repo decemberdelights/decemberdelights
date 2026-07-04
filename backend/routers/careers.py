@@ -100,11 +100,26 @@ def get_admin_jobs(db: Session = Depends(get_db), _=Depends(require_super_admin)
 
 
 @router.post("/api/admin/jobs")
-def create_job(data: dict, db: Session = Depends(get_db), _=Depends(require_super_admin)):
-    filtered = {k: v for k, v in data.items() if k in JOB_FIELDS}
-    if "title" not in filtered or not filtered["title"]:
+def create_job(
+    title: str = Form(""),
+    department: str = Form(""),
+    location: str = Form(""),
+    description: str = Form(""),
+    requirements: str = Form(""),
+    salary_range: str = Form(""),
+    job_type: str = Form("full-time"),
+    is_active: str = Form("true"),
+    db: Session = Depends(get_db),
+    _=Depends(require_super_admin),
+):
+    if not title:
         raise HTTPException(status_code=400, detail="Title is required")
-    job = Job(**filtered)
+    job = Job(
+        title=title, department=department, location=location,
+        description=description, requirements=requirements,
+        salary_range=salary_range, job_type=job_type,
+        is_active=is_active.lower() == "true",
+    )
     db.add(job)
     db.commit()
     db.refresh(job)
@@ -112,13 +127,30 @@ def create_job(data: dict, db: Session = Depends(get_db), _=Depends(require_supe
 
 
 @router.put("/api/admin/jobs/{job_id}")
-def update_job(job_id: int, data: dict, db: Session = Depends(get_db), _=Depends(require_super_admin)):
+def update_job(
+    job_id: int,
+    title: str = Form(""),
+    department: str = Form(""),
+    location: str = Form(""),
+    description: str = Form(""),
+    requirements: str = Form(""),
+    salary_range: str = Form(""),
+    job_type: str = Form("full-time"),
+    is_active: str = Form("true"),
+    db: Session = Depends(get_db),
+    _=Depends(require_super_admin),
+):
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    for k, v in data.items():
-        if k in JOB_FIELDS and k != "id":
-            setattr(job, k, v)
+    job.title = title
+    job.department = department
+    job.location = location
+    job.description = description
+    job.requirements = requirements
+    job.salary_range = salary_range
+    job.job_type = job_type
+    job.is_active = is_active.lower() == "true"
     db.commit()
     return {"ok": True}
 

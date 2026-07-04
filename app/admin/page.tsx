@@ -237,18 +237,13 @@ export default function AdminPage() {
 
   const saveItem = async (endpoint: string, data: Record<string, unknown>, isNew: boolean) => {
     const { _imageFile, ...rest } = data;
-    if (_imageFile) {
-      const fd = new FormData();
-      for (const [k, v] of Object.entries(rest)) {
-        if (v !== undefined && v !== null) fd.append(k, String(v));
-      }
-      fd.append("image", _imageFile as File);
-      if (isNew) { await api(`/api/${endpoint}`, { method: "POST", body: fd }); }
-      else { await api(`/api/${endpoint}/${rest.id}`, { method: "PUT", body: fd }); }
-    } else {
-      if (isNew) { await api(`/api/${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rest) }); }
-      else { await api(`/api/${endpoint}/${rest.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rest) }); }
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(rest)) {
+      if (v !== undefined && v !== null) fd.append(k, String(v));
     }
+    if (_imageFile) fd.append("image", _imageFile as File);
+    if (isNew) { await api(`/api/${endpoint}`, { method: "POST", body: fd }); }
+    else { await api(`/api/${endpoint}/${rest.id}`, { method: "PUT", body: fd }); }
     setEditingItem(null); setEditType(null); refresh();
   };
 

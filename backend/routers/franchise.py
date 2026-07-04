@@ -144,7 +144,7 @@ def franchise_status(
     payload = decode_token(session)
     if not payload or payload.get("type") != "franchise":
         raise HTTPException(status_code=401, detail="Invalid session")
-    app = db.query(FranchiseApplication).filter(FranchiseApplication.id == payload.get("sub")).first()
+    app = db.query(FranchiseApplication).filter(FranchiseApplication.id == int(payload.get("sub"))).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
     return {"application": FranchiseOut.model_validate(app).model_dump()}
@@ -160,7 +160,7 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response,
     if not app or not verify_password(creds.password, app.password_hash):
         franchise_limiter.record(rate_key)
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = create_token({"sub": app.id, "type": "franchise"})
+    token = create_token({"sub": str(app.id), "type": "franchise"})
     secure_flag = os.environ.get("ENV", "development") != "development"
     response.set_cookie("franchise_session", token, httponly=True, samesite="none", max_age=86400, secure=True)
     return {"application": FranchiseOut.model_validate(app).model_dump()}
