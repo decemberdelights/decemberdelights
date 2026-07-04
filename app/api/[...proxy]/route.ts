@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const FASTAPI_URL = process.env.FASTAPI_URL || process.env.BACKEND_URL || "http://localhost:5000";
+const FASTAPI_URL = process.env.FASTAPI_URL || process.env.BACKEND_URL || "http://localhost:4000";
 if (!FASTAPI_URL) {
   console.warn("FASTAPI_URL environment variable is not set");
 }

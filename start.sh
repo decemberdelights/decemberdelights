@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-PORT=${PORT:-5000}
-BACKEND_PORT=5000
+PORT=${PORT:-8080}
+BACKEND_PORT=4000
 
-echo "Starting services on PORT=$PORT"
+echo "Starting services — frontend on port $PORT, backend on port $BACKEND_PORT"
 
 # Run backend in background
 cd backend
@@ -19,10 +19,13 @@ for i in $(seq 1 30); do
         echo "Backend healthy after $i attempts"
         break
     fi
+    if [ "$i" -eq 30 ]; then
+        echo "WARNING: Backend health check timed out after 30 seconds"
+    fi
     sleep 1
 done
 
-# Start Next.js frontend
+# Start Next.js frontend on Railway's assigned port
 export PORT
 node .next/standalone/server.js &
 FRONTEND_PID=$!

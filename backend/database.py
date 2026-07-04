@@ -5,7 +5,15 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable is not set. Set it to your PostgreSQL connection string.")
+    raise RuntimeError(
+        "DATABASE_URL environment variable is not set.\n"
+        "To fix this:\n"
+        "  1. Go to Railway Dashboard → your project\n"
+        "  2. Add a PostgreSQL database plugin\n"
+        "  3. Go to your service → Variables tab\n"
+        "  4. Add: DATABASE_URL = ${Postgres.DATABASE_URL}\n"
+        "  5. Redeploy"
+    )
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)

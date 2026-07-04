@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-ENV BACKEND_URL=http://localhost:5000
+ENV BACKEND_URL=http://localhost:4000
 RUN npm ci
 
 COPY . .
@@ -37,7 +37,7 @@ COPY backend/ ./backend/
 
 RUN mkdir -p backend/uploads backend/backups
 
-EXPOSE 3000 5000
+EXPOSE 8080 4000
 
 COPY start.sh ./start.sh
 RUN chmod +x start.sh
