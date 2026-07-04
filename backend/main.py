@@ -79,6 +79,11 @@ app.include_router(backup.router)
 @app.on_event("startup")
 async def startup_event():
     try:
+        import seed
+        logger.info("Seed completed")
+    except Exception as e:
+        logger.warning(f"Seed failed: {str(e)}")
+    try:
         backup_name = backup.create_backup(reason="startup")
         logger.info(f"Auto-backup created: {backup_name}")
     except Exception as e:
