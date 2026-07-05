@@ -82,6 +82,20 @@ def root():
     return {"message": "December Delights API"}
 
 
+@app.get("/api/debug/env")
+def debug_env():
+    url = os.environ.get("SUPABASE_URL", "")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    return {
+        "SUPABASE_URL_set": bool(url),
+        "SUPABASE_URL_length": len(url),
+        "SUPABASE_URL_preview": url[:30] + "..." if len(url) > 30 else url,
+        "SUPABASE_KEY_set": bool(key),
+        "SUPABASE_KEY_length": len(key),
+        "CORS_ORIGINS": os.environ.get("CORS_ORIGINS", "not set"),
+    }
+
+
 @app.get("/api/health")
 def health_check():
     try:
@@ -90,7 +104,7 @@ def health_check():
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
-        return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "disconnected"})
+        return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "disconnected", "error": str(e)})
 
 
 if __name__ == "__main__":
