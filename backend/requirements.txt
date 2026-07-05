@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-sqlalchemy
 pydantic
 pydantic-core
 python-multipart
@@ -9,4 +8,4 @@ bcrypt==4.0.1
 python-jose[cryptography]
 aiofiles
 python-dotenv
-psycopg2-binary
+supabase

@@ -10,9 +10,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Cookie, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
-from database import get_db
-from models import AdminUser, FranchiseApplication
+from supabase_client import supabase
 
 logger = logging.getLogger(__name__)
 
@@ -52,16 +50,18 @@ def decode_token(token: str) -> Optional[dict]:
         return None
 
 
-def _extract_user(token: str, db: Session) -> AdminUser:
+def _extract_user(token: str) -> dict:
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     payload = decode_token(token)
     if not payload or payload.get("type") != "admin":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
-    user = db.query(AdminUser).filter(AdminUser.id == int(payload.get("sub"))).first()
-    if not user:
+    user_id = int(payload.get("sub"))
+    result = supabase.table("admin_users").select("*").eq("id", user_id).execute()
+    if not result.data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    if not user.is_active:
+    user = result.data[0]
+    if not user.get("is_active", True):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
     return user
 
@@ -70,42 +70,40 @@ def get_current_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     session: Optional[str] = Cookie(None),
     request: Request = None,
-    db: Session = Depends(get_db),
-) -> AdminUser:
+) -> dict:
     token = None
     if credentials:
         token = credentials.credentials
     elif session:
         token = session
-    return _extract_user(token, db)
+    return _extract_user(token)
 
 
 def require_super_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     session: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db),
-) -> AdminUser:
+) -> dict:
     token = None
     if credentials:
         token = credentials.credentials
     elif session:
         token = session
-    user = _extract_user(token, db)
-    if user.role != "super_admin":
+    user = _extract_user(token)
+    if user.get("role") != "super_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
     return user
 
 
 def get_current_franchise(
     session: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db),
-) -> FranchiseApplication:
+) -> dict:
     if not session:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     payload = decode_token(session)
     if not payload or payload.get("type") != "franchise":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
-    app = db.query(FranchiseApplication).filter(FranchiseApplication.id == int(payload.get("sub"))).first()
-    if not app:
+    app_id = int(payload.get("sub"))
+    result = supabase.table("franchise_applications").select("*").eq("id", app_id).execute()
+    if not result.data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Application not found")
-    return app
+    return result.data[0]

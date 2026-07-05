@@ -1,4 +1,5 @@
 services:
+  # Backend (FastAPI + Python)
   - type: web
     name: december-delights-api
     runtime: python
@@ -15,16 +16,32 @@ services:
       - key: ADMIN_USERNAME
         value: admin
       - key: CORS_ORIGINS
-        value: "*"
-      - key: DATABASE_URL
-        fromDatabase:
-          name: december-delights-db
-          property: connectionString
+        value: https://december-delights.onrender.com
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
     healthCheckPath: /api/health
     autoDeploy: true
 
-databases:
-  - name: december-delights-db
+  # Frontend (Next.js)
+  - type: web
+    name: december-delights
+    runtime: node
     plan: free
-    databaseName: december_delights
-    ipAllowList: []
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://december-delights-api.onrender.com
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true

@@ -2,22 +2,14 @@ import os
 import uuid
 import re
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.orm import Session
-from database import get_db
-from models import Job, CareerApplication
-from schemas import JobOut, CareerOut
+from supabase_client import supabase
 from auth import require_super_admin
 from security import validate_email, validate_phone, sanitize_input
 
 router = APIRouter()
 
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads", "careers")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
-
-JOB_FIELDS = {"title", "department", "location", "description", "requirements", "salary_range", "job_type", "is_active"}
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
 def _sanitize_filename(name: str) -> str:
@@ -26,19 +18,21 @@ def _sanitize_filename(name: str) -> str:
     return name[:80] if name else "applicant"
 
 
-def delete_career_files(app: CareerApplication):
-    if app.resume_url and app.resume_url.startswith("/uploads/"):
-        filepath = os.path.join(os.path.dirname(__file__), "..", app.resume_url.lstrip("/"))
-        if os.path.exists(filepath):
+def delete_career_files(app: dict):
+    for field in ["resume_url"]:
+        url = app.get(field, "")
+        if url and "/career-docs/" in url:
+            filename = url.split("/")[-1]
             try:
-                os.remove(filepath)
-            except OSError:
+                supabase.storage.from_("career-docs").remove([filename])
+            except Exception:
                 pass
 
 
-@router.get("/api/jobs", response_model=list)
-def get_jobs(db: Session = Depends(get_db)):
-    return [JobOut.model_validate(j).model_dump() for j in db.query(Job).filter(Job.is_active == True).all()]
+@router.get("/api/jobs")
+def get_jobs():
+    result = supabase.table("jobs").select("*").eq("is_active", True).execute()
+    return result.data or []
 
 
 @router.post("/api/careers")
@@ -49,9 +43,7 @@ async def create_career(
     position: str = Form(""),
     message: str = Form(""),
     resume: UploadFile = File(None),
-    db: Session = Depends(get_db),
 ):
-    # Input validation
     full_name = sanitize_input(full_name, 200)
     email = sanitize_input(email, 200)
     phone = sanitize_input(phone, 20)
@@ -76,27 +68,25 @@ async def create_career(
         if resume.content_type and resume.content_type not in {"application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}:
             raise HTTPException(status_code=400, detail=f"File content type {resume.content_type} not allowed")
         filename = f"{_sanitize_filename(full_name)}_resume_{uuid.uuid4().hex[:8]}{ext}"
-        filepath = os.path.join(UPLOAD_DIR, filename)
-        with open(filepath, "wb") as f:
-            f.write(content)
-        resume_url = f"/uploads/careers/{filename}"
+        supabase.storage.from_("career-docs").upload(filename, content, {"content-type": resume.content_type})
+        resume_url = supabase.storage.from_("career-docs").get_public_url(filename)
 
-    app = CareerApplication(
-        full_name=full_name,
-        email=email,
-        phone=phone,
-        position=position,
-        message=message,
-        resume_url=resume_url,
-    )
-    db.add(app)
-    db.commit()
+    data = {
+        "full_name": full_name,
+        "email": email,
+        "phone": phone,
+        "position": position,
+        "message": message,
+        "resume_url": resume_url,
+    }
+    supabase.table("career_applications").insert(data).execute()
     return {"ok": True}
 
 
-@router.get("/api/admin/jobs", response_model=list)
-def get_admin_jobs(db: Session = Depends(get_db), _=Depends(require_super_admin)):
-    return [JobOut.model_validate(j).model_dump() for j in db.query(Job).order_by(Job.id.desc()).all()]
+@router.get("/api/admin/jobs")
+def get_admin_jobs(_=Depends(require_super_admin)):
+    result = supabase.table("jobs").select("*").order("id", desc=True).execute()
+    return result.data or []
 
 
 @router.post("/api/admin/jobs")
@@ -109,21 +99,22 @@ def create_job(
     salary_range: str = Form(""),
     job_type: str = Form("full-time"),
     is_active: str = Form("true"),
-    db: Session = Depends(get_db),
     _=Depends(require_super_admin),
 ):
     if not title:
         raise HTTPException(status_code=400, detail="Title is required")
-    job = Job(
-        title=title, department=department, location=location,
-        description=description, requirements=requirements,
-        salary_range=salary_range, job_type=job_type,
-        is_active=is_active.lower() == "true",
-    )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
-    return {"id": job.id}
+    data = {
+        "title": title,
+        "department": department,
+        "location": location,
+        "description": description,
+        "requirements": requirements,
+        "salary_range": salary_range,
+        "job_type": job_type,
+        "is_active": is_active.lower() == "true",
+    }
+    result = supabase.table("jobs").insert(data).execute()
+    return {"id": result.data[0]["id"]}
 
 
 @router.put("/api/admin/jobs/{job_id}")
@@ -137,29 +128,29 @@ def update_job(
     salary_range: str = Form(""),
     job_type: str = Form("full-time"),
     is_active: str = Form("true"),
-    db: Session = Depends(get_db),
     _=Depends(require_super_admin),
 ):
-    job = db.query(Job).filter(Job.id == job_id).first()
-    if not job:
+    existing = supabase.table("jobs").select("*").eq("id", job_id).execute()
+    if not existing.data:
         raise HTTPException(status_code=404, detail="Job not found")
-    job.title = title
-    job.department = department
-    job.location = location
-    job.description = description
-    job.requirements = requirements
-    job.salary_range = salary_range
-    job.job_type = job_type
-    job.is_active = is_active.lower() == "true"
-    db.commit()
+    data = {
+        "title": title,
+        "department": department,
+        "location": location,
+        "description": description,
+        "requirements": requirements,
+        "salary_range": salary_range,
+        "job_type": job_type,
+        "is_active": is_active.lower() == "true",
+    }
+    supabase.table("jobs").update(data).eq("id", job_id).execute()
     return {"ok": True}
 
 
 @router.delete("/api/admin/jobs/{job_id}")
-def delete_job(job_id: int, db: Session = Depends(get_db), _=Depends(require_super_admin)):
-    job = db.query(Job).filter(Job.id == job_id).first()
-    if not job:
+def delete_job(job_id: int, _=Depends(require_super_admin)):
+    existing = supabase.table("jobs").select("*").eq("id", job_id).execute()
+    if not existing.data:
         raise HTTPException(status_code=404, detail="Job not found")
-    db.delete(job)
-    db.commit()
+    supabase.table("jobs").delete().eq("id", job_id).execute()
     return {"ok": True}

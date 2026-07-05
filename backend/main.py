@@ -1,8 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from sqlalchemy import text, inspect
 from dotenv import load_dotenv
 import os
 import sys
@@ -16,13 +14,9 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env.local"))
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from database import engine, Base
 from routers import menu, products, auth_router, admin, franchise, careers, admin_users, orders
-import backup
 
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="December Delights API", version="1.0.0")
+app = FastAPI(title="December Delights API", version="2.0.0")
 
 ALLOWED_ORIGINS = [
     origin.strip()
@@ -43,27 +37,10 @@ app.add_middleware(
 async def limit_upload_size(request: Request, call_next):
     if request.method in ("POST", "PUT"):
         content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > 15 * 1024 * 1024:  # 15MB
+        if content_length and int(content_length) > 15 * 1024 * 1024:
             return JSONResponse(status_code=413, content={"detail": "Request too large"})
     return await call_next(request)
 
-uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
-os.makedirs(uploads_dir, exist_ok=True)
-
-
-@app.get("/uploads/{path:path}")
-async def serve_upload(path: str):
-    import os as _os
-    safe_path = _os.path.normpath(path)
-    if ".." in safe_path or safe_path.startswith(("/", "\\")):
-        return JSONResponse(status_code=403, content={"detail": "Invalid path"})
-    full_path = _os.path.join(uploads_dir, safe_path)
-    if not full_path.startswith(_os.path.abspath(uploads_dir)):
-        return JSONResponse(status_code=403, content={"detail": "Invalid path"})
-    if not _os.path.isfile(full_path):
-        return JSONResponse(status_code=404, content={"detail": "Not found"})
-    from fastapi.responses import FileResponse
-    return FileResponse(full_path)
 
 app.include_router(menu.router)
 app.include_router(products.router)
@@ -73,7 +50,6 @@ app.include_router(franchise.router)
 app.include_router(careers.router)
 app.include_router(admin_users.router)
 app.include_router(orders.router)
-app.include_router(backup.router)
 
 
 @app.on_event("startup")
@@ -83,11 +59,6 @@ async def startup_event():
         logger.info("Seed completed")
     except Exception as e:
         logger.warning(f"Seed failed: {str(e)}")
-    try:
-        backup_name = backup.create_backup(reason="startup")
-        logger.info(f"Auto-backup created: {backup_name}")
-    except Exception as e:
-        logger.warning(f"Auto-backup skipped: {str(e)}")
 
 
 @app.middleware("http")
@@ -114,8 +85,8 @@ def root():
 @app.get("/api/health")
 def health_check():
     try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        from supabase_client import supabase
+        supabase.table("admin_users").select("id").limit(1).execute()
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")

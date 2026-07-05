@@ -2,17 +2,11 @@ import os
 import uuid
 import re
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.orm import Session
-from database import get_db
-from models import MenuItem
-from schemas import MenuItemCreate, MenuItemOut
+from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
 from typing import List, Optional
 
 router = APIRouter()
-
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads", "menu")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 ALLOWED_IMAGE_MIME = {"image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -36,28 +30,30 @@ async def save_menu_image(file: Optional[UploadFile], item_name: str) -> str:
         raise HTTPException(status_code=400, detail="File too large (max 5MB)")
     if file.content_type and file.content_type not in ALLOWED_IMAGE_MIME:
         raise HTTPException(status_code=400, detail=f"Content type {file.content_type} not allowed")
+
     filename = f"{_sanitize_filename(item_name)}_{uuid.uuid4().hex[:8]}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    with open(filepath, "wb") as f:
-        f.write(content)
-    return f"/uploads/menu/{filename}"
+    supabase.storage.from_("menu-images").upload(filename, content, {"content-type": file.content_type})
+    public_url = supabase.storage.from_("menu-images").get_public_url(filename)
+    return public_url
 
 
-@router.get("/api/menu", response_model=dict)
-def get_menu(db: Session = Depends(get_db)):
-    items = db.query(MenuItem).filter(MenuItem.is_active == True).order_by(MenuItem.sort_order).all()
-    result = {}
+@router.get("/api/menu")
+def get_menu():
+    result = supabase.table("menu_items").select("*").eq("is_active", True).order("sort_order").execute()
+    items = result.data or []
+    menu = {}
     for item in items:
-        if item.category not in result:
-            result[item.category] = []
-        result[item.category].append(MenuItemOut.model_validate(item).model_dump())
-    return result
+        cat = item["category"]
+        if cat not in menu:
+            menu[cat] = []
+        menu[cat].append(item)
+    return menu
 
 
-@router.get("/api/menu/all", response_model=List[MenuItemOut])
-def get_all_menu(db: Session = Depends(get_db), _=Depends(get_current_admin)):
-    items = db.query(MenuItem).order_by(MenuItem.sort_order).all()
-    return [MenuItemOut.model_validate(i) for i in items]
+@router.get("/api/menu/all")
+def get_all_menu(_=Depends(get_current_admin)):
+    result = supabase.table("menu_items").select("*").order("sort_order").execute()
+    return result.data or []
 
 
 @router.post("/api/admin/menu")
@@ -69,20 +65,20 @@ async def create_menu(
     is_active: str = Form("true"),
     sort_order: str = Form("0"),
     image: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
     image_url = await save_menu_image(image, name) if image else ""
-    db_item = MenuItem(
-        name=name, category=category, description=description,
-        price=price, image_url=image_url,
-        is_active=is_active.lower() == "true",
-        sort_order=int(sort_order) if sort_order.isdigit() else 0,
-    )
-    db.add(db_item)
-    db.commit()
-    db.refresh(db_item)
-    return {"id": db_item.id}
+    data = {
+        "name": name,
+        "category": category,
+        "description": description,
+        "price": price,
+        "image_url": image_url,
+        "is_active": is_active.lower() == "true",
+        "sort_order": int(sort_order) if sort_order.isdigit() else 0,
+    }
+    result = supabase.table("menu_items").insert(data).execute()
+    return {"id": result.data[0]["id"]}
 
 
 @router.put("/api/admin/menu/{item_id}")
@@ -96,42 +92,34 @@ async def update_menu(
     sort_order: str = Form("0"),
     image_url: str = Form(""),
     image: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
-    db_item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
-    if not db_item:
+    existing = supabase.table("menu_items").select("*").eq("id", item_id).execute()
+    if not existing.data:
         raise HTTPException(status_code=404, detail="Menu item not found")
+
     if image and image.filename:
-        new_url = await save_menu_image(image, name or db_item.name)
+        new_url = await save_menu_image(image, name or existing.data[0]["name"])
         if new_url:
-            if db_item.image_url and db_item.image_url.startswith("/uploads/"):
-                old_path = os.path.join(os.path.dirname(__file__), "..", db_item.image_url.lstrip("/"))
-                if os.path.exists(old_path):
-                    try: os.remove(old_path)
-                    except OSError: pass
             image_url = new_url
-    db_item.name = name
-    db_item.category = category
-    db_item.description = description
-    db_item.price = price
-    db_item.image_url = image_url
-    db_item.is_active = is_active.lower() == "true"
-    db_item.sort_order = int(sort_order) if sort_order.isdigit() else 0
-    db.commit()
+
+    data = {
+        "name": name,
+        "category": category,
+        "description": description,
+        "price": price,
+        "image_url": image_url,
+        "is_active": is_active.lower() == "true",
+        "sort_order": int(sort_order) if sort_order.isdigit() else 0,
+    }
+    supabase.table("menu_items").update(data).eq("id", item_id).execute()
     return {"ok": True}
 
 
 @router.delete("/api/admin/menu/{item_id}")
-def delete_menu(item_id: int, db: Session = Depends(get_db), _=Depends(require_super_admin)):
-    db_item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
-    if not db_item:
+def delete_menu(item_id: int, _=Depends(require_super_admin)):
+    existing = supabase.table("menu_items").select("*").eq("id", item_id).execute()
+    if not existing.data:
         raise HTTPException(status_code=404, detail="Menu item not found")
-    if db_item.image_url and db_item.image_url.startswith("/uploads/"):
-        filepath = os.path.join(os.path.dirname(__file__), "..", db_item.image_url.lstrip("/"))
-        if os.path.exists(filepath):
-            try: os.remove(filepath)
-            except OSError: pass
-    db.delete(db_item)
-    db.commit()
+    supabase.table("menu_items").delete().eq("id", item_id).execute()
     return {"ok": True}

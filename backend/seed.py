@@ -2,46 +2,42 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
 
-from database import engine, Base, SessionLocal
-from models import AdminUser, MenuItem, Product, Job, Order
+from supabase_client import supabase
 from auth import hash_password
-from sqlalchemy import text
 from datetime import datetime, timedelta
 import random
 import json
 
-Base.metadata.create_all(bind=engine)
-
-db = SessionLocal()
-
-# Seed super admin only using environment variables
+# Seed super admin
 default_password = os.environ.get("ADMIN_DEFAULT_PASSWORD", "changeme")
-admins_to_seed = [
-    {"username": os.environ.get("ADMIN_USERNAME", "admin"), "password": default_password, "role": "super_admin"},
-]
+admin_username = os.environ.get("ADMIN_USERNAME", "admin")
 
-for a in admins_to_seed:
-    user = db.query(AdminUser).filter(AdminUser.username == a["username"]).first()
-    if not user:
-        db.add(AdminUser(username=a["username"], password_hash=hash_password(a["password"]), role=a["role"]))
-        db.commit()
-        print(f"Created {a['role']}: {a['username']}")
-    else:
-        # Always update password hash from env
-        user.password_hash = hash_password(a["password"])
-        if user.role != a["role"]:
-            user.role = a["role"]
-        db.commit()
-        print(f"Updated {a['username']} password and role from env")
+existing = supabase.table("admin_users").select("*").eq("username", admin_username).execute()
+if not existing.data:
+    supabase.table("admin_users").insert({
+        "username": admin_username,
+        "password_hash": hash_password(default_password),
+        "role": "super_admin",
+        "is_active": True,
+    }).execute()
+    print(f"Created super_admin: {admin_username}")
+else:
+    supabase.table("admin_users").update({
+        "password_hash": hash_password(default_password),
+        "role": "super_admin",
+    }).eq("username", admin_username).execute()
+    print(f"Updated {admin_username} password and role from env")
 
 # Seed sample orders if none exist
-if db.query(Order).count() == 0:
+order_count = supabase.table("orders").select("id", count="exact").execute().count or 0
+if order_count == 0:
     customer_names = ["Rahul", "Priya", "Amit", "Sneha", "Vikram", "Ananya", "Rohan", "Meera", "Karan", "Pooja"]
     menu_items = ["Masala Chai", "Samosa", "Paneer Tikka", "Biryani", "Dosa", "Idli Sambar", "Vada Pav", "Pav Bhaji", "Gulab Jamun", "Rasmalai"]
     statuses = ["pending", "preparing", "delivered", "cancelled"]
     payment_methods = ["cash", "upi", "card"]
-    
+
     now = datetime.now()
+    orders = []
     for i in range(30):
         days_ago = random.randint(0, 29)
         order_date = now - timedelta(days=days_ago, hours=random.randint(8, 20), minutes=random.randint(0, 59))
@@ -54,24 +50,23 @@ if db.query(Order).count() == 0:
             price = round(random.uniform(50, 300), 2)
             order_items.append({"name": item_name, "qty": qty, "price": price})
             total += qty * price
-        
+
         status = random.choice(statuses)
-        order = Order(
-            customer_name=random.choice(customer_names),
-            customer_email=f"{random.choice(customer_names).lower()}@example.com",
-            customer_phone=f"+91{random.randint(7000000000, 9999999999)}",
-            items=json.dumps(order_items),
-            total=round(total, 2),
-            status=status,
-            payment_method=random.choice(payment_methods),
-            payment_status="paid" if status in ["delivered", "cancelled"] else "unpaid",
-            created_at=order_date,
-        )
-        db.add(order)
-    db.commit()
+        orders.append({
+            "customer_name": random.choice(customer_names),
+            "customer_email": f"{random.choice(customer_names).lower()}@example.com",
+            "customer_phone": f"+91{random.randint(7000000000, 9999999999)}",
+            "items": json.dumps(order_items),
+            "total": round(total, 2),
+            "status": status,
+            "payment_method": random.choice(payment_methods),
+            "payment_status": "paid" if status in ["delivered", "cancelled"] else "unpaid",
+            "created_at": order_date.isoformat(),
+        })
+
+    supabase.table("orders").insert(orders).execute()
     print("Seeded 30 sample orders")
 else:
     print("Orders already exist")
 
-db.close()
 print("Seed complete!")

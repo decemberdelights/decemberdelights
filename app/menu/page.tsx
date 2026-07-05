@@ -212,7 +212,7 @@ export default function MenuPage() {
                       {item.image_url && (
                         <div className="menu-img-wrapper">
                           <Image
-                            src={`${API}${item.image_url}`}
+                            src={item.image_url?.startsWith("http") ? item.image_url : `${API}${item.image_url}`}
                             alt={item.name}
                             width={400}
                             height={300}
