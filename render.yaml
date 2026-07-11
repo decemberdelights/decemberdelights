@@ -4,7 +4,7 @@ services:
     name: december-delights-api
     runtime: python
     plan: free
-    buildCommand: pip install --only-binary pydantic-core -r backend/requirements.txt
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
     envVars:
       - key: ENV
@@ -16,15 +16,13 @@ services:
       - key: ADMIN_USERNAME
         value: admin
       - key: CORS_ORIGINS
-        value: https://december-delights.onrender.com
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: HOST
         value: 0.0.0.0
-      - key: PORT
-        value: 10000
     healthCheckPath: /api/health
     autoDeploy: true
 
@@ -37,7 +35,7 @@ services:
     startCommand: npm start
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: https://december-delights-api.onrender.com
+        sync: false
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
