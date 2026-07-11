@@ -59,7 +59,7 @@ export default function AboutSection() {
             </p>
           </div>
           <div className="about-image">
-            <Image src="/images/owners/owner.jpeg" alt="December Delights Owner" fill loading="lazy" sizes="45vw" style={{ objectFit: "cover", objectPosition: "center top" }} />
+            <img src="/images/owners/owner.jpeg" alt="December Delights Owner" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", position: "absolute", top: 0, left: 0 }} />
             <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(180deg, transparent 60%, rgba(9,75,61,0.15) 100%)" }} />
           </div>
         </div>

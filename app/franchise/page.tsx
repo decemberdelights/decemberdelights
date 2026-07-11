@@ -130,7 +130,6 @@ export default function FranchisePage() {
     <>
       {/* Hero */}
       <section data-bg="dark" style={{ minHeight: "100vh", background: "#0c1a14", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "url(/images/owners/IMG_6597.jpg)", backgroundSize: "cover", backgroundPosition: "center 40%", opacity: 0.4 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(12,26,20,0.95) 0%, rgba(12,26,20,0.7) 100%)" }} />
         <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "8rem 5% 6rem" }}>
           <style>{`
