@@ -20,6 +20,7 @@ export default function AdminSidebar({ tab, setTab, role, stats, onLogout }: Adm
     ["products", "Products", undefined],
     ["charts", "Charts", undefined],
     ["careers", "Careers", stats?.pending_careers],
+    ["contacts", "Contacts", stats?.pending_contacts],
     ["menu", "Menu Items", undefined],
     ["jobs", "Jobs", undefined],
   ];

@@ -131,6 +131,7 @@ export type Tab =
   | "overview"
   | "franchise"
   | "careers"
+  | "contacts"
   | "orders"
   | "charts"
   | "menu"

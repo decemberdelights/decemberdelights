@@ -129,6 +129,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [franchises, setFranchises] = useState<App[]>([]);
   const [careers, setCareers] = useState<App[]>([]);
+  const [contacts, setContacts] = useState<App[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -170,7 +171,7 @@ export default function AdminPage() {
     try {
       const [statsR, appsR] = await Promise.all([api("/api/admin/stats"), api("/api/admin/applications")]);
       if (statsR.ok) setStats(await statsR.json());
-      if (appsR.ok) { const d = await appsR.json(); setFranchises(d.franchise || []); setCareers(d.careers || []); }
+      if (appsR.ok) { const d = await appsR.json(); setFranchises(d.franchise || []); setCareers(d.careers || []); setContacts(d.contacts || []); }
     } catch { /* ignore */ }
   }, [api]);
 
@@ -276,8 +277,22 @@ export default function AdminPage() {
         <div className="main">
           {loading && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: "#3b6d11", zIndex: 9999 }} />}
 
+          {tab === "overview" && !stats && loading && (
+            <div style={{ textAlign: "center", padding: "4rem" }}>
+              <div style={{ width: 40, height: 40, border: "3px solid #e4e1d6", borderTopColor: "#173a30", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 1rem" }} />
+              <p style={{ color: "#6b6f6a", fontSize: 14 }}>Loading dashboard...</p>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          )}
+
           {tab === "overview" && stats && (
             <OverviewTab stats={stats} setTab={(t) => setTab(t as Tab)} todayOrders={orderStats?.today_orders || stats.today_orders || 0} monthOrders={orderStats?.month_orders || 0} />
+          )}
+
+          {tab === "overview" && !stats && !loading && (
+            <div style={{ textAlign: "center", padding: "4rem" }}>
+              <p style={{ color: "#a32d2d", fontSize: 14 }}>Failed to load dashboard data. <button onClick={() => setRefreshKey(k => k + 1)} style={{ color: "#173a30", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Retry</button></p>
+            </div>
           )}
 
           {tab === "franchise" && (
@@ -296,6 +311,15 @@ export default function AdminPage() {
               onReject={(id) => setRejectTarget({ type: "careers", id })}
               onDelete={(id, reason) => deleteItem("careers", id, reason)}
               onViewDocs={(item) => setViewingDocs(item)}
+            />
+          )}
+
+          {tab === "contacts" && (
+            <ApplicationsTab type="contacts" items={contacts}
+              onApprove={(id) => updateStatus("contacts", id, "approved", "")}
+              onReject={(id) => setRejectTarget({ type: "contacts", id })}
+              onDelete={(id, reason) => deleteItem("contacts", id, reason)}
+              onViewDocs={() => {}}
             />
           )}
 

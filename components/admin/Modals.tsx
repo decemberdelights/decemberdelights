@@ -53,12 +53,14 @@ export function ViewOrderModal({ order, onClose }: ViewOrderModalProps) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {(order.parsedItems || []).map((val, idx) => {
             const item = val as Record<string, unknown>;
+            const qty = Number(item.quantity || item.qty || 0);
+            const price = Number(item.price || 0);
             return (<div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f9f7f2", borderRadius: 8, border: "1px solid #e4e1d6" }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#1b2b25" }}>{String(item.name)}</div>
-                <div style={{ fontSize: 11, color: "#6b6f6a" }}>Qty: {String(item.qty)} x ₹{String(item.price)}</div>
+                <div style={{ fontSize: 11, color: "#6b6f6a" }}>Qty: {qty} x ₹{price}</div>
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#094b3d" }}>₹{((Number(item.qty) || 0) * (Number(item.price) || 0)).toFixed(2)}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#094b3d" }}>₹{(qty * price).toFixed(2)}</div>
             </div>);
           })}
         </div>
