@@ -85,47 +85,53 @@ def get_applications(_=Depends(get_current_admin)):
 
 
 @router.put("/api/admin/franchise/{app_id}")
-def update_franchise(app_id: int, data: dict, _=Depends(get_current_admin)):
+def update_franchise(app_id: int, data: dict, admin=Depends(get_current_admin)):
     if not validate_application_status(data.get("status", "")):
         raise HTTPException(status_code=400, detail="Invalid status")
     existing = supabase.table("franchise_applications").select("*").eq("id", app_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Application not found")
+    app = existing.data[0]
     update_data = {
         "status": data["status"],
         "admin_notes": sanitize_input(data.get("admin_notes", ""), 2000),
     }
     supabase.table("franchise_applications").update(update_data).eq("id", app_id).execute()
+    log_activity(admin["username"], data["status"], "franchise", app_id, f"Franchise application of {app.get('full_name', '')} → {data['status']}")
     return {"ok": True}
 
 
 @router.put("/api/admin/careers/{app_id}")
-def update_career(app_id: int, data: dict, _=Depends(get_current_admin)):
+def update_career(app_id: int, data: dict, admin=Depends(get_current_admin)):
     if not validate_application_status(data.get("status", "")):
         raise HTTPException(status_code=400, detail="Invalid status")
     existing = supabase.table("career_applications").select("*").eq("id", app_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Application not found")
+    app = existing.data[0]
     update_data = {
         "status": data["status"],
         "admin_notes": sanitize_input(data.get("admin_notes", ""), 2000),
     }
     supabase.table("career_applications").update(update_data).eq("id", app_id).execute()
+    log_activity(admin["username"], data["status"], "career", app_id, f"Career application of {app.get('full_name', '')} → {data['status']}")
     return {"ok": True}
 
 
 @router.put("/api/admin/contacts/{app_id}")
-def update_contact(app_id: int, data: dict, _=Depends(get_current_admin)):
+def update_contact(app_id: int, data: dict, admin=Depends(get_current_admin)):
     if not validate_application_status(data.get("status", "")):
         raise HTTPException(status_code=400, detail="Invalid status")
     existing = supabase.table("contact_messages").select("*").eq("id", app_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Message not found")
+    msg = existing.data[0]
     update_data = {
         "status": data["status"],
         "admin_notes": sanitize_input(data.get("admin_notes", ""), 2000),
     }
     supabase.table("contact_messages").update(update_data).eq("id", app_id).execute()
+    log_activity(admin["username"], data["status"], "contact", app_id, f"Contact message from {msg.get('name', '')} → {data['status']}")
     return {"ok": True}
 
 

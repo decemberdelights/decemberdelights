@@ -250,6 +250,10 @@ def update_order_status(order_id: int, data: dict, _=Depends(get_current_admin))
 
     supabase.table("orders").update(update_data).eq("id", order_id).execute()
     updated = supabase.table("orders").select("*").eq("id", order_id).execute()
+    try:
+        log_activity(admin["username"], f"status:{status_val}", "order", order_id, f"Order #{order_id} ({order.get('customer_name', '')}) → {status_val}")
+    except Exception:
+        pass
     return updated.data[0]
 
 

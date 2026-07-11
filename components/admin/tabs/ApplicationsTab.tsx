@@ -26,92 +26,88 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
     contacts: "CONTACT MESSAGES",
   };
 
+  const statusColors: Record<string, string> = {
+    pending: "#854f0b", submitted: "#185fa5", approved: "#3b6d11",
+    rejected: "#a32d2d", under_process: "#2563a8",
+  };
+  const statusBgs: Record<string, string> = {
+    pending: "#FAEEDA", submitted: "#dce8f5", approved: "#EAF3DE",
+    rejected: "#FCEBEB", under_process: "#e8f0f8",
+  };
+
   const loadImage = async (url: string, key: string) => {
     if (imgBlobs[key]) return;
     try {
       const r = await fetch(`${API}${url}`, { credentials: "include" });
       if (!r.ok) return;
       const blob = await r.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      setImgBlobs(prev => ({ ...prev, [key]: blobUrl }));
+      setImgBlobs(prev => ({ ...prev, [key]: URL.createObjectURL(blob) }));
     } catch { /* ignore */ }
   };
 
-  const openFile = (url: string) => {
-    window.open(`${API}${url}`, "_blank");
-  };
+  const openFile = (url: string) => { window.open(`${API}${url}`, "_blank"); };
 
   const docFields: [string, string][] = [
-    ["aadhaar", "Aadhaar Card"],
-    ["pan", "PAN Card"],
-    ["bank_statement", "Bank Statement"],
-    ["id_proof", "ID Proof"],
-    ["address_proof", "Address Proof"],
-    ["other_docs", "Other Documents"],
+    ["aadhaar", "Aadhaar Card"], ["pan", "PAN Card"], ["bank_statement", "Bank Statement"],
+    ["id_proof", "ID Proof"], ["address_proof", "Address Proof"], ["other_docs", "Other Documents"],
   ];
 
-  const renderFranchiseDocs = (item: App) => {
-    const hasDocs = docFields.some(([key]) => (item as unknown as Record<string, unknown>)[key]);
-    if (!hasDocs) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 14 }}>No documents uploaded.</div>;
-
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: 16 }}>
-        {docFields.map(([key, label]) => {
-          const url = (item as unknown as Record<string, unknown>)[key] as string;
-          if (!url) return null;
-          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-          const isPdf = /\.pdf$/i.test(url);
-          const imgKey = `${item.id}-${key}`;
-          if (isImage && !imgBlobs[imgKey]) loadImage(url, imgKey);
-          const blobUrl = imgBlobs[imgKey];
-          const fullUrl = `${API}${url}`;
-          return (
-            <div key={key} style={{ border: "1px solid #e4e1d6", borderRadius: 10, overflow: "hidden" }}>
-              <div style={{ padding: "10px 16px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 14, fontWeight: 600, color: "#1b2b25", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span>{label}</span>
-                <button onClick={() => openFile(url)} style={{ fontSize: 13, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>Open</button>
+  const renderDocs = (item: App, isFranchise: boolean) => {
+    if (isFranchise) {
+      const docs = docFields.filter(([key]) => (item as unknown as Record<string, unknown>)[key]);
+      if (docs.length === 0) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 13 }}>No documents uploaded.</div>;
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 16 }}>
+          {docs.map(([key, label]) => {
+            const url = (item as unknown as Record<string, unknown>)[key] as string;
+            if (!url) return null;
+            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+            const isPdf = /\.pdf$/i.test(url);
+            const imgKey = `${item.id}-${key}`;
+            if (isImage && !imgBlobs[imgKey]) loadImage(url, imgKey);
+            return (
+              <div key={key} style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
+                <div style={{ padding: "8px 14px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 13, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>{label}</span>
+                  <button onClick={() => openFile(url)} style={{ fontSize: 12, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>Open</button>
+                </div>
+                <div style={{ padding: 10, background: "#fff" }}>
+                  {isImage && imgBlobs[imgKey] ? (
+                    <img src={imgBlobs[imgKey]} alt={label} style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
+                  ) : isPdf ? (
+                    <embed src={`${API}${url}`} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
+                  ) : (
+                    <div style={{ padding: 12, textAlign: "center", color: "#6b6f6a", fontSize: 13, cursor: "pointer" }} onClick={() => openFile(url)}>
+                      {url.split("/").pop()} — Click to view
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ padding: 12, background: "#fff" }}>
-                {isImage && blobUrl ? (
-                  <img src={blobUrl} alt={label} style={{ width: "100%", maxHeight: 280, objectFit: "contain", borderRadius: 8, background: "#f4f1ea" }} />
-                ) : isPdf ? (
-                  <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 8 }} />
-                ) : (
-                  <div style={{ padding: 20, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer" }} onClick={() => openFile(url)}>
-                    {url.split("/").pop()} — Click Open to view
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderCareerDocs = (item: App) => {
-    if (!item.resume_url) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 14 }}>No resume uploaded.</div>;
+            );
+          })}
+        </div>
+      );
+    }
+    if (!item.resume_url) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 13 }}>No resume uploaded.</div>;
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.resume_url);
     const isPdf = /\.pdf$/i.test(item.resume_url);
     const imgKey = `${item.id}-resume`;
     if (isImage && !imgBlobs[imgKey]) loadImage(item.resume_url, imgKey);
-    const blobUrl = imgBlobs[imgKey];
-    const fullUrl = `${API}${item.resume_url}`;
     return (
       <div style={{ padding: 16 }}>
-        <div style={{ border: "1px solid #e4e1d6", borderRadius: 10, overflow: "hidden" }}>
-          <div style={{ padding: "10px 16px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 14, fontWeight: 600, color: "#1b2b25", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ padding: "8px 14px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 13, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>Resume</span>
-            <button onClick={() => openFile(item.resume_url!)} style={{ fontSize: 13, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>Open</button>
+            <button onClick={() => openFile(item.resume_url!)} style={{ fontSize: 12, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>Open</button>
           </div>
-          <div style={{ padding: 12, background: "#fff" }}>
-            {isImage && blobUrl ? (
-              <img src={blobUrl} alt="Resume" style={{ width: "100%", maxHeight: 280, objectFit: "contain", borderRadius: 8, background: "#f4f1ea" }} />
+          <div style={{ padding: 10, background: "#fff" }}>
+            {isImage && imgBlobs[imgKey] ? (
+              <img src={imgBlobs[imgKey]} alt="Resume" style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
             ) : isPdf ? (
-              <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 8 }} />
+              <embed src={`${API}${item.resume_url}`} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
             ) : (
-              <div style={{ padding: 20, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer" }} onClick={() => openFile(item.resume_url!)}>
-                {item.resume_url.split("/").pop()} — Click Open to view
+              <div style={{ padding: 12, textAlign: "center", color: "#6b6f6a", fontSize: 13, cursor: "pointer" }} onClick={() => openFile(item.resume_url!)}>
+                {item.resume_url.split("/").pop()} — Click to view
               </div>
             )}
           </div>
@@ -120,171 +116,164 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
     );
   };
 
-  const renderFranchiseRow = (item: App) => {
+  const renderStatusBadge = (status: string) => (
+    <span style={{ display: "inline-block", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: statusBgs[status] || "#f4f1ea", color: statusColors[status] || "#6b6f6a" }}>
+      {status === "under_process" ? "Under Process" : status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+
+  const renderFranchiseCard = (item: App) => {
     const showActions = item.status === "pending" || item.status === "submitted";
     const showProcessActions = item.status === "under_process";
     const isExpanded = expandedId === item.id;
     const hasDocs = docFields.some(([key]) => (item as unknown as Record<string, unknown>)[key]);
 
     return (
-      <Fragment key={item.id}>
-        <tr style={{ cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
-          <td style={{ fontSize: 14 }}>#{item.id}</td>
-          <td style={{ fontWeight: 600, fontSize: 14 }}>{item.full_name}</td>
-          <td style={{ fontSize: 14 }}>{item.email}</td>
-          <td style={{ fontSize: 14 }}>{item.phone}</td>
-          <td style={{ fontSize: 14 }}>{item.preferred_location || "—"}</td>
-          <td>
-            <span className={`status ${item.status}`} style={{ fontSize: 12, padding: "4px 12px" }}>{item.status === "under_process" ? "under process" : item.status}</span>
-            {item.admin_notes && <div style={{ fontSize: 12, color: "#6b6f6a", marginTop: 3 }}>Note: {item.admin_notes}</div>}
-          </td>
-          <td>
-            <span style={{ fontSize: 13, color: hasDocs ? "#185fa5" : "#6b6f6a", fontWeight: hasDocs ? 600 : 400, cursor: hasDocs ? "pointer" : "default" }}>
-              {hasDocs ? (isExpanded ? "Hide Docs ▲" : "View Docs ▼") : "No docs"}
-            </span>
-          </td>
-          <td onClick={e => e.stopPropagation()}>
-            <div className="row-actions">
+      <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 12, overflow: "hidden", transition: "box-shadow 0.2s" }}>
+        <div style={{ padding: "16px 20px", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: "#6b6f6a", fontWeight: 500 }}>#{item.id}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "#1b2b25" }}>{item.full_name}</span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "#6b6f6a" }}>
+                <span>{item.email}</span>
+                {item.phone && <span>{item.phone}</span>}
+                {item.preferred_location && <span style={{ color: "#094b3d" }}>{item.preferred_location}</span>}
+              </div>
+              {item.admin_notes && <div style={{ fontSize: 12, color: "#6b6f6a", marginTop: 4, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              {renderStatusBadge(item.status)}
+              <span style={{ fontSize: 12, color: hasDocs ? "#185fa5" : "#6b6f6a", fontWeight: hasDocs ? 600 : 400 }}>
+                {hasDocs ? (isExpanded ? "Hide Docs" : "View Docs") : "No docs"}
+              </span>
+            </div>
+          </div>
+          {(showActions || showProcessActions) && (
+            <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }} onClick={e => e.stopPropagation()}>
               {showActions && (
                 <>
-                  <button className="btn process" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => onUnderProcess ? onUnderProcess(item.id) : onApprove(item.id)}>Under Process</button>
-                  <button className="btn approve" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
-                  <button className="btn danger" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
+                  {onUnderProcess && <button className="btn process" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onUnderProcess(item.id)}>Under Process</button>}
+                  <button className="btn approve" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
+                  <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
                 </>
               )}
               {showProcessActions && (
                 <>
-                  <button className="btn approve" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
-                  <button className="btn danger" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
+                  <button className="btn approve" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
+                  <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
                 </>
               )}
-              <button className="btn danger" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => { setDeleteTarget({ id: item.id, name: item.full_name || "this application" }); setDeleteReason(""); }}>Delete</button>
+              <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => { setDeleteTarget({ id: item.id, name: item.full_name || "this" }); setDeleteReason(""); }}>Delete</button>
             </div>
-          </td>
-        </tr>
+          )}
+        </div>
         {isExpanded && (
-          <tr>
-            <td colSpan={8} style={{ padding: 0, background: "#f4f1ea", borderBottom: "2px solid #e4e1d6" }}>
-              {renderFranchiseDocs(item)}
-            </td>
-          </tr>
+          <div style={{ borderTop: "1px solid #e4e1d6", background: "#faf8f5" }}>
+            {renderDocs(item, true)}
+          </div>
         )}
-      </Fragment>
+      </div>
     );
   };
 
-  const renderCareerRow = (item: App) => {
+  const renderCareerCard = (item: App) => {
     const showActions = item.status === "pending" || item.status === "submitted";
     const isExpanded = expandedId === item.id;
 
     return (
-      <Fragment key={item.id}>
-        <tr style={{ cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
-          <td style={{ fontSize: 14 }}>#{item.id}</td>
-          <td style={{ fontWeight: 600, fontSize: 14 }}>{item.full_name}</td>
-          <td style={{ fontSize: 14 }}>{item.email}</td>
-          <td style={{ fontSize: 14 }}>{item.phone}</td>
-          <td style={{ fontSize: 14 }}>{item.position || "—"}</td>
-          <td>
-            <span className={`status ${item.status}`} style={{ fontSize: 12, padding: "4px 12px" }}>{item.status}</span>
-            {item.admin_notes && <div style={{ fontSize: 12, color: "#6b6f6a", marginTop: 3 }}>Note: {item.admin_notes}</div>}
-          </td>
-          <td>
-            <span style={{ fontSize: 13, color: item.resume_url ? "#185fa5" : "#6b6f6a", fontWeight: item.resume_url ? 600 : 400, cursor: item.resume_url ? "pointer" : "default" }}>
-              {item.resume_url ? (isExpanded ? "Hide Resume ▲" : "View Resume ▼") : "No resume"}
-            </span>
-          </td>
-          <td onClick={e => e.stopPropagation()}>
-            <div className="row-actions">
-              {showActions && (
-                <>
-                  <button className="btn approve" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
-                  <button className="btn danger" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
-                </>
-              )}
-              <button className="btn danger" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => { setDeleteTarget({ id: item.id, name: item.full_name || "this application" }); setDeleteReason(""); }}>Delete</button>
+      <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 12, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: "#6b6f6a", fontWeight: 500 }}>#{item.id}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "#1b2b25" }}>{item.full_name}</span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "#6b6f6a" }}>
+                <span>{item.email}</span>
+                {item.phone && <span>{item.phone}</span>}
+                {item.position && <span style={{ color: "#534ab7", fontWeight: 500 }}>{item.position}</span>}
+              </div>
+              {item.admin_notes && <div style={{ fontSize: 12, color: "#6b6f6a", marginTop: 4, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
             </div>
-          </td>
-        </tr>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              {renderStatusBadge(item.status)}
+              <span style={{ fontSize: 12, color: item.resume_url ? "#185fa5" : "#6b6f6a", fontWeight: item.resume_url ? 600 : 400 }}>
+                {item.resume_url ? (isExpanded ? "Hide Resume" : "View Resume") : "No resume"}
+              </span>
+            </div>
+          </div>
+          {showActions && (
+            <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }} onClick={e => e.stopPropagation()}>
+              <button className="btn approve" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
+              <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
+              <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => { setDeleteTarget({ id: item.id, name: item.full_name || "this" }); setDeleteReason(""); }}>Delete</button>
+            </div>
+          )}
+        </div>
         {isExpanded && (
-          <tr>
-            <td colSpan={8} style={{ padding: 0, background: "#f4f1ea", borderBottom: "2px solid #e4e1d6" }}>
-              {renderCareerDocs(item)}
-            </td>
-          </tr>
+          <div style={{ borderTop: "1px solid #e4e1d6", background: "#faf8f5" }}>
+            {renderDocs(item, false)}
+          </div>
         )}
-      </Fragment>
+      </div>
     );
   };
 
-  const renderContactRow = (item: App) => {
+  const renderContactCard = (item: App) => {
     const showActions = item.status === "pending" || item.status === "submitted";
     return (
-      <tr key={item.id}>
-        <td style={{ fontSize: 14 }}>#{item.id}</td>
-        <td style={{ fontWeight: 600, fontSize: 14 }}>{item.name}</td>
-        <td style={{ fontSize: 14 }}>{item.email}</td>
-        <td style={{ fontSize: 14 }}>{item.phone || "—"}</td>
-        <td style={{ fontSize: 14 }}>{item.subject || "—"}</td>
-        <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14 }}>{item.message || "—"}</td>
-        <td>
-          <span className={`status ${item.status}`} style={{ fontSize: 12, padding: "4px 12px" }}>{item.status}</span>
-          {item.admin_notes && <div style={{ fontSize: 12, color: "#6b6f6a", marginTop: 3 }}>Note: {item.admin_notes}</div>}
-        </td>
-        <td>
-          <div className="row-actions">
-            {showActions && (
-              <>
-                <button className="btn approve" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
-                <button className="btn danger" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
-              </>
-            )}
+      <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 12, padding: "16px 20px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <span style={{ fontSize: 11, color: "#6b6f6a", fontWeight: 500 }}>#{item.id}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: "#1b2b25" }}>{item.name}</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "#6b6f6a", marginBottom: 6 }}>
+              <span>{item.email}</span>
+              {item.phone && <span>{item.phone}</span>}
+              {item.subject && <span style={{ color: "#534ab7", fontWeight: 500 }}>{item.subject}</span>}
+            </div>
+            {item.message && <p style={{ fontSize: 13, color: "#3d4a3e", lineHeight: 1.6, margin: 0 }}>{item.message}</p>}
+            {item.admin_notes && <div style={{ fontSize: 12, color: "#6b6f6a", marginTop: 6, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
           </div>
-        </td>
-      </tr>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            {renderStatusBadge(item.status)}
+          </div>
+        </div>
+        {showActions && (
+          <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
+            <button className="btn approve" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
+            <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
+          </div>
+        )}
+      </div>
     );
-  };
-
-  const columns = {
-    franchise: ["ID", "Name", "Email", "Phone", "Location", "Status", "Documents", "Actions"],
-    careers: ["ID", "Name", "Email", "Phone", "Position", "Status", "Resume", "Actions"],
-    contacts: ["ID", "Name", "Email", "Phone", "Subject", "Message", "Status", "Actions"],
   };
 
   return (
     <>
-      <style>{`
-        .app-table th { font-size: 13px; padding: 12px 10px; }
-        .app-table td { padding: 14px 10px; }
-        .app-table tr { border-bottom: 1px solid var(--border); }
-      `}</style>
       <div className="topbar">
         <h2>{titles[type]}</h2>
         <div className="role-pill">{items.length} total</div>
       </div>
-      <div className="panel">
-        <div className="table-wrap">
-        <table className="app-table">
-          <thead>
-            <tr>{columns[type].map(col => <th key={col}>{col}</th>)}</tr>
-          </thead>
-          <tbody>
-            {items.map(item =>
-              type === "franchise" ? renderFranchiseRow(item)
-              : type === "careers" ? renderCareerRow(item)
-              : renderContactRow(item)
-            )}
-          </tbody>
-        </table>
-        </div>
+
+      <div>
         {items.length === 0 && <div className="empty">No {type === "franchise" ? "franchise applications" : type === "careers" ? "career applications" : "contact messages"}.</div>}
+        {type === "franchise" && items.map(item => renderFranchiseCard(item))}
+        {type === "careers" && items.map(item => renderCareerCard(item))}
+        {type === "contacts" && items.map(item => renderContactCard(item))}
       </div>
 
       {deleteTarget && (
         <div className="overlay show" onClick={e => { if (e.target === e.currentTarget) setDeleteTarget(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h4>Delete Application</h4>
-            <p>Are you sure you want to delete <strong>{deleteTarget.name}</strong> (ID: #{deleteTarget.id})? This action cannot be undone and all uploaded documents will be permanently removed.</p>
+            <p>Are you sure you want to delete <strong>{deleteTarget.name}</strong> (ID: #{deleteTarget.id})? This cannot be undone.</p>
             <textarea
               placeholder="Reason for deletion (required)..."
               value={deleteReason}
@@ -293,11 +282,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
             />
             <div className="modal-actions">
               <button className="btn" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button
-                className="btn danger"
-                disabled={!deleteReason.trim()}
-                onClick={() => { onDelete(deleteTarget.id, deleteReason.trim()); setDeleteTarget(null); setDeleteReason(""); }}
-              >Delete Permanently</button>
+              <button className="btn danger" disabled={!deleteReason.trim()} onClick={() => { onDelete(deleteTarget.id, deleteReason.trim()); setDeleteTarget(null); setDeleteReason(""); }}>Delete</button>
             </div>
           </div>
         </div>
