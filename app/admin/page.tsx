@@ -18,7 +18,6 @@ import EditModal from "@/components/admin/EditModal";
 import NotificationSidebar from "@/components/admin/NotificationSidebar";
 import { RejectModal, ViewOrderModal, CancelModal, ViewDocsModal } from "@/components/admin/Modals";
 import { OverviewSkeleton, OrdersSkeleton, ChartsSkeleton, AdminTableSkeleton } from "@/components/Skeleton";
-import { MOCK_STATS, MOCK_FRANCHISES, MOCK_CAREERS, MOCK_CONTACTS, MOCK_MENU, MOCK_PRODUCTS, MOCK_ORDERS, MOCK_ORDER_STATS, MOCK_JOBS } from "@/components/admin/mockData";
 
 const CSS = `
 :root{--bg:#f4f1ea;--side:#173a30;--side-hover:#214a3d;--side-active:#2c5c4a;--card:#fff;--dark:#1b2b25;--muted:#6b6f6a;--border:#e4e1d6;--green:#3b6d11;--blue:#185fa5;--purple:#534ab7;--amber:#854f0b;--red:#a32d2d;--teal:#0f6e56;}
@@ -108,7 +107,6 @@ tr:last-child td{border-bottom:none;}
 .form-group textarea{min-height:60px;resize:vertical;}
 .tab-title{font-size:15px;font-weight:700;margin-bottom:12px;}
 .empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
-.mock-banner{background:#FAEEDA;color:#854f0b;font-size:12px;text-align:center;padding:8px;border-radius:8px;margin-bottom:16px;font-weight:500;}
 .admin-hamburger{display:none;position:fixed;top:12px;left:12px;z-index:1001;background:var(--side);color:#fff;border:none;border-radius:8px;padding:10px 12px;cursor:pointer;font-size:18px;min-height:44px;min-width:44px;align-items:center;justify-content:center;}
 .admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:999;}
 @media(max-width:768px){
@@ -128,7 +126,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [role, setRole] = useState("");
   const [tab, setTab] = useState<Tab>("overview");
-  const [useMock, setUseMock] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [franchises, setFranchises] = useState<App[]>([]);
@@ -148,7 +146,6 @@ export default function AdminPage() {
   const [viewingDocs, setViewingDocs] = useState<App | null>(null);
   const [viewingOrder, setViewingOrder] = useState<(Order & { parsedItems: unknown[] }) | null>(null);
   const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -217,25 +214,12 @@ export default function AdminPage() {
           const ordersR = await api("/api/admin/orders");
           if (ordersR.ok) setOrders(await ordersR.json());
         }
-      } catch {
-        if (!useMock) {
-          setStats(MOCK_STATS);
-          setFranchises(MOCK_FRANCHISES);
-          setCareers(MOCK_CAREERS);
-          setContacts(MOCK_CONTACTS);
-          setMenuItems(MOCK_MENU);
-          setProducts(MOCK_PRODUCTS);
-          setOrders(MOCK_ORDERS);
-          setOrderStats(MOCK_ORDER_STATS);
-          setJobs(MOCK_JOBS);
-          setUseMock(true);
-        }
-      }
+      } catch { /* ignore */ }
       if (!cancelled) setLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [authed, tab, api, role, loadAll, refreshKey, useMock]);
+  }, [authed, tab, api, role, loadAll, refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
@@ -339,7 +323,6 @@ export default function AdminPage() {
         </div>
         <div className="main">
           {loading && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: "#3b6d11", zIndex: 9999 }} />}
-          {useMock && <div className="mock-banner">Using simulated data — backend unreachable. Data is for testing only.</div>}
           {renderTab()}
         </div>
 
