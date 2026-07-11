@@ -2,7 +2,6 @@
 
 import { useState, Fragment } from "react";
 import { App } from "../types";
-import { API } from "@/lib/api";
 
 interface ApplicationsTabProps {
   type: "franchise" | "careers" | "contacts";
@@ -12,6 +11,13 @@ interface ApplicationsTabProps {
   onReject: (id: number) => void;
   onDelete: (id: number, reason: string) => void;
   onViewDocs: (item: App) => void;
+}
+
+function docUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  const API = process.env.NEXT_PUBLIC_API_URL || "https://december-delights-api.onrender.com";
+  return `${API}${url}`;
 }
 
 export default function ApplicationsTab({ type, items, onApprove, onUnderProcess, onReject, onDelete }: ApplicationsTabProps) {
@@ -37,15 +43,35 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
 
   const loadImage = async (url: string, key: string) => {
     if (imgBlobs[key]) return;
+    const fullUrl = docUrl(url);
+    if (!fullUrl) return;
     try {
-      const r = await fetch(`${API}${url}`, { credentials: "include" });
+      const r = await fetch(fullUrl);
       if (!r.ok) return;
       const blob = await r.blob();
       setImgBlobs(prev => ({ ...prev, [key]: URL.createObjectURL(blob) }));
     } catch { /* ignore */ }
   };
 
-  const openFile = (url: string) => { window.open(`${API}${url}`, "_blank"); };
+  const openFile = (url: string) => { window.open(docUrl(url), "_blank"); };
+
+  const downloadFile = async (url: string, filename: string) => {
+    const fullUrl = docUrl(url);
+    if (!fullUrl) return;
+    try {
+      const r = await fetch(fullUrl);
+      if (!r.ok) return;
+      const blob = await r.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename || url.split("/").pop() || "document";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch { /* ignore */ }
+  };
 
   const docFields: [string, string][] = [
     ["aadhaar", "Aadhaar Card"], ["pan", "PAN Card"], ["bank_statement", "Bank Statement"],
@@ -65,20 +91,25 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
             const isPdf = /\.pdf$/i.test(url);
             const imgKey = `${item.id}-${key}`;
             if (isImage && !imgBlobs[imgKey]) loadImage(url, imgKey);
+            const fullUrl = docUrl(url);
+            const fileName = url.split("/").pop() || `${label}.pdf`;
             return (
               <div key={key} style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
                 <div style={{ padding: "8px 14px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 13, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span>{label}</span>
-                  <button onClick={() => openFile(url)} style={{ fontSize: 12, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>Open</button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => openFile(url)} style={{ fontSize: 12, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
+                    <button onClick={() => downloadFile(url, fileName)} style={{ fontSize: 12, color: "#fff", fontWeight: 600, background: "#173a30", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>Download</button>
+                  </div>
                 </div>
                 <div style={{ padding: 10, background: "#fff" }}>
                   {isImage && imgBlobs[imgKey] ? (
                     <img src={imgBlobs[imgKey]} alt={label} style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
-                  ) : isPdf ? (
-                    <embed src={`${API}${url}`} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
+                  ) : isPdf && fullUrl ? (
+                    <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
                   ) : (
                     <div style={{ padding: 12, textAlign: "center", color: "#6b6f6a", fontSize: 13, cursor: "pointer" }} onClick={() => openFile(url)}>
-                      {url.split("/").pop()} — Click to view
+                      {fileName} — Click View to open
                     </div>
                   )}
                 </div>
@@ -88,26 +119,32 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
         </div>
       );
     }
+
     if (!item.resume_url) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 13 }}>No resume uploaded.</div>;
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.resume_url);
     const isPdf = /\.pdf$/i.test(item.resume_url);
     const imgKey = `${item.id}-resume`;
     if (isImage && !imgBlobs[imgKey]) loadImage(item.resume_url, imgKey);
+    const fullUrl = docUrl(item.resume_url);
+    const fileName = item.resume_url.split("/").pop() || "resume.pdf";
     return (
       <div style={{ padding: 16 }}>
         <div style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
           <div style={{ padding: "8px 14px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 13, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>Resume</span>
-            <button onClick={() => openFile(item.resume_url!)} style={{ fontSize: 12, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>Open</button>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => openFile(item.resume_url!)} style={{ fontSize: 12, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
+              <button onClick={() => downloadFile(item.resume_url!, fileName)} style={{ fontSize: 12, color: "#fff", fontWeight: 600, background: "#173a30", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>Download</button>
+            </div>
           </div>
           <div style={{ padding: 10, background: "#fff" }}>
             {isImage && imgBlobs[imgKey] ? (
               <img src={imgBlobs[imgKey]} alt="Resume" style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
-            ) : isPdf ? (
-              <embed src={`${API}${item.resume_url}`} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
+            ) : isPdf && fullUrl ? (
+              <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
             ) : (
               <div style={{ padding: 12, textAlign: "center", color: "#6b6f6a", fontSize: 13, cursor: "pointer" }} onClick={() => openFile(item.resume_url!)}>
-                {item.resume_url.split("/").pop()} — Click to view
+                {fileName} — Click View to open
               </div>
             )}
           </div>
