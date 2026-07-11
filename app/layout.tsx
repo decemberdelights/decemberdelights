@@ -59,6 +59,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preload" as="image" href="/logo-icon.png" />
+        <link rel="preload" as="image" href="/hero-poster.jpg" />
+        <link rel="modulepreload" as="script" href="/_next/static/chunks/polyfills-78c92fac7aa8fdd8.js" />
       </head>
       <body className={cn(cormorant.variable, montserrat.variable, outfit.variable, bebasNeue.variable, "font-sans")} style={{ margin: 0, padding: 0 }}>
         <LoadingScreen />

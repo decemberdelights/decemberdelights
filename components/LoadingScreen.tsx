@@ -8,8 +8,8 @@ export default function LoadingScreen() {
   const [fade, setFade] = useState(false);
 
   useEffect(() => {
-    const timer1 = setTimeout(() => setFade(true), 500);
-    const timer2 = setTimeout(() => setShow(false), 800);
+    const timer1 = setTimeout(() => setFade(true), 300);
+    const timer2 = setTimeout(() => setShow(false), 600);
     return () => { clearTimeout(timer1); clearTimeout(timer2); };
   }, []);
 
@@ -37,6 +37,7 @@ export default function LoadingScreen() {
         alt="December Delights"
         width={120}
         height={120}
+        priority
         style={{
           width: "min(120px, 30vw)",
           height: "auto",

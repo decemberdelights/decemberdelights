@@ -241,6 +241,7 @@ export default function Navbar() {
               alt="December Delights"
               width={30}
               height={30}
+              priority
               style={{ height: "30px", width: "30px" }}
             />
           </Link>
@@ -260,6 +261,7 @@ export default function Navbar() {
             alt="December Delights"
             width={28}
             height={28}
+            priority
             style={{
               height: "28px", width: "28px",
               display: "none",

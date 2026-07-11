@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function HeroSection() {
   const bgRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoReady, setVideoReady] = useState(false);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onCanPlay = () => setVideoReady(true);
+    v.addEventListener("canplaythrough", onCanPlay, { once: true });
+    return () => v.removeEventListener("canplaythrough", onCanPlay);
+  }, []);
 
   useEffect(() => {
     let ticking = false;
@@ -34,20 +43,38 @@ export default function HeroSection() {
     <>
       <div data-bg="dark" style={{ height: "100vh", position: "absolute", top: 0, left: 0, width: "100%", contain: "strict" }} />
       <div data-bg="dark" ref={bgRef} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100vh", zIndex: 1, overflow: "hidden", contain: "strict" }}>
+        {/* Poster image shows instantly while video loads */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            backgroundImage: "url(/hero-poster.jpg)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            transition: "opacity 0.8s ease",
+            opacity: videoReady ? 0 : 1,
+            zIndex: 1,
+          }}
+        />
         <video
           ref={videoRef}
           autoPlay
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           style={{
+            position: "absolute",
+            inset: 0,
             width: "100%",
             height: "100%",
             objectFit: "cover",
             objectPosition: "center center",
             willChange: "transform",
             transform: "translateZ(0)",
+            zIndex: 2,
           }}
         >
           <source src="/DDhero.mp4" type="video/mp4" />

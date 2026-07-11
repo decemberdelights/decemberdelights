@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useEffect, VideoHTMLAttributes } from "react";
-import Image from "next/image";
 
 interface LazyVideoProps extends VideoHTMLAttributes<HTMLVideoElement> {
   src: string;
@@ -25,7 +24,7 @@ export default function LazyVideo({ src, poster, style, className, ...props }: L
           observer.disconnect();
         }
       },
-      { rootMargin: "400px" }
+      { rootMargin: "600px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -39,21 +38,20 @@ export default function LazyVideo({ src, poster, style, className, ...props }: L
   }, [shouldLoad, src]);
 
   return (
-    <div ref={containerRef} className={className} style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div ref={containerRef} className={className} style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", ...style }}>
       {poster && !isLoaded && (
-        <Image
-          src={poster}
-          alt=""
-          fill
+        <div
           style={{
             position: "absolute",
             inset: 0,
             width: "100%",
             height: "100%",
-            objectFit: "cover",
-            zIndex: 1,
-            transition: "opacity 0.5s ease",
+            backgroundImage: `url(${poster})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            transition: "opacity 0.6s ease",
             opacity: isLoaded ? 0 : 1,
+            zIndex: 1,
           }}
         />
       )}
@@ -63,7 +61,7 @@ export default function LazyVideo({ src, poster, style, className, ...props }: L
         muted
         loop
         playsInline
-        preload="none"
+        preload={shouldLoad ? "auto" : "none"}
         onLoadedData={() => setIsLoaded(true)}
         style={{
           width: "100%",

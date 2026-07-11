@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import TermsModal from "@/components/terms-modal";
+import LazyVideo from "@/components/LazyVideo";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
 import { User, Mail, Phone, Briefcase, MapPin, FileText, ArrowRight, Check, Upload } from "@/components/icons";
@@ -171,12 +172,9 @@ export default function FranchisePage() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <video
+            <LazyVideo
               src="/espresso.mp4"
-              autoPlay
-              loop
-              muted
-              playsInline
+              poster="/espresso-poster.jpg"
               style={{ width: "100%", maxWidth: "800px", borderRadius: "20px", objectFit: "cover", transform: "scale(1.1)" }}
             />
           </div>

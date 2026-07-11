@@ -82,7 +82,7 @@ export default function ShopSection() {
           </div>
         ) : (
           <div className="shop-grid">
-            {products.map((product) => (
+            {products.map((product, idx) => (
               <Link key={product.id} href="/shop" style={{ textDecoration: "none", color: "inherit" }}>
                 <div style={{ background: "#fff", borderRadius: "16px", overflow: "hidden", border: "1px solid rgba(0,0,0,0.06)", transition: "transform 0.4s cubic-bezier(0.22,1,0.36,1), box-shadow 0.4s ease", cursor: "pointer" }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 20px 50px rgba(0,0,0,0.1)"; }}
@@ -90,7 +90,15 @@ export default function ShopSection() {
                 >
                   <div style={{ position: "relative", height: "260px", overflow: "hidden" }}>
                     {product.image_url ? (
-                      <Image src={product.image_url?.startsWith("http") ? product.image_url : `${API}${product.image_url}`} alt={product.name} fill loading="lazy" sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit: "cover" }} />
+                      <Image
+                        src={product.image_url?.startsWith("http") ? product.image_url : `${API}${product.image_url}`}
+                        alt={product.name}
+                        fill
+                        priority={idx < 3}
+                        loading={idx < 3 ? "eager" : "lazy"}
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        style={{ objectFit: "cover" }}
+                      />
                     ) : (
                       <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #094b3d, #2d5a4a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span style={{ fontSize: "3rem", opacity: 0.4 }}>&#9749;</span>
