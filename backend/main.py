@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,13 +11,26 @@ import time
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env.local"))
+_env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+if os.path.exists(_env_path):
+    load_dotenv(_env_path)
+else:
+    logger.info("No .env.local found, using system environment variables")
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from routers import menu, products, auth_router, admin, franchise, careers, admin_users, orders
 
-app = FastAPI(title="December Delights API", version="2.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        import seed
+        logger.info("Seed completed")
+    except Exception as e:
+        logger.warning(f"Seed failed: {str(e)}")
+    yield
+
+app = FastAPI(title="December Delights API", version="2.0.0", lifespan=lifespan)
 
 ALLOWED_ORIGINS = [
     origin.strip()
@@ -52,15 +66,6 @@ app.include_router(admin_users.router)
 app.include_router(orders.router)
 
 
-@app.on_event("startup")
-async def startup_event():
-    try:
-        import seed
-        logger.info("Seed completed")
-    except Exception as e:
-        logger.warning(f"Seed failed: {str(e)}")
-
-
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
@@ -80,20 +85,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/")
 def root():
     return {"message": "December Delights API"}
-
-
-@app.get("/api/debug/env")
-def debug_env():
-    url = os.environ.get("SUPABASE_URL", "")
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
-    return {
-        "SUPABASE_URL_set": bool(url),
-        "SUPABASE_URL_length": len(url),
-        "SUPABASE_URL_preview": url[:30] + "..." if len(url) > 30 else url,
-        "SUPABASE_KEY_set": bool(key),
-        "SUPABASE_KEY_length": len(key),
-        "CORS_ORIGINS": os.environ.get("CORS_ORIGINS", "not set"),
-    }
 
 
 @app.get("/api/health")

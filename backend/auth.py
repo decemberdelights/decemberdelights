@@ -2,7 +2,9 @@ import logging
 import os
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env.local"))
+_env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+if os.path.exists(_env_path):
+    load_dotenv(_env_path)
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional

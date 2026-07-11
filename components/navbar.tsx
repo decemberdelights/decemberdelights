@@ -282,11 +282,11 @@ export default function Navbar() {
         <Image src="/logo-icon.png" alt="" width={48} height={48} style={{ height: "48px", width: "48px", marginBottom: "0.5rem", opacity: 0.9 }} />
         <div className="dd-mobile-divider" />
         {links.map((link) => (
-          <a key={link.label} href={link.href} onClick={() => setMenuOpen(false)}>
+          <Link key={link.label} href={link.href} onClick={() => setMenuOpen(false)}>
             {link.label}
-          </a>
+          </Link>
         ))}
-        <a
+        <Link
           href="/franchise/"
           onClick={() => setMenuOpen(false)}
           style={{
@@ -302,7 +302,7 @@ export default function Navbar() {
           }}
         >
           Franchise →
-        </a>
+        </Link>
       </div>
 
       <style>{`

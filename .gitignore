@@ -50,3 +50,11 @@ next-env.d.ts
 /backend/backups/
 /backend/stderr.txt
 /backend/stdout.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Railway
+.railway/
