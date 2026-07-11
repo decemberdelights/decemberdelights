@@ -78,6 +78,15 @@ export default function ShopPage() {
       setFormError("All fields are required");
       return;
     }
+    const cleanedPhone = form.customer_phone.replace(/[\s\-+]/g, "");
+    if (!/^\d{7,15}$/.test(cleanedPhone)) {
+      setFormError("Please enter a valid phone number (7-15 digits)");
+      return;
+    }
+    if (cart.length === 0) {
+      setFormError("Your cart is empty");
+      return;
+    }
     setSaving(true);
     setFormError("");
     const r = await fetch(`${API}/api/orders`, {
@@ -201,7 +210,7 @@ export default function ShopPage() {
                       )}
                       {hasDiscount && (
                         <div style={{ position: "absolute", top: "0.75rem", left: "0.75rem", background: "#1b3c33", color: "#fff", padding: "0.25rem 0.65rem", borderRadius: "4px", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.05em" }}>
-                          {discountPct}% OFF
+                          {product.offer || `${discountPct}% OFF`}
                         </div>
                       )}
                       {product.stock <= 0 && (
@@ -264,7 +273,7 @@ export default function ShopPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem" }}>
                         <button onClick={() => updateQty(item.product.id, -1)} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: "0.8rem" }}>-</button>
                         <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>{item.quantity}</span>
-                        <button onClick={() => updateQty(item.product.id, 1)} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #ddd", background: "#1b3c33", color: "#fff", cursor: "pointer", fontSize: "0.8rem" }}>+</button>
+                        <button onClick={() => updateQty(item.product.id, 1)} disabled={item.quantity >= item.product.stock} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #ddd", background: "#1b3c33", color: "#fff", cursor: item.quantity >= item.product.stock ? "not-allowed" : "pointer", fontSize: "0.8rem", opacity: item.quantity >= item.product.stock ? 0.4 : 1 }}>+</button>
                         <button onClick={() => removeFromCart(item.product.id)} style={{ marginLeft: "auto", background: "none", border: "none", color: "#e74c3c", fontSize: "0.75rem", cursor: "pointer", fontFamily: "var(--font-outfit), sans-serif" }}>Remove</button>
                       </div>
                     </div>

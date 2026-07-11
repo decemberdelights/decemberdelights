@@ -126,10 +126,10 @@ async def create_franchise(
 
 
 @router.get("/api/franchise/status")
-def franchise_status(session: Optional[str] = Cookie(None)):
-    if not session:
+def franchise_status(franchise_session: Optional[str] = Cookie(None)):
+    if not franchise_session:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    payload = decode_token(session)
+    payload = decode_token(franchise_session)
     if not payload or payload.get("type") != "franchise":
         raise HTTPException(status_code=401, detail="Invalid session")
     app_id = int(payload.get("sub"))
@@ -150,6 +150,9 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response)
         franchise_limiter.record(rate_key)
         raise HTTPException(status_code=401, detail="Invalid credentials")
     app = result.data[0]
+
+    franchise_limiter.reset(rate_key)
+
     token = create_token({"sub": str(app["id"]), "type": "franchise"})
     secure_flag = os.environ.get("ENV", "development") != "development"
     response.set_cookie("franchise_session", token, httponly=True, samesite="none", max_age=86400, secure=True)

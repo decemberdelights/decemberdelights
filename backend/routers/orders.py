@@ -34,6 +34,12 @@ def create_public_order(data: dict):
 
     if not data.get("customer_name") or not data.get("customer_phone") or not data.get("customer_address"):
         raise HTTPException(status_code=400, detail="Name, phone, and address are required")
+
+    phone = data["customer_phone"]
+    cleaned = phone.replace(" ", "").replace("-", "").replace("+", "")
+    if not cleaned.isdigit() or len(cleaned) < 7 or len(cleaned) > 15:
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
+
     if not data.get("items"):
         raise HTTPException(status_code=400, detail="Order must contain at least one item")
 
@@ -44,16 +50,47 @@ def create_public_order(data: dict):
     except (json.JSONDecodeError, ValueError):
         raise HTTPException(status_code=400, detail="Invalid items format")
 
+    for item in items:
+        if not isinstance(item, dict) or not item.get("id") or not item.get("quantity"):
+            raise HTTPException(status_code=400, detail="Each item must have id and quantity")
+        qty = int(item["quantity"])
+        if qty <= 0:
+            raise HTTPException(status_code=400, detail="Item quantity must be at least 1")
+
+    product_ids = [int(item["id"]) for item in items]
+    products_result = supabase.table("products").select("*").in_("id", product_ids).execute()
+    products_map = {str(p["id"]): p for p in (products_result.data or [])}
+
+    calculated_total = 0.0
+    sanitized_items = []
+    for item in items:
+        pid = str(item["id"])
+        if pid not in products_map:
+            raise HTTPException(status_code=400, detail=f"Product ID {item['id']} not found")
+        product = products_map[pid]
+        qty = int(item["quantity"])
+        if product.get("stock", 0) < qty:
+            raise HTTPException(status_code=400, detail=f"Insufficient stock for {product.get('name', 'item')}")
+        price = float(product.get("price", 0))
+        calculated_total += price * qty
+        sanitized_items.append({"id": int(pid), "name": product.get("name", ""), "price": price, "quantity": qty})
+
+    for item in sanitized_items:
+        current = supabase.table("products").select("stock").eq("id", item["id"]).execute()
+        if current.data:
+            new_stock = current.data[0]["stock"] - item["quantity"]
+            supabase.table("products").update({"stock": new_stock}).eq("id", item["id"]).execute()
+
     order_data = {
         "customer_name": data["customer_name"],
         "customer_email": data.get("customer_email", ""),
-        "customer_phone": data.get("customer_phone", ""),
-        "customer_address": data.get("customer_address", ""),
-        "items": json.dumps(items) if isinstance(items, list) else data["items"],
-        "total": float(data.get("total", 0)),
-        "status": data.get("status", "pending"),
+        "customer_phone": data["customer_phone"],
+        "customer_address": data["customer_address"],
+        "items": json.dumps(sanitized_items),
+        "total": calculated_total,
+        "status": "pending",
         "payment_method": data.get("payment_method", "cash"),
-        "payment_status": data.get("payment_status", "unpaid"),
+        "payment_status": "unpaid",
         "notes": data.get("notes", ""),
     }
     result = supabase.table("orders").insert(order_data).execute()
@@ -77,7 +114,8 @@ def get_order_stats(_=Depends(get_current_admin)):
     result = supabase.table("orders").select("*").execute()
     orders = result.data or []
 
-    today = datetime.now().date()
+    from datetime import timezone as tz
+    today = datetime.now(tz.utc).date()
     month_start = today.replace(day=1)
     week_start = today - timedelta(days=today.weekday())
 
@@ -149,13 +187,31 @@ def update_order(order_id: int, data: dict, _=Depends(get_current_admin)):
 def update_order_status(order_id: int, data: dict, _=Depends(get_current_admin)):
     status_val = data.get("status", "")
     if not validate_order_status(status_val):
-        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: pending, preparing, delivered, cancelled")
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: pending, confirmed, preparing, packed, ready, delivered, cancelled")
     existing = supabase.table("orders").select("*").eq("id", order_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    order = existing.data[0]
+    old_status = order.get("status", "")
     update_data = {"status": status_val}
     if data.get("admin_notes"):
         update_data["notes"] = sanitize_input(data["admin_notes"], 1000)
+
+    if status_val == "cancelled" and old_status != "cancelled":
+        try:
+            items_list = json.loads(order.get("items", "[]")) if isinstance(order.get("items", ""), str) else order.get("items", [])
+            for item in items_list:
+                pid = item.get("id")
+                qty = item.get("quantity", 0)
+                if pid and qty > 0:
+                    current = supabase.table("products").select("stock").eq("id", pid).execute()
+                    if current.data:
+                        new_stock = current.data[0]["stock"] + qty
+                        supabase.table("products").update({"stock": new_stock}).eq("id", pid).execute()
+        except Exception:
+            pass
+
     supabase.table("orders").update(update_data).eq("id", order_id).execute()
     updated = supabase.table("orders").select("*").eq("id", order_id).execute()
     return updated.data[0]

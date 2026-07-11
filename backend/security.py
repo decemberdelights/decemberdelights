@@ -28,6 +28,9 @@ class RateLimiter:
     def record(self, key: str) -> None:
         self._attempts[key].append(time.time())
 
+    def reset(self, key: str) -> None:
+        self._attempts[key] = []
+
 
 login_limiter = RateLimiter(max_attempts=5, window_seconds=300)
 franchise_limiter = RateLimiter(max_attempts=5, window_seconds=300)
@@ -54,7 +57,7 @@ def validate_phone(phone: str) -> bool:
 
 def validate_order_status(status: str) -> bool:
     """Validate order status value."""
-    return status in ("pending", "preparing", "delivered", "cancelled")
+    return status in ("pending", "confirmed", "preparing", "packed", "ready", "delivered", "cancelled")
 
 
 def validate_application_status(status: str) -> bool:

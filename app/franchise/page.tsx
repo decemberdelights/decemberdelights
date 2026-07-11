@@ -50,8 +50,8 @@ export default function FranchisePage() {
 
     const dobParts = form.dob.split("-");
     const dobShort = dobParts[2] + dobParts[1] + dobParts[0].slice(-2); // DDMMYY
-    const firstName = form.full_name.split(" ")[0].toLowerCase();
-    const autoPassword = `${firstName}${dobShort}`;
+    const firstName = form.full_name.split(" ")[0];
+    const autoPassword = `${firstName.charAt(0).toUpperCase()}${firstName.slice(1).toLowerCase()}${dobShort}@`;
 
     const formData = new FormData();
     formData.append("full_name", form.full_name);
@@ -106,9 +106,9 @@ export default function FranchisePage() {
           <div style={{ background: "#f7f3ee", borderRadius: "14px", padding: "1.25rem 1.5rem", marginBottom: "1.5rem" }}>
             <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>Your Login Password:</p>
             <p style={{ fontFamily: "monospace", color: "#1b3c33", fontSize: "1.1rem", fontWeight: 700, background: "#fff", padding: "0.5rem 1rem", borderRadius: "8px", display: "inline-block" }}>
-              {form.full_name.split(" ")[0].toLowerCase()}{form.dob.split("-")[2]}{form.dob.split("-")[1]}{form.dob.split("-")[0].slice(-2)}
+              {form.full_name.split(" ")[0].charAt(0).toUpperCase()}{form.full_name.split(" ")[0].slice(1).toLowerCase()}{form.dob.split("-")[2]}{form.dob.split("-")[1]}{form.dob.split("-")[0].slice(-2)}@
             </p>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.75rem", marginTop: "0.5rem" }}>Format: yournameDDMMYY (from your date of birth)</p>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.75rem", marginTop: "0.5rem" }}>Format: FirstnameDDMMYY@ (from your date of birth)</p>
           </div>
           <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "1rem", lineHeight: 1.7, marginBottom: "2.5rem" }}>
             Your franchise application has been submitted successfully. Use your phone number and the password above to check status.
@@ -238,7 +238,7 @@ export default function FranchisePage() {
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={labelStyle}><User size={16} /> Date of Birth *</label>
                   <input required type="date" name="dob" value={form.dob} onChange={handleChange} style={inputStyle} />
-                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", marginTop: "0.35rem" }}>Your password will be auto-generated as: yournameDDMMYY</p>
+                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", marginTop: "0.35rem" }}>Your password will be auto-generated as: FirstnameDDMMYY@</p>
                 </div>
               </div>
             </div>

@@ -48,6 +48,8 @@ def auth_login(request: Request, creds: dict, response: Response):
     if not user.get("is_active", True):
         raise HTTPException(status_code=403, detail="Account disabled")
 
+    login_limiter.reset(rate_key)
+
     token = create_token({"sub": str(user["id"]), "type": "admin", "role": user["role"]})
     response.set_cookie("session", token, httponly=True, samesite="none", max_age=86400, secure=True)
     return {"ok": True, "role": user["role"], "username": user["username"], "token": token}

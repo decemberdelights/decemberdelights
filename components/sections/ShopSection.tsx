@@ -106,7 +106,7 @@ export default function ShopSection() {
                     <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#fff", background: "#094b3d", padding: "8px 18px", borderRadius: "999px", cursor: "pointer", transition: "background 0.3s ease" }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = "#073a2e"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = "#094b3d"; }}
-                    >Add to Cart</span>
+                    >View Product</span>
                   </div>
                 </div>
                 </div>
