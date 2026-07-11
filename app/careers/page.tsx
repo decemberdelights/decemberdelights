@@ -5,6 +5,9 @@ import Link from "next/link";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle, selectBackgroundImage } from "@/lib/styles";
 import { User, Mail, Phone, Briefcase, FileText, ArrowRight, Upload, MapPin, Clock } from "@/components/icons";
+import { JobCardSkeleton } from "@/components/Skeleton";
+
+const MAX_RESUME_SIZE = 16 * 1024 * 1024; // 16MB
 
 interface JobOpening {
   id: number; title: string; department: string; location: string;
@@ -42,6 +45,12 @@ export default function CareersPage() {
     e.preventDefault();
     setStatus("submitting");
     setErrorMsg("");
+
+    if (resume && resume.size > MAX_RESUME_SIZE) {
+      setStatus("error");
+      setErrorMsg("Resume file too large. Maximum size is 16MB.");
+      return;
+    }
 
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
@@ -169,7 +178,9 @@ export default function CareersPage() {
           </div>
 
           {loadingJobs ? (
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", textAlign: "center", padding: "2rem" }}>Loading openings...</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {[1, 2, 3].map((i) => <JobCardSkeleton key={i} />)}
+            </div>
           ) : jobs.length === 0 ? (
             <div style={{ textAlign: "center", padding: "3rem", background: "#fdf9f4", borderRadius: "20px" }}>
               <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "1rem", marginBottom: "0.5rem" }}>No open positions right now.</p>

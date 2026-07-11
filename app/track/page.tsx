@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { API } from "@/lib/api";
+import { OrderCardSkeleton } from "@/components/Skeleton";
 
 interface OrderItem {
   id: number;
@@ -34,6 +35,10 @@ const STATUS_INFO: Record<string, { label: string; sub: string; color: string; i
   delivered: { label: "Delivered", sub: "Order complete", color: "#1b3c33", icon: "05" },
   cancelled: { label: "Cancelled", sub: "Order was cancelled", color: "#e74c3c", icon: "X" },
 };
+
+function parseItems(items: string): OrderItem[] {
+  try { return JSON.parse(items); } catch { return []; }
+}
 
 function TrackContent() {
   const searchParams = useSearchParams();
@@ -68,10 +73,6 @@ function TrackContent() {
   const track = async () => {
     if (phone.length < 5) return;
     await trackAuto(phone);
-  };
-
-  const parseItems = (items: string): OrderItem[] => {
-    try { return JSON.parse(items); } catch { return []; }
   };
 
   const getProgress = (status: string): number => {
@@ -132,9 +133,8 @@ function TrackContent() {
       {/* Results */}
       <section style={{ maxWidth: "680px", margin: "2rem auto", padding: "0 1.5rem 5rem" }}>
         {loading && (
-          <div style={{ textAlign: "center", padding: "3rem" }}>
-            <div style={{ width: 40, height: 40, border: "3px solid #e8e5e0", borderTopColor: "#1b3c33", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto" }} />
-            <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", marginTop: "1rem", fontSize: "0.85rem" }}>Searching for your orders...</p>
+          <div style={{ display: "grid", gap: "1.25rem" }}>
+            {[1, 2].map((i) => <OrderCardSkeleton key={i} />)}
           </div>
         )}
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import ScrollFloat from "@/components/ScrollFloat";
 import Image from "next/image";
 import { API } from "@/lib/api";
+import { ProductCardSkeleton } from "@/components/Skeleton";
 
 interface Product {
   id: number;
@@ -71,7 +72,7 @@ export default function ShopSection() {
         {loading ? (
           <div className="shop-grid">
             {[1, 2, 3].map((i) => (
-              <div key={i} style={{ background: "#fff", borderRadius: "16px", height: "320px", opacity: 0.5 }} />
+              <ProductCardSkeleton key={i} />
             ))}
           </div>
         ) : products.length === 0 ? (

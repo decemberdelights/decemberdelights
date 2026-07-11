@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import ScrollRevealProvider from "@/components/scroll-reveal-provider";
 import { API } from "@/lib/api";
+import { MenuCardSkeleton } from "@/components/Skeleton";
 
 interface MenuItem {
   id: number; category: string; name: string; description: string;
@@ -37,7 +38,7 @@ export default function MenuPage() {
 
   return (
     <ScrollRevealProvider>
-    <div style={{ minHeight: "100vh", background: "var(--color-bg)", color: "var(--color-text-main)" }}>
+    <div style={{ minHeight: "100vh", background: "#faf8f5", color: "#1b3c33" }}>
       <style>{`
         .menu-card {
           transition: transform 0.3s var(--ease-smooth), box-shadow 0.3s var(--ease-smooth);
@@ -65,8 +66,8 @@ export default function MenuPage() {
         .menu-sidebar { width: 300px; position: sticky; top: 100px; flex-shrink: 0; maxHeight: calc(100vh - 120px); display: flex; flex-direction: column; }
         .menu-sidebar-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; overflowY: auto; flex: 1; paddingRight: 8px; }
         .menu-sidebar-cat { text-align: left; letter-spacing: 0.05em; border: 1px solid transparent; border-radius: 15px; padding: 1rem 1.5rem; font-size: 1.1rem; font-weight: 600; background: transparent; cursor: pointer; transition: all 0.3s var(--ease-smooth); width: 100%; min-height: 44px; }
-        .menu-sidebar-cat.active { color: var(--color-primary); border-color: var(--color-border); background: #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.06); }
-        .menu-sidebar-cat:not(.active) { color: var(--color-text-muted); }
+        .menu-sidebar-cat.active { color: #1b3c33; border-color: #e4e1d6; background: #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.06); }
+        .menu-sidebar-cat:not(.active) { color: #6b6f6a; }
         .menu-content { flex: 1; }
         @media (max-width: 768px) {
           .menu-layout { flex-direction: column; gap: 1.5rem; padding: 1.5rem 1rem; }
@@ -85,15 +86,15 @@ export default function MenuPage() {
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          background: "var(--color-surface)",
-          borderBottom: "1px solid var(--color-border)",
+          background: "#faf8f5",
+          borderBottom: "1px solid #e4e1d6",
           minHeight: "40vh",
           padding: "120px 2rem 4rem",
         }}
       >
         <h1
           style={{
-            color: "var(--color-primary)",
+            color: "#1b3c33",
             fontFamily: "var(--font-noto-serif), serif",
             fontSize: "clamp(2rem, 8vw, 5rem)",
             fontWeight: 900,
@@ -104,7 +105,7 @@ export default function MenuPage() {
         </h1>
         <p
           style={{
-            color: "var(--color-accent)",
+            color: "#c8a97a",
             textTransform: "uppercase",
             letterSpacing: "0.2em",
             fontSize: "clamp(0.7rem, 2.5vw, 1.2rem)",
@@ -116,7 +117,7 @@ export default function MenuPage() {
         </p>
         <p
           style={{
-            color: "var(--color-text-muted)",
+            color: "#6b6f6a",
             fontFamily: "var(--font-outfit), sans-serif",
             fontSize: "1rem",
             fontStyle: "italic",
@@ -128,11 +129,13 @@ export default function MenuPage() {
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "6rem 2rem" }}>
-          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "var(--color-text-muted)", fontSize: "1rem" }}>Loading menu...</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(300px, 100%), 1fr))", gap: "1.5rem", maxWidth: "1400px", margin: "0 auto", padding: "4rem 2rem" }}>
+            {[1, 2, 3, 4, 5, 6].map((i) => <MenuCardSkeleton key={i} />)}
+          </div>
         </div>
       ) : categories.length === 0 ? (
         <div style={{ textAlign: "center", padding: "6rem 2rem" }}>
-          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "var(--color-text-muted)", fontSize: "1rem" }}>Menu items coming soon. Check back later!</p>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#6b6f6a", fontSize: "1rem" }}>Menu items coming soon. Check back later!</p>
           <Link href="/" style={{ display: "inline-block", marginTop: "1.5rem", padding: "0.9rem 2.5rem", borderRadius: "100px", background: "#1b3c33", color: "#fdf9f4", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.95rem", textDecoration: "none" }}>Back to Home</Link>
         </div>
       ) : (
@@ -152,7 +155,7 @@ export default function MenuPage() {
             </div>
             <Link
               href="/"
-              style={{ color: "var(--color-accent)", fontWeight: 700, display: "inline-block", marginTop: "2rem", textDecoration: "none" }}
+              style={{ color: "#c8a97a", fontWeight: 700, display: "inline-block", marginTop: "2rem", textDecoration: "none" }}
             >
             &larr; Back to Home
           </Link>
@@ -174,12 +177,12 @@ export default function MenuPage() {
                     alignItems: "center",
                     marginBottom: "2rem",
                     paddingBottom: "1rem",
-                    borderBottom: "2px solid var(--color-accent)",
+                    borderBottom: "2px solid #c8a97a",
                   }}
                 >
                   <h2
                     style={{
-                      color: "var(--color-primary)",
+                      color: "#1b3c33",
                       letterSpacing: "0.1em",
                       textTransform: "uppercase",
                       fontSize: "clamp(1.5rem, 5vw, 2.5rem)",
@@ -203,7 +206,7 @@ export default function MenuPage() {
                       key={item.id}
                       className="menu-card"
                       style={{
-                        border: "1px solid var(--color-border)",
+                        border: "1px solid #e4e1d6",
                         background: "#fff",
                         borderRadius: "24px",
                         overflow: "hidden",
@@ -225,7 +228,7 @@ export default function MenuPage() {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.25rem" }}>
                           <h3
                             style={{
-                              color: "var(--color-primary)",
+                              color: "#1b3c33",
                               letterSpacing: "0.05em",
                               fontSize: "1.15rem",
                               fontWeight: 800,
@@ -237,8 +240,8 @@ export default function MenuPage() {
                           {item.price && (
                             <span
                               style={{
-                                background: "var(--color-surface)",
-                                color: "var(--color-accent)",
+                                background: "#faf8f5",
+                                color: "#c8a97a",
                                 borderRadius: "20px",
                                 padding: "0.3rem 0.8rem",
                                 fontSize: "0.85rem",
@@ -253,7 +256,7 @@ export default function MenuPage() {
                         {item.description && (
                           <p
                             style={{
-                              color: "var(--color-text-muted)",
+                              color: "#6b6f6a",
                               fontSize: "0.9rem",
                               lineHeight: 1.5,
                               fontFamily: "var(--font-outfit), sans-serif",

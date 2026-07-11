@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { API } from "@/lib/api";
+import { ProductCardSkeleton } from "@/components/Skeleton";
 
 interface Product {
   id: number; name: string; description: string; price: number;
@@ -16,12 +17,27 @@ interface CartItem {
   quantity: number;
 }
 
+const CART_KEY = "dd_cart";
+
+function loadCart(): CartItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveCart(cart: CartItem[]) {
+  try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch { /* ignore */ }
+}
+
 export default function ShopPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState("");
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -33,11 +49,15 @@ export default function ShopPage() {
   const [formError, setFormError] = useState("");
   const redirectTimer = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => { setCart(loadCart()); }, []);
+
+  useEffect(() => { saveCart(cart); }, [cart]);
+
   useEffect(() => {
     fetch(`${API}/api/products`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((data) => { setProducts(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(() => { setFetchError(true); setLoading(false); });
     fetch(`${API}/api/products/categories`)
       .then((r) => r.json())
       .then(setCategories)
@@ -186,7 +206,14 @@ export default function ShopPage() {
           </div>
 
           {loading ? (
-            <p style={{ textAlign: "center", color: "#586159", fontFamily: "var(--font-outfit), sans-serif", padding: "4rem" }}>Loading products...</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", gap: "1.5rem" }}>
+              {[1, 2, 3, 4, 5, 6].map((i) => <ProductCardSkeleton key={i} />)}
+            </div>
+          ) : fetchError ? (
+            <div style={{ textAlign: "center", padding: "4rem" }}>
+              <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#e74c3c", fontSize: "1rem", marginBottom: "1rem" }}>Failed to load products.</p>
+              <button onClick={() => window.location.reload()} style={{ padding: "0.7rem 2rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Retry</button>
+            </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "4rem" }}>
               <p style={{ fontFamily: "var(--font-bebas-neue), sans-serif", fontSize: "1.5rem", color: "#1b3c33", marginBottom: "0.5rem" }}>Coming Soon</p>

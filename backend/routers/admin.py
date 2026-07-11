@@ -30,66 +30,49 @@ def get_stats(_=Depends(get_current_admin)):
     today = datetime.now(timezone.utc).date()
     month_start = today.replace(day=1)
 
-    franchise_count = supabase.table("franchise_applications").select("id", count="exact").execute().count or 0
-    career_count = supabase.table("career_applications").select("id", count="exact").execute().count or 0
-    contact_count = supabase.table("contact_messages").select("id", count="exact").execute().count or 0
+    franchise_data = supabase.table("franchise_applications").select("id,status,created_at").execute().data or []
+    career_data = supabase.table("career_applications").select("id,status").execute().data or []
+    contact_data = supabase.table("contact_messages").select("id,status").execute().data or []
     menu_count = supabase.table("menu_items").select("id", count="exact").execute().count or 0
-    product_count = supabase.table("products").select("id", count="exact").execute().count or 0
-    order_count = supabase.table("orders").select("id", count="exact").execute().count or 0
+    product_data = supabase.table("products").select("id,is_active").execute().data or []
+    job_count = supabase.table("jobs").select("id", count="exact").eq("is_active", True).execute().count or 0
+    order_data = supabase.table("orders").select("id,total,status,created_at").execute().data or []
     admin_count = supabase.table("admin_users").select("id", count="exact").execute().count or 0
 
-    all_orders = supabase.table("orders").select("total,status,created_at").execute().data or []
-    total_revenue = sum(o.get("total", 0) for o in all_orders)
+    total_revenue = sum(o.get("total", 0) for o in order_data)
 
-    pending_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "pending").execute().count or 0
-    pending_careers = supabase.table("career_applications").select("id", count="exact").eq("status", "pending").execute().count or 0
-    pending_contacts = supabase.table("contact_messages").select("id", count="exact").eq("status", "pending").execute().count or 0
-    submitted_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "submitted").execute().count or 0
-    under_process_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "under_process").execute().count or 0
-    approved_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "approved").execute().count or 0
-    rejected_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "rejected").execute().count or 0
-    approved_careers = supabase.table("career_applications").select("id", count="exact").eq("status", "approved").execute().count or 0
-    rejected_careers = supabase.table("career_applications").select("id", count="exact").eq("status", "rejected").execute().count or 0
-    pending_orders = supabase.table("orders").select("id", count="exact").eq("status", "pending").execute().count or 0
-    preparing_orders = supabase.table("orders").select("id", count="exact").eq("status", "preparing").execute().count or 0
-    delivered_orders = supabase.table("orders").select("id", count="exact").eq("status", "delivered").execute().count or 0
-    cancelled_orders = supabase.table("orders").select("id", count="exact").eq("status", "cancelled").execute().count or 0
-    products_online = supabase.table("products").select("id", count="exact").eq("is_active", True).execute().count or 0
-    job_opening_count = supabase.table("jobs").select("id", count="exact").eq("is_active", True).execute().count or 0
+    def _count(items, **kw):
+        return sum(1 for i in items if all(i.get(k) == v for k, v in kw.items()))
 
-    today_orders_list = [o for o in all_orders if o.get("created_at") and datetime.fromisoformat(o["created_at"]).date() == today]
-    today_orders = len(today_orders_list)
-    today_revenue = sum(o.get("total", 0) for o in today_orders_list)
-
-    franchise_month = supabase.table("franchise_applications").select("id", count="exact").gte("created_at", month_start.isoformat()).execute().count or 0
+    today_orders_list = [o for o in order_data if o.get("created_at") and datetime.fromisoformat(o["created_at"]).date() == today]
 
     return {
-        "franchise_count": franchise_count,
-        "career_count": career_count,
-        "contact_count": contact_count,
+        "franchise_count": len(franchise_data),
+        "career_count": len(career_data),
+        "contact_count": len(contact_data),
         "menu_count": menu_count,
-        "product_count": product_count,
-        "job_opening_count": job_opening_count,
-        "order_count": order_count,
+        "product_count": len(product_data),
+        "job_opening_count": job_count,
+        "order_count": len(order_data),
         "total_revenue": total_revenue,
         "admin_count": admin_count,
-        "pending_franchise": pending_franchise,
-        "pending_careers": pending_careers,
-        "pending_contacts": pending_contacts,
-        "submitted_franchise": submitted_franchise,
-        "under_process_franchise": under_process_franchise,
-        "approved_franchise": approved_franchise,
-        "rejected_franchise": rejected_franchise,
-        "approved_careers": approved_careers,
-        "rejected_careers": rejected_careers,
-        "pending_orders": pending_orders,
-        "preparing_orders": preparing_orders,
-        "delivered_orders": delivered_orders,
-        "cancelled_orders": cancelled_orders,
-        "today_orders": today_orders,
-        "today_revenue": today_revenue,
-        "products_online": products_online,
-        "franchise_month_count": franchise_month,
+        "pending_franchise": _count(franchise_data, status="pending"),
+        "pending_careers": _count(career_data, status="pending"),
+        "pending_contacts": _count(contact_data, status="pending"),
+        "submitted_franchise": _count(franchise_data, status="submitted"),
+        "under_process_franchise": _count(franchise_data, status="under_process"),
+        "approved_franchise": _count(franchise_data, status="approved"),
+        "rejected_franchise": _count(franchise_data, status="rejected"),
+        "approved_careers": _count(career_data, status="approved"),
+        "rejected_careers": _count(career_data, status="rejected"),
+        "pending_orders": _count(order_data, status="pending"),
+        "preparing_orders": _count(order_data, status="preparing"),
+        "delivered_orders": _count(order_data, status="delivered"),
+        "cancelled_orders": _count(order_data, status="cancelled"),
+        "today_orders": len(today_orders_list),
+        "today_revenue": sum(o.get("total", 0) for o in today_orders_list),
+        "products_online": sum(1 for p in product_data if p.get("is_active")),
+        "franchise_month_count": sum(1 for f in franchise_data if f.get("created_at") and datetime.fromisoformat(f["created_at"]).date() >= month_start),
     }
 
 

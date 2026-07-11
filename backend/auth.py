@@ -16,12 +16,13 @@ from supabase_client import supabase
 
 logger = logging.getLogger(__name__)
 
-SECRET_KEY = os.environ.get("JWT_SECRET", "dev-secret")
-if SECRET_KEY == "dev-secret":
-    logger.warning(
-        "JWT_SECRET environment variable is not set. Using development fallback secret. "
-        "Add JWT_SECRET to your environment for production."
-    )
+SECRET_KEY = os.environ.get("JWT_SECRET", "")
+if not SECRET_KEY:
+    if os.environ.get("ENV") == "production":
+        logger.critical("JWT_SECRET environment variable is NOT SET in production. Server cannot start securely.")
+        raise RuntimeError("JWT_SECRET environment variable is required in production")
+    SECRET_KEY = "dev-secret-only-not-for-production"
+    logger.warning("JWT_SECRET not set. Using dev fallback — NOT safe for production.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 

@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
-from security import validate_order_status, sanitize_input
+from security import validate_order_status, sanitize_input, RateLimiter
 from datetime import datetime, timedelta
 from typing import Optional
 import json
 
 router = APIRouter()
+
+track_limiter = RateLimiter(max_attempts=10, window_seconds=60)
 
 
 class DeleteRequest(BaseModel):
@@ -98,9 +100,43 @@ def create_public_order(data: dict):
 
 
 @router.get("/api/orders/track/{phone}")
-def track_order(phone: str):
-    result = supabase.table("orders").select("*").eq("customer_phone", phone).order("created_at", desc=True).limit(5).execute()
+def track_order(phone: str, request: Request):
+    from security import get_client_ip
+    client_ip = get_client_ip(request)
+    track_limiter.check(f"track:{client_ip}")
+    track_limiter.record(f"track:{client_ip}")
+
+    cleaned = phone.replace(" ", "").replace("-", "").replace("+", "")
+    if not cleaned.isdigit() or len(cleaned) < 7:
+        raise HTTPException(status_code=400, detail="Invalid phone number")
+
+    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").eq("customer_phone", phone).order("created_at", desc=True).limit(5).execute()
     return result.data or []
+
+
+@router.post("/api/contact")
+def submit_contact(data: dict):
+    from security import validate_email
+    name = sanitize_input(data.get("name", ""), 200)
+    email = sanitize_input(data.get("email", ""), 200)
+    phone = sanitize_input(data.get("phone", ""), 20)
+    subject = sanitize_input(data.get("subject", ""), 200)
+    message = sanitize_input(data.get("message", ""), 5000)
+
+    if not name or not email or not message:
+        raise HTTPException(status_code=400, detail="Name, email, and message are required")
+    if not validate_email(email):
+        raise HTTPException(status_code=400, detail="Invalid email address")
+
+    result = supabase.table("contact_messages").insert({
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "subject": subject,
+        "message": message,
+        "status": "pending",
+    }).execute()
+    return {"ok": True, "id": result.data[0]["id"]}
 
 
 @router.get("/api/admin/orders")
