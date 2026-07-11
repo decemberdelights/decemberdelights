@@ -139,3 +139,38 @@ export type Tab =
   | "jobs"
   | "admins"
   | "logs";
+
+export interface OrderItem {
+  id: string | number;
+  name: string;
+  quantity: number;
+  price: number;
+  image_url?: string;
+}
+
+export interface ContactItem {
+  id: number;
+  full_name: string;
+  email: string;
+  phone: string;
+  subject: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+export interface LogItem {
+  id: number;
+  admin_id: number;
+  action: string;
+  details: string;
+  created_at: string;
+}
+
+export function parseOrderItems(items: string): OrderItem[] {
+  try {
+    return JSON.parse(items || "[]");
+  } catch {
+    return [];
+  }
+}

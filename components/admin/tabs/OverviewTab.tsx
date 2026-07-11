@@ -18,8 +18,6 @@ export default function OverviewTab({ stats, setTab, todayOrders = 0, monthOrder
   const approvedCareers = stats.approved_careers || 0;
   const rejectedCareers = stats.rejected_careers || 0;
 
-  const totalPending = pendingFranchise + pendingCareers + (stats.pending_contacts || 0);
-
   return (
     <>
       <style>{`

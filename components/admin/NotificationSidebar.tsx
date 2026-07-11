@@ -64,7 +64,7 @@ export default function NotificationSidebar({ stats, franchises, orders, setTab,
             {pendingOrders.length > 0 ? (
               <div className="notif-list">
                 {pendingOrders.map((o) => (
-                  <div key={`ord-${o.id}`} className="notif-item" onClick={() => onViewOrder({ ...o, parsedItems: [] })}>
+                  <div key={`ord-${o.id}`} className="notif-item" onClick={() => onViewOrder({ ...o, parsedItems: (() => { try { return JSON.parse(o.items || "[]"); } catch { return []; } })() })}>
                     <div className="info">
                       <div className="name">{o.customer_name}</div>
                       <div className="meta">#{o.id} • ₹{o.total}</div>

@@ -11,16 +11,22 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      setError("Username and password are required");
+      return;
+    }
     setError("");
+    setLoading(true);
     try {
       const r = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
       const d = await r.json();
       if (r.ok) {
@@ -32,6 +38,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
     } catch {
       setError("Connection failed");
     }
+    setLoading(false);
   };
 
   return (
@@ -42,14 +49,16 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.4px", display: "block", marginBottom: 4 }}>Username</label>
-          <input style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", fontSize: 13, background: "rgba(255,255,255,0.08)", color: "#fff", outline: "none", boxSizing: "border-box" }} value={username} onChange={e => setUsername(e.target.value)} autoFocus />
+          <input style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", fontSize: 13, background: "rgba(255,255,255,0.08)", color: "#fff", outline: "none", boxSizing: "border-box" as const }} value={username} onChange={e => setUsername(e.target.value)} autoFocus disabled={loading} />
         </div>
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.4px", display: "block", marginBottom: 4 }}>Password</label>
-          <input style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", fontSize: 13, background: "rgba(255,255,255,0.08)", color: "#fff", outline: "none", boxSizing: "border-box" }} type="password" value={password} onChange={e => setPassword(e.target.value)} />
+          <input style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", fontSize: 13, background: "rgba(255,255,255,0.08)", color: "#fff", outline: "none", boxSizing: "border-box" as const }} type="password" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} />
         </div>
         {error && <p style={{ color: "#ff6b6b", fontSize: 12, marginTop: 8, textAlign: "center" }}>{error}</p>}
-        <button style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: "#173a30", color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer", marginTop: 12 }} type="submit">Sign In</button>
+        <button style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: loading ? "rgba(23,58,48,0.5)" : "#173a30", color: "#fff", fontWeight: 600, fontSize: 13, cursor: loading ? "not-allowed" : "pointer", marginTop: 12, opacity: loading ? 0.7 : 1 }} type="submit" disabled={loading}>
+          {loading ? "Signing in..." : "Sign In"}
+        </button>
       </form>
     </div>
   );

@@ -1,8 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { App } from "./types";
 import { API } from "@/lib/api";
+
+function useEscapeKey(handler: () => void, enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handler(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [handler, enabled]);
+}
 
 interface RejectModalProps {
   open: boolean;
@@ -12,9 +21,10 @@ interface RejectModalProps {
 
 export function RejectModal({ open, onReject, onCancel }: RejectModalProps) {
   const [reason, setReason] = useState("");
+  useEscapeKey(onCancel, open);
 
   useEffect(() => {
-    setReason("");
+    if (open) setReason("");
   }, [open]);
 
   if (!open) return null;
@@ -25,7 +35,7 @@ export function RejectModal({ open, onReject, onCancel }: RejectModalProps) {
         <h4>Reject application</h4>
         <p>A reason is required so the applicant and team know why this was rejected.</p>
         <textarea placeholder="e.g. Incomplete information, location not available..." value={reason} onChange={e => setReason(e.target.value)} />
-        <div className="err" style={{ display: !reason.trim() ? "block" : "none", color: "#a32d2d", fontSize: 12, marginTop: 6 }}>Enter a reason before rejecting.</div>
+        <div style={{ display: !reason.trim() ? "block" : "none", color: "#a32d2d", fontSize: 12, marginTop: 6 }}>Enter a reason before rejecting.</div>
         <div className="modal-actions">
           <button className="btn" onClick={onCancel}>Cancel</button>
           <button className="btn danger" disabled={!reason.trim()} onClick={() => onReject(reason.trim())}>Reject</button>
@@ -41,6 +51,8 @@ interface ViewOrderModalProps {
 }
 
 export function ViewOrderModal({ order, onClose }: ViewOrderModalProps) {
+  useEscapeKey(onClose, !!order);
+
   if (!order) return null;
 
   return (
@@ -85,6 +97,11 @@ interface CancelModalProps {
 
 export function CancelModal({ orderId, onConfirm, onCancel }: CancelModalProps) {
   const [reason, setReason] = useState("");
+  useEscapeKey(onCancel, !!orderId);
+
+  useEffect(() => {
+    if (!orderId) setReason("");
+  }, [orderId]);
 
   if (!orderId) return null;
 
@@ -116,6 +133,33 @@ export function CancelModal({ orderId, onConfirm, onCancel }: CancelModalProps) 
   );
 }
 
+function DocPreview({ url, label, blobUrl, onOpen }: { url: string; label: string; blobUrl?: string; onOpen: (url: string) => void }) {
+  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+  const isPdf = /\.pdf$/i.test(url);
+  const fileName = url.split("/").pop() || label;
+  const fullUrl = `${API}${url}`;
+
+  return (
+    <div style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
+      <div style={{ padding: "8px 12px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "#1b2b25" }}>{label}</span>
+        <button onClick={() => onOpen(url)} style={{ fontSize: 11, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "3px 10px", borderRadius: 4, border: "none", cursor: "pointer" }}>Open</button>
+      </div>
+      <div style={{ padding: 12, background: "#fff" }}>
+        {isImage && blobUrl ? (
+          <img src={blobUrl} alt={label} style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
+        ) : isPdf ? (
+          <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 6 }} />
+        ) : (
+          <div style={{ padding: 16, textAlign: "center", color: "#6b6f6a", fontSize: 12, cursor: "pointer" }} onClick={() => onOpen(url)}>
+            {fileName} — Click Open to view
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface ViewDocsModalProps {
   docs: App | null;
   onClose: () => void;
@@ -124,6 +168,7 @@ interface ViewDocsModalProps {
 export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
   const [blobs, setBlobs] = useState<Record<string, string>>({});
   const prevDocsRef = useRef<App | null>(null);
+  useEscapeKey(onClose, !!docs);
 
   useEffect(() => {
     return () => {
@@ -139,7 +184,7 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
     prevDocsRef.current = docs;
   }, [docs]);
 
-  const loadDoc = async (url: string, key: string) => {
+  const loadDoc = useCallback(async (url: string, key: string) => {
     if (blobs[key]) return;
     try {
       const r = await fetch(`${API}${url}`, { credentials: "include" });
@@ -148,25 +193,25 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
       const blobUrl = URL.createObjectURL(blob);
       setBlobs(prev => ({ ...prev, [key]: blobUrl }));
     } catch { /* ignore */ }
-  };
+  }, [blobs]);
 
-  const downloadDoc = async (url: string, label: string) => {
-    try {
-      const r = await fetch(`${API}${url}`, { credentials: "include" });
-      const blob = await r.blob();
-      const ext = url.split(".").pop() || "file";
-      const a = document.createElement("a");
-      const blobUrl = URL.createObjectURL(blob);
-      a.href = blobUrl;
-      a.download = `${label}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-    } catch {
-      window.open(`${API}${url}`, "_blank");
+  const openFile = useCallback((url: string) => {
+    window.open(`${API}${url}`, "_blank");
+  }, []);
+
+  useEffect(() => {
+    if (!docs) return;
+    const docFields = ["aadhaar", "pan", "bank_statement", "id_proof", "address_proof", "other_docs"] as const;
+    for (const key of docFields) {
+      const url = (docs as unknown as Record<string, string>)[key];
+      if (url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url) && !blobs[key]) {
+        loadDoc(url, key);
+      }
     }
-  };
+    if (docs.resume_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(docs.resume_url) && !blobs["resume"]) {
+      loadDoc(docs.resume_url, "resume");
+    }
+  }, [docs, blobs, loadDoc]);
 
   if (!docs) return null;
 
@@ -179,10 +224,6 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
     ["other_docs", "Other Documents"],
   ];
 
-  const openFile = (url: string) => {
-    window.open(`${API}${url}`, "_blank");
-  };
-
   return (
     <div className="overlay show" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ width: 700, maxHeight: "90vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
@@ -194,61 +235,11 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
           {docFields.map(([key, label]) => {
             const url = (docs as unknown as Record<string, unknown>)[key] as string;
             if (!url) return null;
-            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-            const isPdf = /\.pdf$/i.test(url);
-            const fileName = url.split("/").pop() || label;
-            if (isImage && !blobs[key]) loadDoc(url, key);
-            const blobUrl = blobs[key];
-            const fullUrl = `${API}${url}`;
-            return (
-              <div key={key} style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
-                <div style={{ padding: "8px 12px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#1b2b25" }}>{label}</span>
-                  <button onClick={() => openFile(url)} style={{ fontSize: 11, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "3px 10px", borderRadius: 4, border: "none", cursor: "pointer" }}>Open</button>
-                </div>
-                <div style={{ padding: 12, background: "#fff" }}>
-                  {isImage && blobUrl ? (
-                    <img src={blobUrl} alt={label} style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
-                  ) : isPdf ? (
-                    <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 6 }} />
-                  ) : (
-                    <div style={{ padding: 16, textAlign: "center", color: "#6b6f6a", fontSize: 12, cursor: "pointer" }} onClick={() => openFile(url)}>
-                      {fileName} — Click Open to view
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
+            return <DocPreview key={key} url={url} label={label} blobUrl={blobs[key]} onOpen={openFile} />;
           })}
-          {docs.resume_url && (() => {
-            const url = docs.resume_url!;
-            const key = "resume";
-            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-            const isPdf = /\.pdf$/i.test(url);
-            const fileName = url.split("/").pop() || "resume";
-            if (isImage && !blobs[key]) loadDoc(url, key);
-            const blobUrl = blobs[key];
-            const fullUrl = `${API}${url}`;
-            return (
-              <div style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
-                <div style={{ padding: "8px 12px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#1b2b25" }}>Resume</span>
-                  <button onClick={() => openFile(url)} style={{ fontSize: 11, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "3px 10px", borderRadius: 4, border: "none", cursor: "pointer" }}>Open</button>
-                </div>
-                <div style={{ padding: 12, background: "#fff" }}>
-                  {isImage && blobUrl ? (
-                    <img src={blobUrl} alt="Resume" style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
-                  ) : isPdf ? (
-                    <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 6 }} />
-                  ) : (
-                    <div style={{ padding: 16, textAlign: "center", color: "#6b6f6a", fontSize: 12, cursor: "pointer" }} onClick={() => openFile(url)}>
-                      {fileName} — Click Open to view
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
+          {docs.resume_url && (
+            <DocPreview url={docs.resume_url} label="Resume" blobUrl={blobs["resume"]} onOpen={openFile} />
+          )}
           {![docs.aadhaar, docs.pan, docs.bank_statement, docs.id_proof, docs.address_proof, docs.other_docs, docs.resume_url].some(Boolean) && (
             <div className="empty">No documents uploaded.</div>
           )}
