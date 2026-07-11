@@ -81,7 +81,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
   const renderDocs = (item: App, isFranchise: boolean) => {
     if (isFranchise) {
       const docs = docFields.filter(([key]) => (item as unknown as Record<string, unknown>)[key]);
-      if (docs.length === 0) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 13 }}>No documents uploaded.</div>;
+      if (docs.length === 0) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 14 }}>No documents uploaded.</div>;
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 16 }}>
           {docs.map(([key, label]) => {
@@ -95,11 +95,11 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
             const fileName = url.split("/").pop() || `${label}.pdf`;
             return (
               <div key={key} style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
-                <div style={{ padding: "8px 14px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 13, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ padding: "10px 16px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 14, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span>{label}</span>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => openFile(url)} style={{ fontSize: 12, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
-                    <button onClick={() => downloadFile(url, fileName)} style={{ fontSize: 12, color: "#fff", fontWeight: 600, background: "#173a30", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>Download</button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => openFile(url)} style={{ fontSize: 13, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
+                    <button onClick={() => downloadFile(url, fileName)} style={{ fontSize: 13, color: "#fff", fontWeight: 600, background: "#173a30", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>Download</button>
                   </div>
                 </div>
                 <div style={{ padding: 10, background: "#fff" }}>
@@ -108,7 +108,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
                   ) : isPdf && fullUrl ? (
                     <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
                   ) : (
-                    <div style={{ padding: 12, textAlign: "center", color: "#6b6f6a", fontSize: 13, cursor: "pointer" }} onClick={() => openFile(url)}>
+                    <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer" }} onClick={() => openFile(url)}>
                       {fileName} — Click View to open
                     </div>
                   )}
@@ -120,7 +120,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
       );
     }
 
-    if (!item.resume_url) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 13 }}>No resume uploaded.</div>;
+    if (!item.resume_url) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 14 }}>No resume uploaded.</div>;
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.resume_url);
     const isPdf = /\.pdf$/i.test(item.resume_url);
     const imgKey = `${item.id}-resume`;
@@ -130,11 +130,11 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
     return (
       <div style={{ padding: 16 }}>
         <div style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
-          <div style={{ padding: "8px 14px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 13, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ padding: "10px 16px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 14, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>Resume</span>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => openFile(item.resume_url!)} style={{ fontSize: 12, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
-              <button onClick={() => downloadFile(item.resume_url!, fileName)} style={{ fontSize: 12, color: "#fff", fontWeight: 600, background: "#173a30", padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer" }}>Download</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => openFile(item.resume_url!)} style={{ fontSize: 13, color: "#094b3d", fontWeight: 600, background: "#e4f0eb", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
+              <button onClick={() => downloadFile(item.resume_url!, fileName)} style={{ fontSize: 13, color: "#fff", fontWeight: 600, background: "#173a30", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>Download</button>
             </div>
           </div>
           <div style={{ padding: 10, background: "#fff" }}>
@@ -143,7 +143,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
             ) : isPdf && fullUrl ? (
               <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
             ) : (
-              <div style={{ padding: 12, textAlign: "center", color: "#6b6f6a", fontSize: 13, cursor: "pointer" }} onClick={() => openFile(item.resume_url!)}>
+              <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer" }} onClick={() => openFile(item.resume_url!)}>
                 {fileName} — Click View to open
               </div>
             )}
@@ -154,7 +154,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
   };
 
   const renderStatusBadge = (status: string) => (
-    <span style={{ display: "inline-block", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: statusBgs[status] || "#f4f1ea", color: statusColors[status] || "#6b6f6a" }}>
+    <span style={{ display: "inline-block", fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20, background: statusBgs[status] || "#f4f1ea", color: statusColors[status] || "#6b6f6a" }}>
       {status === "under_process" ? "Under Process" : status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
@@ -166,44 +166,44 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
     const hasDocs = docFields.some(([key]) => (item as unknown as Record<string, unknown>)[key]);
 
     return (
-      <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 12, overflow: "hidden", transition: "box-shadow 0.2s" }}>
-        <div style={{ padding: "16px 20px", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                <span style={{ fontSize: 11, color: "#6b6f6a", fontWeight: 500 }}>#{item.id}</span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#1b2b25" }}>{item.full_name}</span>
+      <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 14, overflow: "hidden", transition: "box-shadow 0.2s" }}>
+        <div style={{ padding: "20px 24px", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: "#6b6f6a", fontWeight: 500 }}>#{item.id}</span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: "#1b2b25" }}>{item.full_name}</span>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "#6b6f6a" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 20px", fontSize: 14, color: "#6b6f6a" }}>
                 <span>{item.email}</span>
                 {item.phone && <span>{item.phone}</span>}
-                {item.preferred_location && <span style={{ color: "#094b3d" }}>{item.preferred_location}</span>}
+                {item.preferred_location && <span style={{ color: "#094b3d", fontWeight: 500 }}>{item.preferred_location}</span>}
               </div>
-              {item.admin_notes && <div style={{ fontSize: 12, color: "#6b6f6a", marginTop: 4, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
+              {item.admin_notes && <div style={{ fontSize: 13, color: "#6b6f6a", marginTop: 6, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
               {renderStatusBadge(item.status)}
-              <span style={{ fontSize: 12, color: hasDocs ? "#185fa5" : "#6b6f6a", fontWeight: hasDocs ? 600 : 400 }}>
+              <span style={{ fontSize: 13, color: hasDocs ? "#185fa5" : "#6b6f6a", fontWeight: hasDocs ? 600 : 400 }}>
                 {hasDocs ? (isExpanded ? "Hide Docs" : "View Docs") : "No docs"}
               </span>
             </div>
           </div>
           {(showActions || showProcessActions) && (
-            <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }} onClick={e => e.stopPropagation()}>
               {showActions && (
                 <>
-                  {onUnderProcess && <button className="btn process" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onUnderProcess(item.id)}>Under Process</button>}
-                  <button className="btn approve" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
-                  <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
+                  {onUnderProcess && <button className="btn process" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onUnderProcess(item.id)}>Under Process</button>}
+                  <button className="btn approve" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onApprove(item.id)}>Approve</button>
+                  <button className="btn danger" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onReject(item.id)}>Reject</button>
                 </>
               )}
               {showProcessActions && (
                 <>
-                  <button className="btn approve" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
-                  <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
+                  <button className="btn approve" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onApprove(item.id)}>Approve</button>
+                  <button className="btn danger" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onReject(item.id)}>Reject</button>
                 </>
               )}
-              <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => { setDeleteTarget({ id: item.id, name: item.full_name || "this" }); setDeleteReason(""); }}>Delete</button>
+              <button className="btn danger" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => { setDeleteTarget({ id: item.id, name: item.full_name || "this" }); setDeleteReason(""); }}>Delete</button>
             </div>
           )}
         </div>
@@ -221,33 +221,33 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
     const isExpanded = expandedId === item.id;
 
     return (
-      <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 12, overflow: "hidden" }}>
-        <div style={{ padding: "16px 20px", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                <span style={{ fontSize: 11, color: "#6b6f6a", fontWeight: 500 }}>#{item.id}</span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#1b2b25" }}>{item.full_name}</span>
+      <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 14, overflow: "hidden" }}>
+        <div style={{ padding: "20px 24px", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: "#6b6f6a", fontWeight: 500 }}>#{item.id}</span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: "#1b2b25" }}>{item.full_name}</span>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "#6b6f6a" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 20px", fontSize: 14, color: "#6b6f6a" }}>
                 <span>{item.email}</span>
                 {item.phone && <span>{item.phone}</span>}
                 {item.position && <span style={{ color: "#534ab7", fontWeight: 500 }}>{item.position}</span>}
               </div>
-              {item.admin_notes && <div style={{ fontSize: 12, color: "#6b6f6a", marginTop: 4, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
+              {item.admin_notes && <div style={{ fontSize: 13, color: "#6b6f6a", marginTop: 6, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
               {renderStatusBadge(item.status)}
-              <span style={{ fontSize: 12, color: item.resume_url ? "#185fa5" : "#6b6f6a", fontWeight: item.resume_url ? 600 : 400 }}>
+              <span style={{ fontSize: 13, color: item.resume_url ? "#185fa5" : "#6b6f6a", fontWeight: item.resume_url ? 600 : 400 }}>
                 {item.resume_url ? (isExpanded ? "Hide Resume" : "View Resume") : "No resume"}
               </span>
             </div>
           </div>
           {showActions && (
-            <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }} onClick={e => e.stopPropagation()}>
-              <button className="btn approve" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
-              <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
-              <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => { setDeleteTarget({ id: item.id, name: item.full_name || "this" }); setDeleteReason(""); }}>Delete</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }} onClick={e => e.stopPropagation()}>
+              <button className="btn approve" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onApprove(item.id)}>Approve</button>
+              <button className="btn danger" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onReject(item.id)}>Reject</button>
+              <button className="btn danger" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => { setDeleteTarget({ id: item.id, name: item.full_name || "this" }); setDeleteReason(""); }}>Delete</button>
             </div>
           )}
         </div>
@@ -263,29 +263,29 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
   const renderContactCard = (item: App) => {
     const showActions = item.status === "pending" || item.status === "submitted";
     return (
-      <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 12, padding: "16px 20px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-              <span style={{ fontSize: 11, color: "#6b6f6a", fontWeight: 500 }}>#{item.id}</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: "#1b2b25" }}>{item.name}</span>
+      <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 14, padding: "20px 24px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <span style={{ fontSize: 13, color: "#6b6f6a", fontWeight: 500 }}>#{item.id}</span>
+              <span style={{ fontSize: 17, fontWeight: 700, color: "#1b2b25" }}>{item.name}</span>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "#6b6f6a", marginBottom: 6 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 20px", fontSize: 14, color: "#6b6f6a", marginBottom: 8 }}>
               <span>{item.email}</span>
               {item.phone && <span>{item.phone}</span>}
               {item.subject && <span style={{ color: "#534ab7", fontWeight: 500 }}>{item.subject}</span>}
             </div>
-            {item.message && <p style={{ fontSize: 13, color: "#3d4a3e", lineHeight: 1.6, margin: 0 }}>{item.message}</p>}
-            {item.admin_notes && <div style={{ fontSize: 12, color: "#6b6f6a", marginTop: 6, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
+            {item.message && <p style={{ fontSize: 14, color: "#3d4a3e", lineHeight: 1.6, margin: 0 }}>{item.message}</p>}
+            {item.admin_notes && <div style={{ fontSize: 13, color: "#6b6f6a", marginTop: 8, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
             {renderStatusBadge(item.status)}
           </div>
         </div>
         {showActions && (
-          <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
-            <button className="btn approve" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onApprove(item.id)}>Approve</button>
-            <button className="btn danger" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => onReject(item.id)}>Reject</button>
+          <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+            <button className="btn approve" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onApprove(item.id)}>Approve</button>
+            <button className="btn danger" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onReject(item.id)}>Reject</button>
           </div>
         )}
       </div>
