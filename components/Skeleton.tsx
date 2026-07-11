@@ -104,3 +104,142 @@ export function SidebarSkeleton() {
     </div>
   );
 }
+
+export function AdminStatCardsSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 18 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "18px 20px", borderLeft: "4px solid #e4e1d6", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+          <SkeletonBox style={{ height: 12, width: "50%", marginBottom: 8 }} />
+          <SkeletonBox style={{ height: 28, width: "30%" }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function AdminTableSkeleton({ rows = 8, cols = 6 }: { rows?: number; cols?: number }) {
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, padding: "20px 22px", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+        <SkeletonBox style={{ height: 18, width: "20%" }} />
+        <SkeletonBox style={{ height: 32, width: 100, borderRadius: 6 }} />
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            {Array.from({ length: cols }).map((_, i) => (
+              <th key={i} style={{ textAlign: "left", padding: "8px 6px", borderBottom: "1px solid #e4e1d6" }}>
+                <SkeletonBox style={{ height: 10, width: "70%" }} />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }).map((_, r) => (
+            <tr key={r}>
+              {Array.from({ length: cols }).map((_, c) => (
+                <td key={c} style={{ padding: "12px 6px", borderBottom: "1px solid #e4e1d6" }}>
+                  <SkeletonBox style={{ height: 14, width: `${50 + Math.random() * 40}%` }} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function OverviewSkeleton() {
+  return (
+    <div>
+      <div style={{ marginBottom: 22 }}>
+        <SkeletonBox style={{ height: 22, width: 200, marginBottom: 4 }} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 28 }}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} style={{ background: "#fff", borderRadius: 14, padding: "28px 26px", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+            <SkeletonBox style={{ height: 15, width: "60%", marginBottom: 10 }} />
+            <SkeletonBox style={{ height: 36, width: "30%" }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}>
+        {[1, 2].map(i => (
+          <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "20px 22px", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+            <SkeletonBox style={{ height: 18, width: "40%", marginBottom: 14 }} />
+            {Array.from({ length: 3 }).map((_, j) => (
+              <div key={j} style={{ display: "flex", justifyContent: "space-between", padding: "16px 18px", borderRadius: 10, background: "#f9f8f4", border: "1px solid #e4e1d6", marginBottom: 12 }}>
+                <SkeletonBox style={{ height: 15, width: "30%" }} />
+                <SkeletonBox style={{ height: 26, width: 50 }} />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function OrdersSkeleton() {
+  return (
+    <div>
+      <div style={{ marginBottom: 22 }}>
+        <SkeletonBox style={{ height: 22, width: 120 }} />
+      </div>
+      <AdminStatCardsSkeleton count={6} />
+      <div style={{ background: "#fff", borderRadius: 12, padding: "20px 22px", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+          <SkeletonBox style={{ height: 18, width: 140 }} />
+          <SkeletonBox style={{ height: 14, width: 100 }} />
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              {["ID", "Customer", "Items", "Total", "Status", "Payment", "Date", "Actions"].map((h, i) => (
+                <th key={i} style={{ textAlign: "left", padding: "8px 6px", borderBottom: "1px solid #e4e1d6" }}>
+                  <SkeletonBox style={{ height: 10, width: "70%" }} />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 8 }).map((_, r) => (
+              <tr key={r}>
+                {Array.from({ length: 8 }).map((_, c) => (
+                  <td key={c} style={{ padding: "12px 6px", borderBottom: "1px solid #e4e1d6" }}>
+                    {c === 2 ? (
+                      <SkeletonBox style={{ height: 26, width: 80, borderRadius: 6 }} />
+                    ) : (
+                      <SkeletonBox style={{ height: 14, width: `${40 + Math.random() * 30}%` }} />
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function ChartsSkeleton() {
+  return (
+    <div>
+      <div style={{ marginBottom: 22 }}>
+        <SkeletonBox style={{ height: 22, width: 160 }} />
+      </div>
+      <AdminStatCardsSkeleton count={3} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "20px 22px", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+            <SkeletonBox style={{ height: 18, width: "50%", marginBottom: 14 }} />
+            <SkeletonBox style={{ height: 260, width: "100%" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

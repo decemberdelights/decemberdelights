@@ -17,6 +17,8 @@ import LogsTab from "@/components/admin/tabs/LogsTab";
 import EditModal from "@/components/admin/EditModal";
 import NotificationSidebar from "@/components/admin/NotificationSidebar";
 import { RejectModal, ViewOrderModal, CancelModal, ViewDocsModal } from "@/components/admin/Modals";
+import { OverviewSkeleton, OrdersSkeleton, ChartsSkeleton, AdminTableSkeleton } from "@/components/Skeleton";
+import { MOCK_STATS, MOCK_FRANCHISES, MOCK_CAREERS, MOCK_CONTACTS, MOCK_MENU, MOCK_PRODUCTS, MOCK_ORDERS, MOCK_ORDER_STATS, MOCK_JOBS } from "@/components/admin/mockData";
 
 const CSS = `
 :root{--bg:#f4f1ea;--side:#173a30;--side-hover:#214a3d;--side-active:#2c5c4a;--card:#fff;--dark:#1b2b25;--muted:#6b6f6a;--border:#e4e1d6;--green:#3b6d11;--blue:#185fa5;--purple:#534ab7;--amber:#854f0b;--red:#a32d2d;--teal:#0f6e56;}
@@ -106,6 +108,7 @@ tr:last-child td{border-bottom:none;}
 .form-group textarea{min-height:60px;resize:vertical;}
 .tab-title{font-size:15px;font-weight:700;margin-bottom:12px;}
 .empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
+.mock-banner{background:#FAEEDA;color:#854f0b;font-size:12px;text-align:center;padding:8px;border-radius:8px;margin-bottom:16px;font-weight:500;}
 .admin-hamburger{display:none;position:fixed;top:12px;left:12px;z-index:1001;background:var(--side);color:#fff;border:none;border-radius:8px;padding:10px 12px;cursor:pointer;font-size:18px;min-height:44px;min-width:44px;align-items:center;justify-content:center;}
 .admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:999;}
 @media(max-width:768px){
@@ -125,6 +128,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [role, setRole] = useState("");
   const [tab, setTab] = useState<Tab>("overview");
+  const [useMock, setUseMock] = useState(false);
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [franchises, setFranchises] = useState<App[]>([]);
@@ -213,12 +217,25 @@ export default function AdminPage() {
           const ordersR = await api("/api/admin/orders");
           if (ordersR.ok) setOrders(await ordersR.json());
         }
-      } catch { /* ignore */ }
+      } catch {
+        if (!useMock) {
+          setStats(MOCK_STATS);
+          setFranchises(MOCK_FRANCHISES);
+          setCareers(MOCK_CAREERS);
+          setContacts(MOCK_CONTACTS);
+          setMenuItems(MOCK_MENU);
+          setProducts(MOCK_PRODUCTS);
+          setOrders(MOCK_ORDERS);
+          setOrderStats(MOCK_ORDER_STATS);
+          setJobs(MOCK_JOBS);
+          setUseMock(true);
+        }
+      }
       if (!cancelled) setLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [authed, tab, api, role, loadAll, refreshKey]);
+  }, [authed, tab, api, role, loadAll, refreshKey, useMock]);
 
   const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
@@ -266,6 +283,52 @@ export default function AdminPage() {
     );
   }
 
+  const renderTab = () => {
+    if (tab === "overview") {
+      if (loading && !stats) return <OverviewSkeleton />;
+      if (!stats && !loading) return (
+        <div style={{ textAlign: "center", padding: "4rem" }}>
+          <p style={{ color: "#a32d2d", fontSize: 14 }}>Failed to load dashboard data. <button onClick={() => setRefreshKey(k => k + 1)} style={{ color: "#173a30", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Retry</button></p>
+        </div>
+      );
+      return <OverviewTab stats={stats!} setTab={(t) => setTab(t as Tab)} todayOrders={orderStats?.today_orders || stats!.today_orders || 0} monthOrders={orderStats?.month_orders || 0} />;
+    }
+
+    if (tab === "franchise") return <ApplicationsTab type="franchise" items={franchises} onApprove={(id) => updateStatus("franchise", id, "approved", "")} onUnderProcess={(id) => updateStatus("franchise", id, "under_process", "")} onReject={(id) => setRejectTarget({ type: "franchise", id })} onDelete={(id, reason) => deleteItem("franchise", id, reason)} onViewDocs={(item) => setViewingDocs(item)} />;
+    if (tab === "careers") return <ApplicationsTab type="careers" items={careers} onApprove={(id) => updateStatus("careers", id, "approved", "")} onReject={(id) => setRejectTarget({ type: "careers", id })} onDelete={(id, reason) => deleteItem("careers", id, reason)} onViewDocs={(item) => setViewingDocs(item)} />;
+    if (tab === "contacts") return <ApplicationsTab type="contacts" items={contacts} onApprove={(id) => updateStatus("contacts", id, "approved", "")} onReject={(id) => setRejectTarget({ type: "contacts", id })} onDelete={(id, reason) => deleteItem("contacts", id, reason)} onViewDocs={() => {}} />;
+
+    if (tab === "orders") {
+      if (loading && !orderStats) return <OrdersSkeleton />;
+      return <OrdersTab orders={orders} orderStats={orderStats} api={api} onRefresh={refresh} onViewOrder={(o) => setViewingOrder(o)} onCancelOrder={(id) => setCancelOrderId(id)} />;
+    }
+
+    if (tab === "charts") {
+      if (loading && !stats) return <ChartsSkeleton />;
+      return stats ? <ChartsTab stats={stats} orderStats={orderStats} /> : <OverviewSkeleton />;
+    }
+
+    if (tab === "menu") {
+      if (loading && menuItems.length === 0) return <AdminTableSkeleton rows={8} cols={6} />;
+      return <MenuTab items={menuItems} onAdd={() => { setEditingItem({ category: "", name: "", description: "", price: "", image_url: "", is_active: true, sort_order: 0 }); setEditType("add"); }} onEdit={(m) => { setEditingItem({ ...m }); setEditType("edit"); }} onDelete={(id) => deleteItem("menu", id)} />;
+    }
+
+    if (tab === "products") {
+      if (loading && products.length === 0) return <AdminTableSkeleton rows={8} cols={7} />;
+      return <ProductsTab products={products} onAdd={() => { setEditingItem({ name: "", description: "", price: 0, original_price: 0, category: "", image_url: "", stock: 0, is_active: true, offer: "", sort_order: 0 }); setEditType("add"); }} onEdit={(p) => { setEditingItem({ ...p }); setEditType("edit"); }} onDelete={(id) => deleteItem("products", id)} />;
+    }
+
+    if (tab === "jobs") {
+      if (loading && jobs.length === 0) return <AdminTableSkeleton rows={5} cols={7} />;
+      return <JobsTab jobs={jobs} onAdd={() => { setEditingItem({ title: "", department: "", location: "", description: "", requirements: "", salary_range: "", job_type: "full-time", is_active: true }); setEditType("add"); }} onEdit={(j) => { setEditingItem({ ...j }); setEditType("edit"); }} onDelete={(id) => deleteItem("jobs", id)} />;
+    }
+
+    if (tab === "admins" && role === "super_admin") return <AdminsTab adminUsers={adminUsers} stats={stats} api={api} onRefresh={refresh} />;
+    if (tab === "logs" && role === "super_admin") return <LogsTab logs={activityLogs} />;
+
+    return null;
+  };
+
   return (
     <><style>{CSS}</style>
       <div className="app">
@@ -276,95 +339,8 @@ export default function AdminPage() {
         </div>
         <div className="main">
           {loading && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: "#3b6d11", zIndex: 9999 }} />}
-
-          {tab === "overview" && !stats && loading && (
-            <div style={{ textAlign: "center", padding: "4rem" }}>
-              <div style={{ width: 40, height: 40, border: "3px solid #e4e1d6", borderTopColor: "#173a30", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 1rem" }} />
-              <p style={{ color: "#6b6f6a", fontSize: 14 }}>Loading dashboard...</p>
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            </div>
-          )}
-
-          {tab === "overview" && stats && (
-            <OverviewTab stats={stats} setTab={(t) => setTab(t as Tab)} todayOrders={orderStats?.today_orders || stats.today_orders || 0} monthOrders={orderStats?.month_orders || 0} />
-          )}
-
-          {tab === "overview" && !stats && !loading && (
-            <div style={{ textAlign: "center", padding: "4rem" }}>
-              <p style={{ color: "#a32d2d", fontSize: 14 }}>Failed to load dashboard data. <button onClick={() => setRefreshKey(k => k + 1)} style={{ color: "#173a30", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Retry</button></p>
-            </div>
-          )}
-
-          {tab === "franchise" && (
-            <ApplicationsTab type="franchise" items={franchises}
-              onApprove={(id) => updateStatus("franchise", id, "approved", "")}
-              onUnderProcess={(id) => updateStatus("franchise", id, "under_process", "")}
-              onReject={(id) => setRejectTarget({ type: "franchise", id })}
-              onDelete={(id, reason) => deleteItem("franchise", id, reason)}
-              onViewDocs={(item) => setViewingDocs(item)}
-            />
-          )}
-
-          {tab === "careers" && (
-            <ApplicationsTab type="careers" items={careers}
-              onApprove={(id) => updateStatus("careers", id, "approved", "")}
-              onReject={(id) => setRejectTarget({ type: "careers", id })}
-              onDelete={(id, reason) => deleteItem("careers", id, reason)}
-              onViewDocs={(item) => setViewingDocs(item)}
-            />
-          )}
-
-          {tab === "contacts" && (
-            <ApplicationsTab type="contacts" items={contacts}
-              onApprove={(id) => updateStatus("contacts", id, "approved", "")}
-              onReject={(id) => setRejectTarget({ type: "contacts", id })}
-              onDelete={(id, reason) => deleteItem("contacts", id, reason)}
-              onViewDocs={() => {}}
-            />
-          )}
-
-          {tab === "orders" && (
-            <OrdersTab orders={orders} orderStats={orderStats} api={api} onRefresh={refresh}
-              onViewOrder={(o) => setViewingOrder(o)}
-              onCancelOrder={(id) => setCancelOrderId(id)}
-            />
-          )}
-
-          {tab === "charts" && stats && (
-            <ChartsTab stats={stats} orderStats={orderStats} />
-          )}
-
-          {tab === "menu" && (
-            <MenuTab items={menuItems}
-              onAdd={() => { setEditingItem({ category: "", name: "", description: "", price: "", image_url: "", is_active: true, sort_order: 0 }); setEditType("add"); }}
-              onEdit={(m) => { setEditingItem({ ...m }); setEditType("edit"); }}
-              onDelete={(id) => deleteItem("menu", id)}
-            />
-          )}
-
-          {tab === "products" && (
-            <ProductsTab products={products}
-              onAdd={() => { setEditingItem({ name: "", description: "", price: 0, original_price: 0, category: "", image_url: "", stock: 0, is_active: true, offer: "", sort_order: 0 }); setEditType("add"); }}
-              onEdit={(p) => { setEditingItem({ ...p }); setEditType("edit"); }}
-              onDelete={(id) => deleteItem("products", id)}
-            />
-          )}
-
-          {tab === "jobs" && (
-            <JobsTab jobs={jobs}
-              onAdd={() => { setEditingItem({ title: "", department: "", location: "", description: "", requirements: "", salary_range: "", job_type: "full-time", is_active: true }); setEditType("add"); }}
-              onEdit={(j) => { setEditingItem({ ...j }); setEditType("edit"); }}
-              onDelete={(id) => deleteItem("jobs", id)}
-            />
-          )}
-
-          {tab === "admins" && role === "super_admin" && (
-            <AdminsTab adminUsers={adminUsers} stats={stats} api={api} onRefresh={refresh} />
-          )}
-
-          {tab === "logs" && role === "super_admin" && (
-            <LogsTab logs={activityLogs} />
-          )}
+          {useMock && <div className="mock-banner">Using simulated data — backend unreachable. Data is for testing only.</div>}
+          {renderTab()}
         </div>
 
         {stats && tab !== "orders" && tab !== "charts" && (
