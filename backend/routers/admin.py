@@ -199,3 +199,30 @@ def get_franchise_cities(_=Depends(get_current_admin)):
     result = supabase.table("franchise_applications").select("city").neq("city", "").execute()
     cities = list(set(r["city"] for r in (result.data or []) if r.get("city")))
     return cities
+
+
+@router.post("/api/admin/reset-database")
+def reset_database(_=Depends(require_super_admin)):
+    from routers.orders import log_activity as log_order_activity
+    tables_to_clear = [
+        "activity_logs",
+        "orders",
+        "franchise_applications",
+        "career_applications",
+        "contact_messages",
+        "menu_items",
+        "products",
+        "jobs",
+    ]
+    cleared = {}
+    for table in tables_to_clear:
+        try:
+            result = supabase.table(table).select("id").execute()
+            count = len(result.data) if result.data else 0
+            if count > 0:
+                ids = [r["id"] for r in result.data]
+                supabase.table(table).delete().in_("id", ids).execute()
+                cleared[table] = count
+        except Exception:
+            cleared[table] = "error"
+    return {"ok": True, "cleared": cleared}
