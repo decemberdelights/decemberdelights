@@ -30,7 +30,6 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
       });
       const d = await r.json();
       if (r.ok) {
-        if (d.token) localStorage.setItem("admin_token", d.token);
         onLogin(d.role || "");
       } else {
         setError(d.detail || "Invalid credentials");
