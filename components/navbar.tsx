@@ -189,14 +189,14 @@ export default function Navbar() {
         .dd-mobile-menu a {
           font-family: "Cormorant Garamond", serif;
           font-size: clamp(1.8rem, 7vw, 2.5rem);
-          color: #f5f0eb;
+          color: #f5f0eb !important;
           letter-spacing: 0.08em;
           opacity: 0;
           text-decoration: none;
           transform: translateY(20px);
           transition: color 0.4s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
         }
-        .dd-mobile-menu.open a { opacity: 0.8; transform: translateY(0); }
+        .dd-mobile-menu.open a { opacity: 1; transform: translateY(0); }
         .dd-mobile-menu.open a:nth-child(1) { transition-delay: 0.05s; }
         .dd-mobile-menu.open a:nth-child(2) { transition-delay: 0.10s; }
         .dd-mobile-menu.open a:nth-child(3) { transition-delay: 0.15s; }
