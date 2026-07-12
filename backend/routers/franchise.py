@@ -7,6 +7,7 @@ from supabase_client import supabase
 from schemas import FranchiseLogin, FranchiseOut
 from auth import hash_password, verify_password, create_token, decode_token
 from security import franchise_limiter, get_client_ip, validate_email, validate_phone, sanitize_input
+from email_utils import send_password_email
 
 router = APIRouter()
 
@@ -122,6 +123,9 @@ async def create_franchise(
     app_id = result.data[0]["id"]
     login_id = f"DD{phone[-4:]}{str(app_id).zfill(4)}"
     supabase.table("franchise_applications").update({"login_id": login_id}).eq("id", app_id).execute()
+
+    send_password_email(to_email=email, full_name=full_name, password=password, login_id=login_id)
+
     return {"ok": True, "id": app_id}
 
 

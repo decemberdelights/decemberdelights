@@ -115,13 +115,13 @@ export default function FranchisePage() {
     return (
       <SuccessState
         title="Application Received"
-        description="Your franchise application has been submitted successfully. Use your phone number and the password below to check status."
+        description="Your franchise application has been submitted successfully. We've sent your login credentials to your email. You can also use them below."
         actions={[
           { label: "Check Status", onClick: () => window.location.href = "/franchise/status", primary: true },
           { label: "Back to Home", onClick: () => window.location.href = "/" },
         ]}
       >
-        <div style={{ background: "#f7f3ee", borderRadius: "14px", padding: "1.25rem 1.5rem" }}>
+        <div style={{ background: "#f7f3ee", borderRadius: "14px", padding: "1.25rem 1.5rem", marginBottom: "1rem" }}>
           <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>Your Login Password:</p>
           <p style={{ fontFamily: "monospace", color: "#1b3c33", fontSize: "1.1rem", fontWeight: 700, background: "#fff", padding: "0.5rem 1rem", borderRadius: "8px", display: "inline-block" }}>
             {password}
