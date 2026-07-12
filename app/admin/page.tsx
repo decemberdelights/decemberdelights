@@ -165,6 +165,16 @@ export default function AdminPage() {
     setAuthed(false);
   };
 
+  useEffect(() => {
+    if (!authed) return;
+    let timer: NodeJS.Timeout;
+    const reset = () => { clearTimeout(timer); timer = setTimeout(() => { localStorage.removeItem("admin_token"); setAuthed(false); }, 4 * 60 * 1000); };
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
+    events.forEach((e) => document.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => { clearTimeout(timer); events.forEach((e) => document.removeEventListener(e, reset)); };
+  }, [authed]);
+
   if (authed === null) return <div className="admin-page"><div className="app" style={{ alignItems: "center", justifyContent: "center" }}><p style={{ color: "#888" }}>Loading...</p></div></div>;
 
   if (!authed) {
