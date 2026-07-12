@@ -7,6 +7,7 @@ import LazyVideo from "@/components/LazyVideo";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
 import { User, Mail, Phone, Briefcase, MapPin, FileText, ArrowRight, Check, Upload } from "@/components/icons";
+import SuccessState from "@/components/SuccessState";
 
 const icons = {
   building: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M9 22V12h6v10" /><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01" /></svg>,
@@ -97,34 +98,25 @@ export default function FranchisePage() {
   }
 
   if (status === "success") {
-    return <>
-      <main data-bg="light" style={{ minHeight: "100vh", background: "#fdf9f4", display: "flex", alignItems: "center", justifyContent: "center", padding: "6rem 1.5rem 4rem" }}>
-        <div style={{ maxWidth: "480px", width: "100%", textAlign: "center" }}>
-          <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#1b3c33", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 2rem" }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-          </div>
-          <h1 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", fontSize: "clamp(2rem, 4vw, 2.5rem)", color: "#1b3c33", letterSpacing: "0.05em", marginBottom: "1rem" }}>Application Received</h1>
-          <div style={{ background: "#f7f3ee", borderRadius: "14px", padding: "1.25rem 1.5rem", marginBottom: "1.5rem" }}>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>Your Login Password:</p>
-            <p style={{ fontFamily: "monospace", color: "#1b3c33", fontSize: "1.1rem", fontWeight: 700, background: "#fff", padding: "0.5rem 1rem", borderRadius: "8px", display: "inline-block" }}>
-              {form.full_name.split(" ")[0].charAt(0).toUpperCase()}{form.full_name.split(" ")[0].slice(1).toLowerCase()}{form.dob.split("-")[2]}{form.dob.split("-")[1]}{form.dob.split("-")[0].slice(-2)}@
-            </p>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.75rem", marginTop: "0.5rem" }}>Format: FirstnameDDMMYY@ (from your date of birth)</p>
-          </div>
-          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "1rem", lineHeight: 1.7, marginBottom: "2.5rem" }}>
-            Your franchise application has been submitted successfully. Use your phone number and the password above to check status.
+    const password = `${form.full_name.split(" ")[0].charAt(0).toUpperCase()}${form.full_name.split(" ")[0].slice(1).toLowerCase()}${form.dob.split("-")[2]}${form.dob.split("-")[1]}${form.dob.split("-")[0].slice(-2)}@`;
+    return (
+      <SuccessState
+        title="Application Received"
+        description="Your franchise application has been submitted successfully. Use your phone number and the password below to check status."
+        actions={[
+          { label: "Check Status", onClick: () => window.location.href = "/franchise/status", primary: true },
+          { label: "Back to Home", onClick: () => window.location.href = "/" },
+        ]}
+      >
+        <div style={{ background: "#f7f3ee", borderRadius: "14px", padding: "1.25rem 1.5rem" }}>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>Your Login Password:</p>
+          <p style={{ fontFamily: "monospace", color: "#1b3c33", fontSize: "1.1rem", fontWeight: 700, background: "#fff", padding: "0.5rem 1rem", borderRadius: "8px", display: "inline-block" }}>
+            {password}
           </p>
-          <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/franchise/status" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.5rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.9rem", textDecoration: "none" }}>
-              Check Status <ArrowRight size={16} />
-            </Link>
-            <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.5rem", borderRadius: "100px", border: "1.5px solid #1b3c33", background: "transparent", color: "#1b3c33", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.9rem", textDecoration: "none" }}>
-              Back to Home
-            </Link>
-          </div>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.75rem", marginTop: "0.5rem" }}>Format: FirstnameDDMMYY@ (from your date of birth)</p>
         </div>
-      </main>
-    </>;
+      </SuccessState>
+    );
   }
 
   return (

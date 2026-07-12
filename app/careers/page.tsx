@@ -6,6 +6,7 @@ import { API } from "@/lib/api";
 import { inputStyle, labelStyle, selectBackgroundImage } from "@/lib/styles";
 import { User, Mail, Phone, Briefcase, FileText, ArrowRight, Upload, MapPin, Clock } from "@/components/icons";
 import { JobCardSkeleton } from "@/components/Skeleton";
+import SuccessState from "@/components/SuccessState";
 
 const MAX_RESUME_SIZE = 16 * 1024 * 1024; // 16MB
 
@@ -95,22 +96,11 @@ export default function CareersPage() {
 
   if (status === "success") {
     return (
-      <>
-        <main data-bg="light" style={{ minHeight: "100vh", background: "#fdf9f4", display: "flex", alignItems: "center", justifyContent: "center", padding: "6rem 1.5rem 4rem" }}>
-          <div style={{ maxWidth: "480px", width: "100%", textAlign: "center" }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#1b3c33", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 2rem" }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-            </div>
-            <h1 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", fontSize: "clamp(2rem, 4vw, 2.5rem)", color: "#1b3c33", letterSpacing: "0.05em", marginBottom: "1rem" }}>Application Received</h1>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "1rem", lineHeight: 1.7, marginBottom: "2.5rem" }}>
-              Thank you for applying to join December Delights. Our team will review your application and reach out if there is a match.
-            </p>
-            <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.5rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.9rem", textDecoration: "none" }}>
-              Back to Home <ArrowRight size={16} />
-            </Link>
-          </div>
-        </main>
-      </>
+      <SuccessState
+        title="Application Received"
+        description="Thank you for applying to join December Delights. Our team will review your application and reach out if there is a match."
+        actions={[{ label: "Back to Home", onClick: () => window.location.href = "/", primary: true }]}
+      />
     );
   }
 

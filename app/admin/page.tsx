@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { API } from "@/lib/api";
 import { Tab, Stats, App, MenuItem, Product, Job, Order, AdminUser, OrderStats } from "@/components/admin/types";
 import AdminLogin from "@/components/admin/AdminLogin";
@@ -8,7 +9,6 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import OverviewTab from "@/components/admin/tabs/OverviewTab";
 import ApplicationsTab from "@/components/admin/tabs/ApplicationsTab";
 import OrdersTab from "@/components/admin/tabs/OrdersTab";
-import ChartsTab from "@/components/admin/tabs/ChartsTab";
 import MenuTab from "@/components/admin/tabs/MenuTab";
 import ProductsTab from "@/components/admin/tabs/ProductsTab";
 import JobsTab from "@/components/admin/tabs/JobsTab";
@@ -19,6 +19,8 @@ import NotificationSidebar from "@/components/admin/NotificationSidebar";
 import { RejectModal, ViewOrderModal, CancelModal, ViewDocsModal } from "@/components/admin/Modals";
 import { OverviewSkeleton, OrdersSkeleton, ChartsSkeleton, AdminTableSkeleton, ApplicationsSkeleton, AdminsSkeleton, LogsSkeleton } from "@/components/Skeleton";
 
+const ChartsTab = dynamic(() => import("@/components/admin/tabs/ChartsTab"), { loading: () => <ChartsSkeleton /> });
+
 const CSS = `
 :root{--bg:#f4f1ea;--side:#173a30;--side-hover:#214a3d;--side-active:#2c5c4a;--card:#fff;--dark:#1b2b25;--muted:#6b6f6a;--border:#e4e1d6;--green:#3b6d11;--blue:#185fa5;--purple:#534ab7;--amber:#854f0b;--red:#a32d2d;--teal:#0f6e56;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -27,7 +29,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 
 .sidebar{width:260px;background:linear-gradient(180deg,#0f2e24 0%,#173a30 100%);color:#dfe7e2;display:flex;flex-direction:column;padding:0;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;}
 .brand{padding:20px 20px 18px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:12px;}
-.brand-logo{font-size:28px;width:44px;height:44px;background:rgba(255,255,255,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;}
+.brand-logo{font-size:16px;font-weight:700;letter-spacing:1px;width:44px;height:44px;background:rgba(255,255,255,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;}
 .brand h1{font-size:17px;letter-spacing:1.5px;color:#fff;font-weight:700;}
 .brand p{font-size:12px;margin-top:2px;color:#9fb0a8;}
 .nav{flex:1;padding:8px 10px;}
@@ -35,7 +37,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:14px;padding:10px 12px;border-radius:8px;color:#cdd9d2;transition:all 0.15s;}
 .nav button:hover{background:var(--side-hover);color:#fff;}
 .nav button.active{background:var(--side-active);color:#fff;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
-.nav-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0;}
+.nav-icon{font-size:10px;width:22px;text-align:center;flex-shrink:0;font-weight:700;letter-spacing:0.5px;color:rgba(255,255,255,0.5);}
 .nav-label{flex:1;}
 .nav .badge{margin-left:auto;background:#e24b4a;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;min-width:22px;text-align:center;}
 .logout{margin:12px 10px 16px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#dfe7e2;padding:11px;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;transition:all 0.15s;font-family:inherit;}
@@ -114,7 +116,7 @@ tr:last-child td{border-bottom:none;}
 .tab-title{font-size:17px;font-weight:700;margin-bottom:14px;}
 .empty{padding:44px;text-align:center;color:var(--muted);font-size:15px;}
 
-.admin-hamburger{display:none;position:fixed;top:12px;left:12px;z-index:1001;background:var(--side);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-size:20px;min-height:44px;min-width:44px;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
+.admin-hamburger{display:none;position:fixed;top:12px;left:12px;z-index:1001;background:var(--side);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;min-height:44px;min-width:44px;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
 .admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;}
 
 @media(max-width:1024px){
@@ -186,12 +188,9 @@ export default function AdminPage() {
   const apiWithTimeout = useCallback(async (path: string, opts?: RequestInit, timeoutMs = 30000) => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
-    const token = localStorage.getItem("admin_token") || "";
-    const headers: Record<string, string> = { ...(opts?.headers as Record<string, string> || {}) };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
     try {
-      const r = await fetch(`${API}${path}`, { credentials: "include", ...opts, headers, signal: controller.signal });
-      if (r.status === 401 || r.status === 403) { localStorage.removeItem("admin_token"); setAuthed(false); throw new Error("Unauthorized"); }
+      const r = await fetch(`${API}${path}`, { credentials: "include", ...opts, signal: controller.signal });
+      if (r.status === 401 || r.status === 403) { setAuthed(false); throw new Error("Unauthorized"); }
       return r;
     } finally { clearTimeout(id); }
   }, []);
@@ -201,13 +200,10 @@ export default function AdminPage() {
   }, [apiWithTimeout]);
 
   useEffect(() => {
-    const token = localStorage.getItem("admin_token") || "";
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    fetch(`${API}/api/auth/check`, { credentials: "include", headers })
+    fetch(`${API}/api/auth/check`, { credentials: "include" })
       .then(r => r.json())
-      .then(d => { setAuthed(d.authenticated); setRole(d.role || ""); if (!d.authenticated) localStorage.removeItem("admin_token"); })
-      .catch(() => { localStorage.removeItem("admin_token"); setAuthed(false); });
+      .then(d => { setAuthed(d.authenticated); setRole(d.role || ""); })
+      .catch(() => { setAuthed(false); });
   }, []);
 
   const loadAll = useCallback(async (retries = 2) => {
@@ -293,7 +289,6 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     await fetch(`${API}/api/auth/logout`, { method: "POST", credentials: "include" });
-    localStorage.removeItem("admin_token");
     setAuthed(false);
   };
 
@@ -379,7 +374,9 @@ export default function AdminPage() {
   return (
     <><style>{CSS}</style>
       <div className="app">
-        <button className="admin-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle menu">☰</button>
+        <button className="admin-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+        </button>
         <div className={`admin-overlay${sidebarOpen ? " open" : ""}`} onClick={() => setSidebarOpen(false)} />
         <div className={`sidebar${sidebarOpen ? " open" : ""}`}>
           <AdminSidebar tab={tab} setTab={(t) => { setTab(t); setEditingItem(null); setEditType(null); setSidebarOpen(false); }} role={role} stats={stats} onLogout={handleLogout} />

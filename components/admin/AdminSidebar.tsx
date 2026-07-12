@@ -11,8 +11,8 @@ interface AdminSidebarProps {
 }
 
 const icons: Record<string, string> = {
-  overview: "📊", orders: "📦", franchise: "🏪", products: "🛒", charts: "📈",
-  careers: "💼", contacts: "✉️", menu: "🍽️", jobs: "📋", admins: "👥", logs: "📝",
+  overview: "OV", orders: "OR", franchise: "FR", products: "PR", charts: "CH",
+  careers: "CA", contacts: "CO", menu: "MN", jobs: "JB", admins: "AU", logs: "LG",
 };
 
 export default function AdminSidebar({ tab, setTab, role, stats, onLogout }: AdminSidebarProps) {
@@ -57,7 +57,7 @@ export default function AdminSidebar({ tab, setTab, role, stats, onLogout }: Adm
   return (
     <div className="sidebar">
       <div className="brand">
-        <div className="brand-logo">☕</div>
+        <div className="brand-logo">DD</div>
         <div>
           <h1>DD ADMIN</h1>
           <p>{roleLabel}</p>
@@ -78,7 +78,7 @@ export default function AdminSidebar({ tab, setTab, role, stats, onLogout }: Adm
         )}
       </div>
       <button className="logout" onClick={onLogout}>
-        <span>🚪</span> Sign Out
+        Sign Out
       </button>
     </div>
   );

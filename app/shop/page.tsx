@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { API } from "@/lib/api";
 import { ProductCardSkeleton } from "@/components/Skeleton";
+import SuccessState from "@/components/SuccessState";
 
 interface Product {
   id: number; name: string; description: string; price: number;
@@ -150,34 +151,14 @@ export default function ShopPage() {
 
   if (orderSuccess) {
     return (
-      <>
-        <main style={{ minHeight: "100vh", background: "#faf8f5", padding: "8rem 0 4rem" }}>
-          <div style={{ maxWidth: "500px", margin: "0 auto", padding: "4rem 2rem", textAlign: "center" }}>
-            <div style={{ width: "100px", height: "100px", borderRadius: "50%", background: "#27ae60", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 2rem", animation: "successPop 0.5s ease forwards, successPulse 2s ease infinite 0.5s" }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "checkDraw 0.6s ease 0.3s both" }}>
-                <polyline points="20 6 9 17 4 12" strokeDasharray="30" strokeDashoffset="30" style={{ animation: "checkDraw 0.4s ease 0.5s forwards" }} />
-              </svg>
-            </div>
-            <h1 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "2.5rem", marginBottom: "0.5rem", animation: "fadeSlideUp 0.5s ease 0.3s both" }}>Order Placed!</h1>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "1rem", lineHeight: 1.7, marginBottom: "0.5rem", animation: "fadeSlideUp 0.5s ease 0.4s both" }}>
-              Your order <strong style={{ color: "#1b3c33" }}>#{orderId}</strong> has been placed successfully.
-            </p>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem", marginBottom: "2rem", animation: "fadeSlideUp 0.5s ease 0.5s both" }}>
-              Redirecting to order tracking in a few seconds...
-            </p>
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", animation: "fadeSlideUp 0.5s ease 0.6s both" }}>
-              <button onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); router.push(`/track?phone=${encodeURIComponent(orderPhone)}`); }} style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", transition: "background 0.2s" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}
-              >Track Now</button>
-              <button onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); setOrderSuccess(false); }} style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "1.5px solid #ddd", background: "#fff", color: "#586159", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", transition: "border-color 0.2s" }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#1b3c33"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#ddd"; }}
-              >Continue Shopping</button>
-            </div>
-          </div>
-        </main>
-      </>
+      <SuccessState
+        title="Order Placed!"
+        description={`Your order #${orderId} has been placed successfully. Redirecting to order tracking in a few seconds...`}
+        actions={[
+          { label: "Track Now", onClick: () => { if (redirectTimer.current) clearTimeout(redirectTimer.current); router.push(`/track?phone=${encodeURIComponent(orderPhone)}`); }, primary: true },
+          { label: "Continue Shopping", onClick: () => { if (redirectTimer.current) clearTimeout(redirectTimer.current); setOrderSuccess(false); } },
+        ]}
+      />
     );
   }
 
