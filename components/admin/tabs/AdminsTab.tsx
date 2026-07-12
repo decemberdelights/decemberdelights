@@ -97,14 +97,14 @@ export default function AdminsTab({ adminUsers, stats, api, onRefresh }: AdminsT
                   placeholder="Username"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  style={{ flex: 1, padding: "8px 10px", border: "1px solid #e4e1d6", borderRadius: 6, fontSize: 13, fontFamily: "inherit" }}
+                  style={{ flex: 1, padding: "8px 10px", border: "1px solid #e4e1d6", borderRadius: 6, fontSize: 13, fontFamily: "inherit", color: "#1b2b25" }}
                 />
                 <input
                   type="password"
                   placeholder="Password (min 8 chars)"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  style={{ flex: 1, padding: "8px 10px", border: "1px solid #e4e1d6", borderRadius: 6, fontSize: 13, fontFamily: "inherit" }}
+                  style={{ flex: 1, padding: "8px 10px", border: "1px solid #e4e1d6", borderRadius: 6, fontSize: 13, fontFamily: "inherit", color: "#1b2b25" }}
                 />
                 <button type="submit" className="btn primary" disabled={saving} style={{ padding: "8px 16px" }}>
                   {saving ? "Adding..." : "Add"}

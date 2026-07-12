@@ -315,7 +315,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
               placeholder="Reason for deletion (required)..."
               value={deleteReason}
               onChange={e => setDeleteReason(e.target.value)}
-              style={{ width: "100%", minHeight: 80, padding: 10, border: "1px solid var(--border)", borderRadius: 8, fontSize: 14, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box" }}
+              style={{ width: "100%", minHeight: 80, padding: 10, border: "1px solid var(--border)", borderRadius: 8, fontSize: 14, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", color: "#1b2b25" }}
             />
             <div className="modal-actions">
               <button className="btn" onClick={() => setDeleteTarget(null)}>Cancel</button>

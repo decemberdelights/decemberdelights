@@ -64,7 +64,7 @@ export default function OverviewTab({ stats, setTab, todayOrders = 0, monthOrder
         <div className="stat-card" onClick={() => setTab("franchise")}>
           <div>
             <div className="label">Franchise Applications (This Month)</div>
-            <div className="value">{stats.franchise_month_count || 0}</div>
+            <div className="value" style={{ color: "#1b2b25" }}>{stats.franchise_month_count || 0}</div>
           </div>
         </div>
       </div>

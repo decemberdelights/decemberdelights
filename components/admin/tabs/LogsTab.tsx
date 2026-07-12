@@ -30,14 +30,14 @@ export default function LogsTab({ logs }: LogsTabProps) {
             <tbody>
               {logs.map((log) => (
                 <tr key={log.id}>
-                  <td style={{ fontWeight: 600 }}>{log.admin_username}</td>
-                  <td>{log.action}</td>
+                  <td style={{ fontWeight: 600, color: "#1b2b25" }}>{log.admin_username}</td>
+                  <td style={{ color: "#1b2b25" }}>{log.action}</td>
                   <td><span className="status submitted">{log.target_type} #{log.target_id}</span></td>
-                  <td style={{ maxWidth: 400, fontSize: 13, lineHeight: 1.5 }}>
+                  <td style={{ maxWidth: 400, fontSize: 13, lineHeight: 1.5, color: "#1b2b25" }}>
                     {log.details ? (
                       log.details.includes("Reason:") ? (
                         <>
-                          <span>{log.details.split("Reason:")[0]}</span>
+                          <span style={{ color: "#1b2b25" }}>{log.details.split("Reason:")[0]}</span>
                           <span style={{ display: "block", marginTop: 4, color: "#a32d2d", fontWeight: 600, fontSize: 12 }}>
                             Reason: {log.details.split("Reason:")[1]?.trim() || "—"}
                           </span>

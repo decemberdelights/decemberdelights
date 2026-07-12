@@ -19,7 +19,7 @@ interface JobOpening {
 export default function CareersPage() {
   const [jobs, setJobs] = useState<JobOpening[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
-  const [form, setForm] = useState({ full_name: "", email: "", phone: "", position: "", message: "" });
+  const [form, setForm] = useState({ full_name: "", email: "", phone: "", dob: "", position: "", message: "" });
   const [resume, setResume] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -51,6 +51,19 @@ export default function CareersPage() {
       setStatus("error");
       setErrorMsg("Resume file too large. Maximum size is 16MB.");
       return;
+    }
+
+    if (form.dob) {
+      const dobDate = new Date(form.dob);
+      const today = new Date();
+      let age = today.getFullYear() - dobDate.getFullYear();
+      const monthDiff = today.getMonth() - dobDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) age--;
+      if (age < 18) {
+        setStatus("error");
+        setErrorMsg("You must be at least 18 years old to apply.");
+        return;
+      }
     }
 
     const formData = new FormData();
@@ -251,6 +264,11 @@ export default function CareersPage() {
                 <div>
                   <label style={labelStyle}><Phone size={16} /> Phone Number *</label>
                   <input required name="phone" value={form.phone} onChange={handleChange} style={inputStyle} placeholder="+91 XXXXX XXXXX" />
+                </div>
+                <div>
+                  <label style={labelStyle}><User size={16} /> Date of Birth *</label>
+                  <input required type="date" name="dob" value={form.dob} onChange={handleChange} style={inputStyle} max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]} />
+                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", marginTop: "0.35rem" }}>You must be 18 years or older to apply.</p>
                 </div>
                 <div>
                   <label style={labelStyle}><Briefcase size={16} /> Position</label>

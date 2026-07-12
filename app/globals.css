@@ -451,7 +451,8 @@ a { color: inherit; text-decoration: none; }
 .admin-table-wrap { -webkit-overflow-scrolling: touch; }
 
 /* ============ ADMIN DASHBOARD ============ */
-.admin-page, .admin-page * { color: var(--admin-dark) !important; }
+.admin-page { color: var(--admin-dark); }
+.admin-page input, .admin-page textarea, .admin-page select { color: var(--admin-dark) !important; }
 .admin-page { --admin-bg: #f4f1ea; --admin-side: #173a30; --admin-side-hover: #214a3d; --admin-side-active: #2c5c4a; --admin-card: #fff; --admin-dark: #1b2b25; --admin-muted: #6b6f6a; --admin-border: #e4e1d6; --admin-green: #3b6d11; --admin-blue: #185fa5; --admin-purple: #534ab7; --admin-amber: #854f0b; --admin-red: #a32d2d; --admin-teal: #0f6e56; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--admin-bg); font-size: 15px; line-height: 1.5; }
 .admin-page .app { display: flex; min-height: 100vh; }
 
@@ -554,7 +555,7 @@ a { color: inherit; text-decoration: none; }
 .admin-page .btn.approve:hover { background: #EAF3DE; }
 .admin-page .btn.process { border-color: #a8c4db; color: #2563a8; }
 .admin-page .btn.process:hover { background: #e8f0f8; }
-.admin-page .btn.primary { background: #173a30; color: #fff; border-color: #173a30; }
+.admin-page .btn.primary { background: #173a30; color: #fff !important; border-color: #173a30; }
 .admin-page .btn.primary:hover { background: #214a3d; }
 .admin-page .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .admin-page .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }

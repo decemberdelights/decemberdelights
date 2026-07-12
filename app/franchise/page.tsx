@@ -43,6 +43,19 @@ export default function FranchisePage() {
   const handleSubmitClick = (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+
+    if (form.dob) {
+      const dobDate = new Date(form.dob);
+      const today = new Date();
+      let age = today.getFullYear() - dobDate.getFullYear();
+      const monthDiff = today.getMonth() - dobDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) age--;
+      if (age < 18) {
+        setErrorMsg("You must be at least 18 years old to apply for a franchise.");
+        return;
+      }
+    }
+
     setStatus("terms");
   };
 
@@ -227,8 +240,8 @@ export default function FranchisePage() {
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={labelStyle}><User size={16} /> Date of Birth *</label>
-                  <input required type="date" name="dob" value={form.dob} onChange={handleChange} style={inputStyle} />
-                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", marginTop: "0.35rem" }}>Your password will be auto-generated as: FirstnameDDMMYY@</p>
+                  <input required type="date" name="dob" value={form.dob} onChange={handleChange} style={inputStyle} max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]} />
+                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", marginTop: "0.35rem" }}>You must be 18 years or older. Your password will be auto-generated as: FirstnameDDMMYY@</p>
                 </div>
               </div>
             </div>
