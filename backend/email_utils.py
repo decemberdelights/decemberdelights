@@ -65,6 +65,7 @@ def send_password_email(to_email: str, full_name: str, password: str, login_id: 
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "DecemberDelights/1.0",
         },
         method="POST",
     )
@@ -101,6 +102,7 @@ def test_email_connection() -> dict:
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "DecemberDelights/1.0",
         },
         method="POST",
     )
