@@ -451,10 +451,50 @@ a { color: inherit; text-decoration: none; }
 .admin-table-wrap { -webkit-overflow-scrolling: touch; }
 
 /* ============ ADMIN DASHBOARD ============ */
-.admin-page { --admin-bg: #f4f1ea; --admin-side: #173a30; --admin-side-hover: #214a3d; --admin-side-active: #2c5c4a; --admin-card: #fff; --admin-dark: #1b2b25; --admin-muted: #6b6f6a; --admin-border: #e4e1d6; --admin-green: #3b6d11; --admin-blue: #185fa5; --admin-purple: #534ab7; --admin-amber: #854f0b; --admin-red: #a32d2d; --admin-teal: #0f6e56; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--admin-bg); color: var(--admin-dark); font-size: 15px; line-height: 1.5; }
+.admin-page, .admin-page * { color: var(--admin-dark) !important; }
+.admin-page { --admin-bg: #f4f1ea; --admin-side: #173a30; --admin-side-hover: #214a3d; --admin-side-active: #2c5c4a; --admin-card: #fff; --admin-dark: #1b2b25; --admin-muted: #6b6f6a; --admin-border: #e4e1d6; --admin-green: #3b6d11; --admin-blue: #185fa5; --admin-purple: #534ab7; --admin-amber: #854f0b; --admin-red: #a32d2d; --admin-teal: #0f6e56; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--admin-bg); font-size: 15px; line-height: 1.5; }
 .admin-page .app { display: flex; min-height: 100vh; }
 
-.admin-page .sidebar { width: 260px; background: linear-gradient(180deg, #0f2e24 0%, #173a30 100%); color: #dfe7e2; display: flex; flex-direction: column; padding: 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.admin-page .sidebar { width: 260px; background: linear-gradient(180deg, #0f2e24 0%, #173a30 100%); display: flex; flex-direction: column; padding: 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.admin-page .sidebar, .admin-page .sidebar * { color: #dfe7e2 !important; }
+.admin-page .sidebar .brand h1 { color: #fff !important; }
+.admin-page .sidebar .brand p { color: #9fb0a8 !important; }
+.admin-page .sidebar .nav-section { color: rgba(255,255,255,0.35) !important; }
+.admin-page .sidebar .nav-icon { color: rgba(255,255,255,0.5) !important; }
+.admin-page .sidebar .badge { color: #fff !important; }
+.admin-page .sidebar .logout { color: #dfe7e2 !important; }
+.admin-page .stat-card .label { color: var(--admin-muted) !important; }
+.admin-page .panel .sub { color: var(--admin-muted) !important; }
+.admin-page .role-pill { color: var(--admin-muted) !important; }
+.admin-page .role-pill b { color: var(--admin-dark) !important; }
+.admin-page th { color: var(--admin-muted) !important; }
+.admin-page .btn.danger { color: var(--admin-red) !important; }
+.admin-page .btn.approve { color: var(--admin-green) !important; }
+.admin-page .btn.process { color: #2563a8 !important; }
+.admin-page .status.pending { color: #854f0b !important; }
+.admin-page .status.submitted { color: #185fa5 !important; }
+.admin-page .status.approved { color: #3b6d11 !important; }
+.admin-page .status.rejected { color: #a32d2d !important; }
+.admin-page .status.under_process { color: #2563a8 !important; }
+.admin-page .status.preparing { color: #185fa5 !important; }
+.admin-page .status.delivered { color: #3b6d11 !important; }
+.admin-page .status.cancelled { color: #a32d2d !important; }
+.admin-page .notif-section-title { color: var(--admin-muted) !important; }
+.admin-page .notif-item .info .name { color: var(--admin-dark) !important; }
+.admin-page .notif-item .info .meta { color: var(--admin-muted) !important; }
+.admin-page .notif-empty { color: var(--admin-muted) !important; }
+.admin-page .notif-sidebar { background: #fff !important; }
+.admin-page .empty { color: var(--admin-muted) !important; }
+.admin-page .admin-row .meta span { color: var(--admin-muted) !important; }
+.admin-page .limit-note { color: #854f0b !important; }
+.admin-page .modal p { color: var(--admin-muted) !important; }
+.admin-page .modal .err { color: var(--admin-red) !important; }
+.admin-page .btn:disabled { color: var(--admin-dark) !important; opacity: 0.45; }
+.admin-page .stat-card .icon { color: var(--admin-dark) !important; }
+.admin-page .admin-hamburger { color: #fff !important; }
+.admin-page .overlay { color: var(--admin-dark) !important; }
+.admin-page .modal { color: var(--admin-dark) !important; }
+.admin-page .nav .badge { color: #fff !important; background: #e24b4a !important; }
 .admin-page .brand { padding: 20px 20px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 12px; }
 .admin-page .brand-logo { font-size: 16px; font-weight: 700; letter-spacing: 1px; width: 44px; height: 44px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; }
 .admin-page .brand h1 { font-size: 17px; letter-spacing: 1.5px; color: #fff; font-weight: 700; }
