@@ -161,39 +161,66 @@ export default function CareersPage() {
 
       {/* Job Openings */}
       <section id="openings" data-bg="light" className="careers-section-pad" style={{ padding: "6rem 5%", background: "#fff" }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "960px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
             <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Open Positions</span>
             <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2.5rem, 5vw, 4rem)", letterSpacing: "0.03em", marginTop: "0.5rem" }}>Current Openings</h2>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.95rem", marginTop: "0.75rem", maxWidth: "480px", margin: "0.75rem auto 0" }}>Join our growing team. Find a role that matches your passion and grow with us.</p>
           </div>
 
           {loadingJobs ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               {[1, 2, 3].map((i) => <JobCardSkeleton key={i} />)}
             </div>
           ) : jobs.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "3rem", background: "#fdf9f4", borderRadius: "20px" }}>
-              <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "1rem", marginBottom: "0.5rem" }}>No open positions right now.</p>
-              <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.9rem" }}>Check back soon or send us your resume for future opportunities.</p>
+            <div style={{ textAlign: "center", padding: "4rem 2rem", background: "#fdf9f4", borderRadius: "24px", border: "1px solid #f0ede8" }}>
+              <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#1b3c3310", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem", color: "#1b3c33" }}>
+                <Briefcase size={28} />
+              </div>
+              <p style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.3rem", letterSpacing: "0.03em", marginBottom: "0.5rem" }}>No Open Positions Right Now</p>
+              <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.9rem", maxWidth: "380px", margin: "0 auto" }}>We are always growing. Send us your resume and we will reach out when something opens up.</p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(420px, 100%), 1fr))", gap: "1.25rem" }}>
               {jobs.map((job) => (
-                <div key={job.id} style={{ background: "#fdf9f4", borderRadius: "20px", padding: "2rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1.5rem", flexWrap: "wrap" }}>
-                  <div style={{ flex: 1, minWidth: "250px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
-                      <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.3rem", letterSpacing: "0.03em" }}>{job.title}</h3>
-                      <span style={{ padding: "0.2rem 0.7rem", borderRadius: "100px", background: "#1b3c3310", color: "#1b3c33", fontSize: "0.7rem", fontWeight: 700, fontFamily: "var(--font-outfit), sans-serif" }}>{job.job_type}</span>
+                <div key={job.id} style={{ background: "#fdf9f4", borderRadius: "20px", overflow: "hidden", border: "1px solid #f0ede8", transition: "transform 0.3s, box-shadow 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(27,60,51,0.08)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+                  <div style={{ height: "4px", background: "linear-gradient(90deg, #1b3c33, #eab96a)" }} />
+                  <div style={{ padding: "1.75rem 1.75rem 1.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "1rem" }}>
+                      <div>
+                        <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.4rem", letterSpacing: "0.03em", marginBottom: "0.3rem" }}>{job.title}</h3>
+                        {job.department && <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#c8a97a", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{job.department}</p>}
+                      </div>
+                      <span style={{ padding: "0.3rem 0.85rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontSize: "0.65rem", fontWeight: 700, fontFamily: "var(--font-outfit), sans-serif", letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0 }}>{job.job_type}</span>
                     </div>
-                    {job.department && <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", marginBottom: "0.25rem" }}><Briefcase size={14} /> {job.department}</p>}
-                    {job.location && <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", marginBottom: "0.25rem" }}><MapPin size={14} /> {job.location}</p>}
-                    {job.salary_range && <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", marginBottom: "0.5rem" }}><Clock size={14} /> {job.salary_range}</p>}
-                    {job.description && <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.88rem", lineHeight: 1.6, marginTop: "0.5rem" }}>{job.description}</p>}
-                    {job.requirements && <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.82rem", lineHeight: 1.5, marginTop: "0.5rem" }}>{job.requirements}</p>}
+
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
+                      {job.location && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.35rem 0.75rem", borderRadius: "100px", background: "#fff", border: "1px solid #e8e5e0", fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.75rem" }}>
+                          <MapPin size={12} /> {job.location}
+                        </span>
+                      )}
+                      {job.salary_range && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.35rem 0.75rem", borderRadius: "100px", background: "#fff", border: "1px solid #e8e5e0", fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.75rem" }}>
+                          <Clock size={12} /> {job.salary_range}
+                        </span>
+                      )}
+                    </div>
+
+                    {job.description && (
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", lineHeight: 1.65, marginBottom: "0.75rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{job.description}</p>
+                    )}
+
+                    {job.requirements && (
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.78rem", lineHeight: 1.5, marginBottom: "1.25rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{job.requirements}</p>
+                    )}
+
+                    <a href="#apply" className="careers-apply-btn" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.7rem 1.8rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.82rem", textDecoration: "none", whiteSpace: "nowrap", transition: "background 0.2s" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
+                      Apply Now <ArrowRight size={14} />
+                    </a>
                   </div>
-                  <a href="#apply" className="careers-apply-btn" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.7rem 1.8rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem", textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>
-                    Apply <ArrowRight size={14} />
-                  </a>
                 </div>
               ))}
             </div>
