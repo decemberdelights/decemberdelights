@@ -190,7 +190,7 @@ export default function AdminPage() {
     const id = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const r = await fetch(`${API}${path}`, { credentials: "include", ...opts, signal: controller.signal });
-      if (r.status === 401 || r.status === 403) { setAuthed(false); throw new Error("Unauthorized"); }
+      if (r.status === 401) { setAuthed(false); throw new Error("Unauthorized"); }
       return r;
     } finally { clearTimeout(id); }
   }, []);
