@@ -8,7 +8,7 @@ from supabase_client import supabase
 from schemas import FranchiseLogin, FranchiseOut
 from auth import hash_password, verify_password, create_token, decode_token
 from security import franchise_limiter, get_client_ip, validate_email, validate_phone, sanitize_input
-from email_utils import send_password_email
+from email_utils import send_password_email, test_email_connection
 
 logger = logging.getLogger(__name__)
 
@@ -176,21 +176,4 @@ def franchise_logout(response: Response):
 
 @router.get("/api/email/test")
 def test_email():
-    import smtplib
-    smtp_user = os.environ.get("SMTP_EMAIL", "")
-    smtp_pass = os.environ.get("SMTP_PASSWORD", "")
-    smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-
-    if not smtp_user or not smtp_pass:
-        return {"ok": False, "error": "SMTP_EMAIL and SMTP_PASSWORD env vars are not set", "configured": False}
-
-    try:
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(smtp_user, smtp_pass)
-        return {"ok": True, "configured": True, "smtp_user": smtp_user, "smtp_host": smtp_host, "smtp_port": smtp_port}
-    except Exception as e:
-        return {"ok": False, "configured": True, "error": str(e), "smtp_user": smtp_user, "smtp_host": smtp_host}
+    return test_email_connection()
