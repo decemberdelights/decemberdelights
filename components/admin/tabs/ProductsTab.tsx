@@ -17,6 +17,7 @@ export default function ProductsTab({ products, onAdd, onEdit, onDelete }: Produ
         <button className="btn primary" onClick={onAdd}>+ Add Product</button>
       </div>
       <div className="panel">
+        <div className="table-wrap">
         <table>
           <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>
@@ -38,6 +39,7 @@ export default function ProductsTab({ products, onAdd, onEdit, onDelete }: Produ
             ))}
           </tbody>
         </table>
+        </div>
         {products.length === 0 && <div className="empty">No products. Click &quot;Add Product&quot; to create one.</div>}
       </div>
     </>

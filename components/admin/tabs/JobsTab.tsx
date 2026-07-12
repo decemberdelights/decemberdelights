@@ -17,6 +17,7 @@ export default function JobsTab({ jobs, onAdd, onEdit, onDelete }: JobsTabProps)
         <button className="btn primary" onClick={onAdd}>+ Add Job</button>
       </div>
       <div className="panel">
+        <div className="table-wrap">
         <table>
           <thead><tr><th>ID</th><th>Title</th><th>Department</th><th>Location</th><th>Type</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>
@@ -38,6 +39,7 @@ export default function JobsTab({ jobs, onAdd, onEdit, onDelete }: JobsTabProps)
             ))}
           </tbody>
         </table>
+        </div>
         {jobs.length === 0 && <div className="empty">No job openings. Click &quot;Add Job&quot; to create one.</div>}
       </div>
     </>

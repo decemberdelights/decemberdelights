@@ -6,31 +6,6 @@ import Image from "next/image";
 export default function AboutSection() {
   return (
     <>
-      <style>{`
-        .about-section { position: relative; z-index: 25; background: #faf8f5; display: flex; flex-direction: column; min-height: auto; }
-        .about-content { display: flex; min-height: 70vh; }
-        .about-text { flex: 1; padding: 100px 80px 40px; display: flex; flex-direction: column; justify-content: center; }
-        .about-text h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px, 5vw, 80px); font-weight: 700; line-height: 0.95; color: #094b3d; margin-bottom: 40px; text-transform: uppercase; }
-        .about-text p { font-family: 'Montserrat', sans-serif; font-size: clamp(14px, 2vw, 19px); font-weight: 500; line-height: 1.8; color: #1a1a1a; margin-bottom: 22px; max-width: 540px; }
-        .about-image { width: 45%; position: relative; overflow: hidden; }
-        .about-stats { display: flex; align-items: center; justify-content: center; gap: 48px; padding: 48px 80px; flex-wrap: wrap; }
-        @media (max-width: 900px) {
-          .about-text { padding: 80px 40px 30px; }
-          .about-stats { gap: 32px; padding: 40px 40px; }
-        }
-        @media (max-width: 768px) {
-          .about-content { flex-direction: column; min-height: auto; }
-          .about-image { width: 100%; height: 50vh; order: -1; }
-          .about-text { padding: 60px 24px 20px; }
-          .about-text h2 { margin-bottom: 24px; }
-          .about-text p { margin-bottom: 16px; }
-          .about-stats { gap: 24px; padding: 40px 24px; }
-        }
-        @media (max-width: 480px) {
-          .about-text { padding: 40px 16px 16px; }
-          .about-stats { gap: 20px; padding: 32px 16px; flex-direction: column; }
-        }
-      `}</style>
       <div id="our-story" data-bg="light" className="about-section">
         <div className="about-content">
           <div className="about-text">
@@ -59,7 +34,7 @@ export default function AboutSection() {
             </p>
           </div>
           <div className="about-image">
-            <img src="/images/owners/owner.jpeg" alt="December Delights Owner" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", position: "absolute", top: 0, left: 0 }} />
+            <Image src="/images/owners/owner.jpeg" alt="December Delights Owner" fill loading="lazy" style={{ objectFit: "cover", objectPosition: "center top" }} />
             <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(180deg, transparent 60%, rgba(9,75,61,0.15) 100%)" }} />
           </div>
         </div>
@@ -75,7 +50,7 @@ export default function AboutSection() {
               </div>
             </div>
           </div>
-          <div style={{ width: "1px", height: "60px", background: "rgba(0,0,0,0.15)" }} />
+          <div className="stats-divider" style={{ width: "1px", height: "60px", background: "rgba(0,0,0,0.15)" }} />
           <div style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px 24px", background: "rgba(9,75,61,0.04)", borderRadius: "16px" }}>
             <div style={{ width: "4px", height: "60px", background: "#c8a97a", borderRadius: "2px" }} />
             <div>

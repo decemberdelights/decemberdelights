@@ -6,28 +6,6 @@ import LazyVideo from "@/components/LazyVideo";
 export default function VisitSection() {
   return (
     <>
-      <style>{`
-        .visit-section { position: relative; z-index: 25; height: 80vh; display: flex; background: linear-gradient(135deg, #063529 0%, #094b3d 50%, #0a5c49 100%); isolation: isolate; }
-        .visit-text { flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: center; }
-        .visit-video-wrap { width: 48%; display: flex; align-items: center; margin-left: -60px; }
-        .visit-video-inner { width: 100%; height: 100%; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%); }
-        .visit-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 4vw, 60px); font-weight: 700; line-height: 0.95; color: #fdf9f4; margin-bottom: 30px; text-transform: uppercase; }
-        .visit-buttons { display: flex; gap: 16px; margin-top: 32px; flex-wrap: wrap; }
-        @media (max-width: 900px) {
-          .visit-text { padding: 60px 40px; }
-          .visit-video-wrap { margin-left: -40px; }
-        }
-        @media (max-width: 768px) {
-          .visit-section { flex-direction: column; height: auto; min-height: 100vh; }
-          .visit-text { padding: 60px 24px; }
-          .visit-video-wrap { width: 100%; height: 50vh; margin-left: 0; }
-        }
-        @media (max-width: 480px) {
-          .visit-text { padding: 40px 16px; }
-          .visit-buttons { flex-direction: column; }
-          .visit-buttons a { width: 100%; justify-content: center; }
-        }
-      `}</style>
       <div data-bg="dark" id="visit" className="visit-section">
         <div className="visit-text">
           <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Visit Us</span>

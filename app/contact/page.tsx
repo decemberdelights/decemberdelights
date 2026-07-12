@@ -50,6 +50,39 @@ export default function ContactPage() {
 
   return (
     <>
+      <style>{`
+        .contact-card-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1.5rem;
+        }
+        .contact-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 1rem;
+          padding: 2.5rem 1.5rem;
+          background: #fff;
+          border-radius: 20px;
+          border: 1px solid rgba(27,60,51,0.06);
+          box-shadow: 0 2px 24px rgba(27,60,51,0.04);
+          text-decoration: none;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .contact-form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1.25rem;
+          margin-bottom: 1.25rem;
+        }
+        @media (max-width: 900px) {
+          .contact-card-grid { grid-template-columns: 1fr; gap: 1rem; }
+        }
+        @media (max-width: 640px) {
+          .contact-form-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
       {/* Hero */}
       <section data-bg="dark" style={{ minHeight: "60vh", background: "#0c1a14", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 30% 50%, rgba(234,185,106,0.08) 0%, transparent 60%)" }} />
@@ -107,7 +140,7 @@ export default function ContactPage() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ background: "#fdf9f4", borderRadius: "24px", padding: "2.5rem", boxShadow: "0 2px 24px rgba(27,60,51,0.04)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem", marginBottom: "1.25rem" }}>
+            <div className="contact-form-grid">
               <div>
                 <label style={labelStyle}><Mail size={16} /> Your Name *</label>
                 <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={inputStyle} placeholder="Your full name" />

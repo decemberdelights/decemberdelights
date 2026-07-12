@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Stats, OrderStats } from "../types";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -16,58 +17,43 @@ const COLORS = ["#3b6d11", "#854f0b", "#a32d2d", "#185fa5"];
 export default function ChartsTab({ stats, orderStats }: ChartsTabProps) {
   const DAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  const dailyData = orderStats?.daily
+  const dailyData = useMemo(() => orderStats?.daily
     ? DAY_ORDER
         .map(day => orderStats.daily[day] ? { day, orders: orderStats.daily[day].orders, revenue: orderStats.daily[day].revenue } : null)
         .filter(Boolean) as { day: string; orders: number; revenue: number }[]
-    : [];
+    : [], [orderStats?.daily]);
 
-  const monthlyData = orderStats?.monthly
+  const monthlyData = useMemo(() => orderStats?.monthly
     ? Object.entries(orderStats.monthly)
         .sort(([a], [b]) => {
           const parse = (s: string) => { const [m, y] = s.split(" "); return new Date(`${m} 1 ${y}`).getTime(); };
           return parse(a) - parse(b);
         })
         .map(([month, val]) => ({ month, orders: val.orders, revenue: val.revenue }))
-    : [];
+    : [], [orderStats?.monthly]);
 
-  const franchisePieData = [
+  const franchisePieData = useMemo(() => [
     { name: "Approved", value: stats.approved_franchise || 0 },
     { name: "Under Process", value: stats.under_process_franchise || 0 },
     { name: "Pending", value: (stats.pending_franchise || 0) + (stats.submitted_franchise || 0) },
     { name: "Rejected", value: stats.rejected_franchise || 0 },
-  ].filter(d => d.value > 0);
+  ].filter(d => d.value > 0), [stats]);
 
-  const careersPieData = [
+  const careersPieData = useMemo(() => [
     { name: "Approved", value: stats.approved_careers || 0 },
     { name: "Pending", value: stats.pending_careers || 0 },
     { name: "Rejected", value: stats.rejected_careers || 0 },
-  ].filter(d => d.value > 0);
+  ].filter(d => d.value > 0), [stats]);
 
-  const orderStatusPie = [
+  const orderStatusPie = useMemo(() => [
     { name: "Delivered", value: stats.delivered_orders || 0 },
     { name: "Pending", value: stats.pending_orders || 0 },
     { name: "Preparing", value: stats.preparing_orders || 0 },
     { name: "Cancelled", value: stats.cancelled_orders || 0 },
-  ].filter(d => d.value > 0);
+  ].filter(d => d.value > 0), [stats]);
 
   return (
     <>
-      <style>{`
-        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-        .charts-grid .panel { min-height: 380px; }
-        .charts-grid .panel h3 { margin-bottom: 16px; font-size: 16px; }
-        .pie-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-        .pie-row .panel { text-align: center; }
-        .pie-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin-top: 12px; }
-        .pie-legend span { font-size: 12px; display: flex; align-items: center; gap: 6px; }
-        .pie-legend .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-        .charts-full { margin-bottom: 24px; }
-        .charts-full .panel { min-height: 340px; }
-        .charts-empty { display: flex; align-items: center; justify-content: center; min-height: 300px; color: #6b6f6a; font-size: 14px; }
-        @media(max-width:900px) { .charts-grid, .pie-row { grid-template-columns: 1fr; } }
-      `}</style>
-
       <div className="topbar">
         <h2>ANALYTICS &amp; CHARTS</h2>
         <div className="role-pill">Charts</div>

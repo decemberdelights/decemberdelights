@@ -6,26 +6,6 @@ import LazyVideo from "@/components/LazyVideo";
 export default function CareerSection() {
   return (
     <>
-      <style>{`
-        .career-section { position: relative; z-index: 25; background: linear-gradient(135deg, #063529 0%, #094b3d 50%, #0a5c49 100%); padding: 80px 60px; min-height: 60vh; display: flex; align-items: center; isolation: isolate; }
-        .career-text { flex: 1; }
-        .career-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 5vw, 80px); font-weight: 700; line-height: 0.95; color: #fdf9f4; margin-bottom: 40px; text-transform: uppercase; }
-        .career-text p { font-family: 'Montserrat', sans-serif; font-size: clamp(15px, 3.5vw, 19px); font-weight: 400; line-height: 1.8; color: rgba(255,255,255,0.85); margin-bottom: 40px; max-width: 540px; }
-        .career-video-wrap { width: 55%; height: 60vh; position: relative; overflow: hidden; border-radius: 24px; }
-        @media (max-width: 900px) {
-          .career-section { padding: 60px 40px; }
-          .career-video-wrap { width: 45%; height: 50vh; }
-        }
-        @media (max-width: 768px) {
-          .career-section { flex-direction: column; padding: 60px 24px; min-height: auto; }
-          .career-text { paddingRight: 0; }
-          .career-video-wrap { width: 100%; height: 40vh; margin-top: 40px; }
-        }
-        @media (max-width: 480px) {
-          .career-section { padding: 40px 16px; }
-          .career-video-wrap { height: 35vh; }
-        }
-      `}</style>
       <div data-bg="dark" className="career-section">
         <div className="career-text">
           <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Career</span>

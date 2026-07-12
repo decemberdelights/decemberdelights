@@ -92,7 +92,7 @@ export default function AdminsTab({ adminUsers, stats, api, onRefresh }: AdminsT
           <div style={{ marginTop: 16, borderTop: "1px solid #e4e1d6", paddingTop: 16 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#6b6f6a", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.4px" }}>Add New Admin</div>
             <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <input
                   placeholder="Username"
                   value={username}

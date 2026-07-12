@@ -41,24 +41,6 @@ const mustTryItems = [
 export default function MenuPreviewSection() {
   return (
     <>
-      <style>{`
-        .menu-section { position: relative; z-index: 25; background: #faf8f5; padding: 100px 80px; min-height: 100vh; display: flex; align-items: center; gap: 60px; isolation: isolate; }
-        .menu-content { max-width: 750px; width: 100%; position: relative; z-index: 3; margin-left: auto; }
-        .menu-grid-equal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .menu-card-vert { background: #094b3d; border: 1px solid rgba(9,75,61,0.2); border-radius: 12px; overflow: hidden; transition: transform 0.3s ease, border-color 0.3s ease; }
-        .menu-card-vert:hover { transform: translateY(-4px); border-color: rgba(9,75,61,0.4); }
-        .menu-video-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; opacity: 1; filter: brightness(1.3); }
-        @media (max-width: 768px) {
-          .menu-section { flex-direction: column; padding: 60px 24px; min-height: auto; gap: 30px; }
-          .menu-content { margin-left: 0; max-width: 100%; }
-          .menu-grid-equal { grid-template-columns: repeat(2, 1fr); }
-          .menu-video-bg { position: relative; width: 100%; height: 280px; object-fit: cover; border-radius: 16px; order: -1; }
-        }
-        @media (max-width: 480px) {
-          .menu-section { padding: 40px 16px; }
-          .menu-video-bg { height: 220px; border-radius: 12px; }
-        }
-      `}</style>
       <div data-bg="light" className="menu-section">
         <LazyVideo
           src="/DDespresso.mp4"

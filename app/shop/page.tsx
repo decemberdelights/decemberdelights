@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { API } from "@/lib/api";
@@ -51,22 +51,27 @@ export default function ShopPage() {
 
   useEffect(() => { setCart(loadCart()); }, []);
 
-  useEffect(() => { saveCart(cart); }, [cart]);
+  useEffect(() => {
+    const timer = setTimeout(() => { saveCart(cart); }, 300);
+    return () => clearTimeout(timer);
+  }, [cart]);
 
   useEffect(() => {
-    fetch(`${API}/api/products`)
+    const controller = new AbortController();
+    fetch(`${API}/api/products`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((data) => { setProducts(data); setLoading(false); })
-      .catch(() => { setFetchError(true); setLoading(false); });
-    fetch(`${API}/api/products/categories`)
+      .catch((err) => { if (err.name !== "AbortError") { setFetchError(true); setLoading(false); } });
+    fetch(`${API}/api/products/categories`, { signal: controller.signal })
       .then((r) => r.json())
       .then(setCategories)
       .catch(() => {});
+    return () => controller.abort();
   }, []);
 
-  const filtered = activeCategory ? products.filter((p) => p.category === activeCategory) : products;
-  const cartCount = cart.reduce((s, c) => s + c.quantity, 0);
-  const cartTotal = cart.reduce((s, c) => s + c.product.price * c.quantity, 0);
+  const filtered = useMemo(() => activeCategory ? products.filter((p) => p.category === activeCategory) : products, [activeCategory, products]);
+  const cartCount = useMemo(() => cart.reduce((s, c) => s + c.quantity, 0), [cart]);
+  const cartTotal = useMemo(() => cart.reduce((s, c) => s + c.product.price * c.quantity, 0), [cart]);
 
   const addToCart = (product: Product) => {
     setCart((prev) => {
@@ -146,7 +151,6 @@ export default function ShopPage() {
   if (orderSuccess) {
     return (
       <>
-        <style>{`@keyframes successPop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } } @keyframes successPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(39,174,96,0.3); } 50% { box-shadow: 0 0 0 16px rgba(39,174,96,0); } } @keyframes fadeSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @keyframes checkDraw { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }`}</style>
         <main style={{ minHeight: "100vh", background: "#faf8f5", padding: "8rem 0 4rem" }}>
           <div style={{ maxWidth: "500px", margin: "0 auto", padding: "4rem 2rem", textAlign: "center" }}>
             <div style={{ width: "100px", height: "100px", borderRadius: "50%", background: "#27ae60", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 2rem", animation: "successPop 0.5s ease forwards, successPulse 2s ease infinite 0.5s" }}>
@@ -281,7 +285,7 @@ export default function ShopPage() {
         {showCart && (
           <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex" }}>
             <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={() => setShowCart(false)} />
-            <div style={{ marginLeft: "auto", width: "420px", maxWidth: "100%", height: "100%", background: "#fff", position: "relative", display: "flex", flexDirection: "column", boxShadow: "-4px 0 24px rgba(0,0,0,0.25)", overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+            <div style={{ marginLeft: "auto", width: "min(420px, 100%)", height: "100%", background: "#fff", position: "relative", display: "flex", flexDirection: "column", boxShadow: "-4px 0 24px rgba(0,0,0,0.25)", overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
               <div style={{ padding: "1.5rem", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
                 <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.5rem" }}>Your Cart ({cartCount})</h2>
                 <button onClick={() => setShowCart(false)} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#586159" }}>&times;</button>

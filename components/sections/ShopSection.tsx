@@ -24,41 +24,23 @@ export default function ShopSection() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/products`)
+    const controller = new AbortController();
+    fetch(`${API}/api/products`, { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => setProducts(data.filter((p: Product) => p.stock > 0).slice(0, 6)))
-      .catch(() => {})
+      .catch((err) => { if (err.name !== "AbortError") {} })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, []);
 
   return (
     <div data-bg="light" style={{ position: "relative", zIndex: 25, marginTop: "100vh", background: "linear-gradient(180deg, #faf8f5 0%, #f0ebe4 50%, #faf8f5 100%)", minHeight: "100vh", display: "flex", justifyContent: "flex-start", alignItems: "center", overflow: "hidden" }}>
-      {/* Paper grain texture */}
       <div style={{ position: "absolute", inset: 0, opacity: 0.35, pointerEvents: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.4'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "200px 200px" }} />
-      {/* Decorative background shapes */}
       <div style={{ position: "absolute", top: "-120px", right: "-80px", width: "400px", height: "400px", borderRadius: "50%", background: "radial-gradient(circle, rgba(200,169,122,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: "350px", height: "350px", borderRadius: "50%", background: "radial-gradient(circle, rgba(9,75,61,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", top: "50%", left: "60%", width: "250px", height: "250px", borderRadius: "50%", background: "radial-gradient(circle, rgba(200,169,122,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", top: "20%", left: "10%", width: "180px", height: "180px", borderRadius: "50%", border: "1px solid rgba(200,169,122,0.1)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: "15%", right: "15%", width: "120px", height: "120px", borderRadius: "50%", border: "1px solid rgba(9,75,61,0.08)", pointerEvents: "none" }} />
-      <style>{`
-        .shop-section { padding: 100px 60px; }
-        .shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 48px; }
-        .shop-grid > a { display: flex; flex-direction: column; }
-        .shop-grid > a > div { flex: 1; display: flex; flex-direction: column; }
-        .shop-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 6vw, 90px); font-weight: 700; color: #094b3d; margin-bottom: 20px; line-height: 1.15; }
-        @media (max-width: 900px) {
-          .shop-section { padding: 80px 40px; }
-          .shop-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
-        }
-        @media (max-width: 768px) {
-          .shop-section { padding: 60px 24px; }
-        }
-        @media (max-width: 480px) {
-          .shop-section { padding: 40px 16px; }
-          .shop-grid { grid-template-columns: 1fr; gap: 16px; }
-        }
-      `}</style>
       <div className="shop-section" style={{ maxWidth: "1600px", width: "100%", margin: "0 auto" }}>
         <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Our Shop</span>
         <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />

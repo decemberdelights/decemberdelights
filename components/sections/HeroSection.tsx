@@ -31,6 +31,11 @@ export default function HeroSection() {
         if (videoRef.current) {
           const translateY = progress * 60;
           videoRef.current.style.transform = `translateZ(0) translateY(${translateY}px)`;
+          if (progress >= 0.9 && !videoRef.current.paused) {
+            videoRef.current.pause();
+          } else if (progress < 0.9 && videoRef.current.paused) {
+            videoRef.current.play().catch(() => {});
+          }
         }
         ticking = false;
       });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Order, OrderStats } from "../types";
 
 interface OrdersTabProps {
@@ -12,6 +13,12 @@ interface OrdersTabProps {
 }
 
 export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOrder, onCancelOrder }: OrdersTabProps) {
+  const parsedOrders = useMemo(() => orders.slice(0, 20).map(o => {
+    let parsedItems: unknown[] = [];
+    try { parsedItems = JSON.parse(o.items); } catch { /* ignore */ }
+    return { ...o, parsedItems };
+  }), [orders]);
+
   const updateStatus = async (orderId: number, status: string) => {
     await api(`/api/admin/orders/${orderId}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
     onRefresh();
@@ -40,15 +47,13 @@ export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOr
         <table>
           <thead><tr><th>ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Payment</th><th>Date</th><th>Actions</th></tr></thead>
           <tbody>
-            {orders.slice(0, 20).map(o => {
-              let parsedItems: unknown[] = [];
-              try { parsedItems = JSON.parse(o.items); } catch { /* ignore */ }
+            {parsedOrders.map(o => {
               return (
                 <tr key={o.id}>
                   <td>#{o.id}</td>
                   <td>{o.customer_name}</td>
                   <td>
-                    <button className="btn" onClick={() => onViewOrder({ ...o, parsedItems })} style={{ fontSize: 11, padding: "3px 8px" }}>View Items</button>
+                    <button className="btn" onClick={() => onViewOrder(o)} style={{ fontSize: 11, padding: "3px 8px" }}>View Items</button>
                   </td>
                   <td>₹{o.total.toLocaleString()}</td>
                   <td><span className={`status ${o.status}`}>{o.status === "pending" ? "Pending" : o.status === "preparing" ? "Packing" : o.status === "delivered" ? "Delivered" : o.status === "cancelled" ? "Cancelled" : o.status}</span></td>

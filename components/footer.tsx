@@ -1,5 +1,3 @@
-"use client";
-
 import Image from "next/image";
 
 export default function Footer() {
@@ -11,48 +9,6 @@ export default function Footer() {
       position: "relative",
       zIndex: 50,
     }}>
-      <style>{`
-        .footer-grid {
-          max-width: 1200px;
-          margin: 0 auto;
-          display: grid;
-          grid-template-columns: 2fr 1fr 1fr 1fr;
-          gap: 3rem;
-        }
-        .footer-link {
-          display: block;
-          font-family: 'Montserrat', sans-serif;
-          font-size: 0.8rem;
-          color: rgba(9,75,61,0.85);
-          margin-bottom: 0.5rem;
-          text-decoration: none;
-          transition: color 0.2s ease;
-          padding: 6px 0;
-        }
-        .footer-link:hover { color: #094b3d; }
-
-        @media (max-width: 900px) {
-          .footer-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-          }
-          .footer-brand img { height: 100px; }
-        }
-        @media (max-width: 480px) {
-          .footer-grid {
-            grid-template-columns: 1fr;
-            gap: 1.75rem;
-            text-align: center;
-          }
-          .footer-brand {
-            display: flex;
-            justify-content: center;
-          }
-          .footer-brand img { height: 80px; }
-          .footer-link { text-align: center; }
-        }
-      `}</style>
-
       <div className="footer-grid">
         <div className="footer-brand">
           <Image src="/logo.png" alt="December Delights" width={300} height={140} style={{ height: "140px", width: "auto", marginBottom: "12px" }} />

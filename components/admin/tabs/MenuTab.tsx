@@ -17,6 +17,7 @@ export default function MenuTab({ items, onAdd, onEdit, onDelete }: MenuTabProps
         <button className="btn primary" onClick={onAdd}>+ Add Item</button>
       </div>
       <div className="panel">
+        <div className="table-wrap">
         <table>
           <thead><tr><th>ID</th><th>Category</th><th>Name</th><th>Price</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>
@@ -37,6 +38,7 @@ export default function MenuTab({ items, onAdd, onEdit, onDelete }: MenuTabProps
             ))}
           </tbody>
         </table>
+        </div>
         {items.length === 0 && <div className="empty">No menu items. Click &quot;Add Item&quot; to create one.</div>}
       </div>
     </>
