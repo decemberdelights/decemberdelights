@@ -188,9 +188,12 @@ export default function AdminPage() {
   const apiWithTimeout = useCallback(async (path: string, opts?: RequestInit, timeoutMs = 30000) => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
+    const token = localStorage.getItem("admin_token") || "";
+    const headers: Record<string, string> = { ...(opts?.headers as Record<string, string> || {}) };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
     try {
-      const r = await fetch(`${API}${path}`, { credentials: "include", ...opts, signal: controller.signal });
-      if (r.status === 401 || r.status === 403) { setAuthed(false); throw new Error("Unauthorized"); }
+      const r = await fetch(`${API}${path}`, { credentials: "include", ...opts, headers, signal: controller.signal });
+      if (r.status === 401 || r.status === 403) { localStorage.removeItem("admin_token"); setAuthed(false); throw new Error("Unauthorized"); }
       return r;
     } finally { clearTimeout(id); }
   }, []);
@@ -200,10 +203,13 @@ export default function AdminPage() {
   }, [apiWithTimeout]);
 
   useEffect(() => {
-    fetch(`${API}/api/auth/check`, { credentials: "include" })
+    const token = localStorage.getItem("admin_token") || "";
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    fetch(`${API}/api/auth/check`, { credentials: "include", headers })
       .then(r => r.json())
-      .then(d => { setAuthed(d.authenticated); setRole(d.role || ""); })
-      .catch(() => { setAuthed(false); });
+      .then(d => { setAuthed(d.authenticated); setRole(d.role || ""); if (!d.authenticated) localStorage.removeItem("admin_token"); })
+      .catch(() => { localStorage.removeItem("admin_token"); setAuthed(false); });
   }, []);
 
   const loadAll = useCallback(async (retries = 2) => {
@@ -289,6 +295,7 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     await fetch(`${API}/api/auth/logout`, { method: "POST", credentials: "include" });
+    localStorage.removeItem("admin_token");
     setAuthed(false);
   };
 
