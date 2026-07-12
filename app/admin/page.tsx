@@ -34,7 +34,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .brand p{font-size:12px;margin-top:2px;color:#9fb0a8;}
 .nav{flex:1;padding:8px 10px;}
 .nav-section{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.35);padding:14px 12px 6px;font-weight:600;}
-.nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:14px;padding:10px 12px;border-radius:8px;color:#cdd9d2;transition:all 0.15s;}
+.nav button{cursor:pointer;display:flex;align-items:center;gap:10px;font-size:14px;padding:10px 12px;border-radius:8px;color:#cdd9d2;background:none;border:none;margin:0;font-family:inherit;transition:all 0.15s;}
 .nav button:hover{background:var(--side-hover);color:#fff;}
 .nav button.active{background:var(--side-active);color:#fff;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
 .nav-icon{font-size:10px;width:22px;text-align:center;flex-shrink:0;font-weight:700;letter-spacing:0.5px;color:rgba(255,255,255,0.5);}
