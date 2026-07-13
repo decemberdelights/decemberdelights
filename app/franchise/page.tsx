@@ -267,7 +267,7 @@ export default function FranchisePage() {
           {/* Progress Line */}
           <div style={{ marginBottom: "2.5rem" }}>
             <div style={{ position: "relative", height: "4px", background: "#e8e5e0", borderRadius: "100px" }}>
-              <div style={{ height: "100%", width: `${((step + 1) / STEPS.length) * 100}%`, background: "linear-gradient(90deg, #1b3c33, #eab96a)", borderRadius: "100px", transition: "width 0.4s cubic-bezier(0.25,0.1,0.25,1)" }} />
+              <div style={{ height: "100%", width: `${((step + 1) / STEPS.length) * 100}%`, background: "#1b3c33", borderRadius: "100px", transition: "width 0.4s cubic-bezier(0.25,0.1,0.25,1)" }} />
               {STEPS.map((_, i) => (
                 <div key={i} style={{ position: "absolute", top: "50%", left: `${(i / (STEPS.length - 1)) * 100}%`, transform: "translate(-50%, -50%)", width: i <= step ? "14px" : "10px", height: i <= step ? "14px" : "10px", borderRadius: "50%", background: i < step ? "#1b3c33" : i === step ? "#eab96a" : "#e8e5e0", border: i <= step ? "none" : "2px solid #d4d0ca", transition: "all 0.3s", zIndex: 1 }} />
               ))}
