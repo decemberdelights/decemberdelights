@@ -52,7 +52,7 @@ export default function VisitSection() {
         </div>
         <div className="visit-video-wrap">
           <div className="visit-video-inner">
-            <LazyVideo src="/video.mp4" />
+            <LazyVideo src="/video.mp4" style={{ objectFit: "contain" }} />
           </div>
         </div>
       </div>
