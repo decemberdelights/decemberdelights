@@ -8,7 +8,7 @@ import { inputStyle, labelStyle } from "@/lib/styles";
 import { User, Mail, Phone, Briefcase, MapPin, FileText, ArrowRight, Check, Upload } from "@/components/icons";
 import SuccessState from "@/components/SuccessState";
 
-const STEPS = ["Personal", "Business", "Documents"];
+const STEPS = ["Personal", "Business", "Documents", "Review"];
 
 const DOC_FIELDS = [
   { key: "aadhaar", label: "Aadhaar Card", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>, required: true },
@@ -62,6 +62,16 @@ export default function FranchisePage() {
       if (!form.preferred_location.trim()) { setErrorMsg("Please enter your preferred city."); return false; }
       return true;
     }
+    if (s === 2) {
+      const required = ["aadhaar", "pan", "bank_statement", "id_proof", "address_proof"];
+      const missing = required.filter((k) => !files[k]);
+      if (missing.length > 0) {
+        const labels: Record<string, string> = { aadhaar: "Aadhaar Card", pan: "PAN Card", bank_statement: "Bank Statement", id_proof: "Identity Proof", address_proof: "Address Proof" };
+        setErrorMsg(`Please upload: ${missing.map((k) => labels[k]).join(", ")}`);
+        return false;
+      }
+      return true;
+    }
     return true;
   };
 
@@ -79,7 +89,7 @@ export default function FranchisePage() {
 
   const handleSubmitClick = (e: FormEvent) => {
     e.preventDefault();
-    if (!validateStep(0) || !validateStep(1)) return;
+    if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return;
     setStatus("terms");
   };
 
@@ -168,7 +178,6 @@ export default function FranchisePage() {
       <style>{`
         .franchise-hero { position: relative; min-height: 55vh; background: #0c1a14; display: flex; align-items: center; overflow: hidden; }
         .franchise-hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 70% 40%, rgba(234,185,106,0.08) 0%, transparent 60%); }
-        .franchise-hero::after { content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(to top, #fdf9f4, transparent); }
         .step-indicator { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 3rem; }
         .step-dot { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-outfit), sans-serif; font-weight: 700; font-size: 0.85rem; transition: all 0.3s; flex-shrink: 0; }
         .step-line { flex: 1; height: 2px; max-width: 80px; transition: background 0.3s; }
@@ -240,30 +249,22 @@ export default function FranchisePage() {
           <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
             <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase" }}>Get Started</span>
             <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2rem, 5vw, 3.5rem)", letterSpacing: "0.03em", marginTop: "0.5rem" }}>Franchise Application</h2>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.9rem", marginTop: "0.5rem" }}>Complete the form below in 3 easy steps.</p>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.9rem", marginTop: "0.5rem" }}>Complete the form below to apply for a franchise.</p>
           </div>
 
-          {/* Step Indicator */}
-          <div className="step-indicator">
-            {STEPS.map((s, i) => (
-              <div key={s} style={{ display: "flex", alignItems: "center" }}>
-                <div className="step-dot" style={{
-                  background: i < step ? "#1b3c33" : i === step ? "#1b3c33" : "#e8e5e0",
-                  color: i <= step ? "#fff" : "#999",
-                  boxShadow: i === step ? "0 0 0 4px rgba(27,60,51,0.1)" : "none",
-                }}>
-                  {i < step ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg> : i + 1}
-                </div>
-                {i < STEPS.length - 1 && (
-                  <div className="step-line" style={{ background: i < step ? "#1b3c33" : "#e8e5e0" }} />
-                )}
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: "2rem", marginBottom: "2rem" }}>
-            {STEPS.map((s, i) => (
-              <span key={s} style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", fontWeight: i === step ? 700 : 500, color: i === step ? "#1b3c33" : i < step ? "#586159" : "#bbb", letterSpacing: "0.05em" }}>{s}</span>
-            ))}
+          {/* Progress Line */}
+          <div style={{ marginBottom: "2.5rem" }}>
+            <div style={{ position: "relative", height: "4px", background: "#e8e5e0", borderRadius: "100px" }}>
+              <div style={{ height: "100%", width: `${((step + 1) / STEPS.length) * 100}%`, background: "linear-gradient(90deg, #1b3c33, #eab96a)", borderRadius: "100px", transition: "width 0.4s cubic-bezier(0.25,0.1,0.25,1)" }} />
+              {STEPS.map((_, i) => (
+                <div key={i} style={{ position: "absolute", top: "50%", left: `${(i / (STEPS.length - 1)) * 100}%`, transform: "translate(-50%, -50%)", width: i <= step ? "14px" : "10px", height: i <= step ? "14px" : "10px", borderRadius: "50%", background: i < step ? "#1b3c33" : i === step ? "#eab96a" : "#e8e5e0", border: i <= step ? "none" : "2px solid #d4d0ca", transition: "all 0.3s", zIndex: 1 }} />
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}>
+              {STEPS.map((s, i) => (
+                <span key={s} style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.8rem", fontWeight: i <= step ? 700 : 400, color: i <= step ? "#1b3c33" : "#bbb", transition: "color 0.3s", letterSpacing: "0.02em" }}>{s}</span>
+              ))}
+            </div>
           </div>
 
           <form ref={formRef} onSubmit={handleSubmitClick}>
@@ -277,7 +278,7 @@ export default function FranchisePage() {
                     </div>
                     <div>
                       <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Personal Information</h3>
-                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 1 of 3</p>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 1 of 4</p>
                     </div>
                   </div>
                   <div className="franchise-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
@@ -316,7 +317,7 @@ export default function FranchisePage() {
                     </div>
                     <div>
                       <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Business Details</h3>
-                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 2 of 3</p>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 2 of 4</p>
                     </div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -351,7 +352,7 @@ export default function FranchisePage() {
                     </div>
                     <div>
                       <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Upload Documents</h3>
-                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 3 of 3</p>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 3 of 4</p>
                     </div>
                   </div>
                   <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #f0ede8" }}>Upload your documents for verification. PDF, JPG, PNG accepted. Max 10MB per file.</p>
@@ -373,6 +374,61 @@ export default function FranchisePage() {
               </div>
             )}
 
+            {/* Step 3: Review & Terms */}
+            {step === 3 && (
+              <div className="form-section">
+                <div className="franchise-form-card" style={{ background: "#fff", borderRadius: "20px", padding: "2rem", boxShadow: "0 2px 16px rgba(27,60,51,0.04)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.75rem" }}>
+                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f7f3ee", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3c33" }}>
+                      <Check size={18} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Review Your Application</h3>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 4 of 4</p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <div style={{ background: "#f7f3ee", borderRadius: "12px", padding: "1.25rem" }}>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Personal Details</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Name</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.full_name}</p></div>
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Email</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.email}</p></div>
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Phone</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.phone}</p></div>
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>DOB</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.dob}</p></div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: "#f7f3ee", borderRadius: "12px", padding: "1.25rem" }}>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Business Details</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Preferred City</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.preferred_location}</p></div>
+                        {form.investment_capability && <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Investment</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.investment_capability}</p></div>}
+                      </div>
+                    </div>
+
+                    <div style={{ background: "#f7f3ee", borderRadius: "12px", padding: "1.25rem" }}>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Documents</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        {DOC_FIELDS.filter((d) => d.required).map(({ key, label }) => (
+                          <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.35rem 0.75rem", borderRadius: "100px", background: files[key] ? "#1b3c33" : "#e74c3c18", color: files[key] ? "#fff" : "#e74c3c", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 600, fontSize: "0.78rem" }}>
+                            {files[key] ? <Check size={12} /> : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>}
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ background: "rgba(200,169,126,0.08)", border: "1px solid rgba(200,169,126,0.2)", borderRadius: "12px", padding: "1.25rem" }}>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", lineHeight: 1.6 }}>
+                        Click <strong>"Accept & Submit"</strong> to review our Terms & Conditions before submitting your application.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Error */}
             {errorMsg && (
               <div style={{ background: "#fdf0ef", borderRadius: "14px", padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", animation: "fadeSlideUp 0.3s ease" }}>
@@ -388,13 +444,13 @@ export default function FranchisePage() {
                   Back
                 </button>
               )}
-              {step < 2 ? (
+              {step < 3 ? (
                 <button type="button" onClick={nextStep} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
                   Continue <ArrowRight size={16} />
                 </button>
               ) : (
                 <button type="submit" style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
-                  Review & Submit <ArrowRight size={16} />
+                  Accept & Submit<ArrowRight size={16} />
                 </button>
               )}
             </div>
