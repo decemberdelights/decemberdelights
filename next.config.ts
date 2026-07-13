@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL || "";
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "";
     if (!backendUrl) return [];
     return [
       {

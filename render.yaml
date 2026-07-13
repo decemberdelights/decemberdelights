@@ -4,29 +4,19 @@ services:
     name: dd-backend
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: cd backend && pip install -r requirements.txt
     startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
       - key: ENV
         value: production
-      - key: JWT_SECRET
-        generateValue: true
       - key: ADMIN_DEFAULT_PASSWORD
-        sync: false
+        value: admin123
       - key: ADMIN_USERNAME
         value: admin
-      - key: CORS_ORIGINS
-        sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
       - key: HOST
         value: 0.0.0.0
-    healthCheckPath: /api/health
-    autoDeploy: true
 
   # ── Frontend (Next.js + Node) ──────────────────────────────────
   - type: web
@@ -38,10 +28,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: BACKEND_URL
-        sync: false
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
-    autoDeploy: true
