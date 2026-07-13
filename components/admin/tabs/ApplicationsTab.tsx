@@ -16,7 +16,7 @@ interface ApplicationsTabProps {
 function docUrl(url: string) {
   if (!url) return "";
   if (url.startsWith("http")) return url;
-  const API = process.env.NEXT_PUBLIC_API_URL || "https://december-delights-api.onrender.com";
+  const API = process.env.NEXT_PUBLIC_API_URL || "";
   return `${API}${url}`;
 }
 
