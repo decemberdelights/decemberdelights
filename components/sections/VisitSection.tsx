@@ -51,7 +51,6 @@ export default function VisitSection() {
           </div>
         </div>
         <div className="visit-video-wrap">
-          <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(to right, #094b3d 0%, transparent 25%)" }} />
           <div className="visit-video-inner">
             <LazyVideo src="/video.mp4" />
           </div>
