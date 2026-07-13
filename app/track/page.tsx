@@ -77,7 +77,7 @@ function TrackContent() {
 
   const getProgress = (status: string): number => {
     const idx = STATUS_FLOW.indexOf(status);
-    return idx >= 0 ? ((idx + 1) / STATUS_FLOW.length) * 100 : 0;
+    return idx >= 0 ? (idx / STATUS_FLOW.length) * 100 : 0;
   };
 
   return (
@@ -206,8 +206,8 @@ function TrackContent() {
 
                           {/* Progress bar */}
                           <div style={{ display: "flex", justifyContent: "space-between", position: "relative" }}>
-                            <div style={{ position: "absolute", top: 14, left: 14, right: 14, height: 2, background: "#eee", borderRadius: 1 }} />
-                            <div style={{ position: "absolute", top: 14, left: 14, width: `calc(${getProgress(order.status)}% - 28px)`, height: 2, background: `linear-gradient(90deg, #27ae60, ${st.color})`, borderRadius: 1, transition: "width 0.6s ease" }} />
+                            <div style={{ position: "absolute", top: 14, left: "10%", right: "10%", height: 2, background: "#eee", borderRadius: 1 }} />
+                            <div style={{ position: "absolute", top: 14, left: "10%", width: `${getProgress(order.status)}%`, height: 2, background: `linear-gradient(90deg, ${STATUS_INFO[STATUS_FLOW[0]].color}, ${st.color})`, borderRadius: 1, transition: "width 0.6s ease" }} />
                             {STATUS_FLOW.map((step, i) => {
                               const info = STATUS_INFO[step];
                               const done = i <= currentIdx;
