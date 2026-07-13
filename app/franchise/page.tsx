@@ -189,7 +189,6 @@ export default function FranchisePage() {
         .step-line { flex: 1; height: 2px; max-width: 80px; transition: background 0.3s; }
         .form-section { animation: fadeSlideUp 0.35s ease both; }
         @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes floatSvg { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
         .doc-card { display: flex; align-items: center; gap: 0.85rem; padding: 1rem 1.25rem; border-radius: 14px; cursor: pointer; transition: all 0.2s; border: 1.5px dashed #d4d0ca; background: transparent; }
         .doc-card:hover { border-color: #1b3c33; background: rgba(27,60,51,0.02); }
         .doc-card.has-file { border-style: solid; border-color: #1b3c33; background: #f7f3ee; }
@@ -230,7 +229,7 @@ export default function FranchisePage() {
               </Link>
             </div>
           </div>
-          <div className="franchise-hero-image" style={{ flex: "0 0 auto", animation: "floatSvg 4s ease-in-out infinite" }}>
+          <div className="franchise-hero-image" style={{ flex: "0 0 auto" }}>
             <img src="/working.svg" alt="Franchise With Us" style={{ width: "380px", height: "auto" }} />
           </div>
         </div>
