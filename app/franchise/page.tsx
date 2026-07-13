@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import TermsModal from "@/components/terms-modal";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
@@ -232,7 +231,7 @@ export default function FranchisePage() {
             </div>
           </div>
           <div className="franchise-hero-image" style={{ flex: "0 0 auto", animation: "floatSvg 4s ease-in-out infinite" }}>
-            <Image src="/working.svg" alt="Franchise With Us" width={380} height={380} style={{ width: "auto", height: "auto" }} />
+            <img src="/working.svg" alt="Franchise With Us" style={{ width: "380px", height: "auto" }} />
           </div>
         </div>
       </section>
