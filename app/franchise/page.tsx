@@ -89,6 +89,7 @@ export default function FranchisePage() {
 
   const handleSubmitClick = (e: FormEvent) => {
     e.preventDefault();
+    if (step !== 3) return;
     if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return;
     setStatus("terms");
   };
