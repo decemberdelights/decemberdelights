@@ -15,6 +15,7 @@ export default function FranchiseSection() {
               width={400}
               height={400}
               className="franchise-svg"
+              unoptimized
             />
           </div>
           <div className="franchise-text">
