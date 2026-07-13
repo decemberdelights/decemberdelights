@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "*.onrender.com",
+        hostname: "*.railway.app",
       },
       {
         protocol: "https",

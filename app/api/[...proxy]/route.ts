@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = process.env.BACKEND_URL || "https://december-delights-api.onrender.com";
+const BACKEND = process.env.BACKEND_URL || "";
 
 async function proxyRequest(req: NextRequest, method: string) {
   const url = new URL(req.url);

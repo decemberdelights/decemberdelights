@@ -26,7 +26,7 @@ EMAIL_HTML = """
       <p style="font-size: 18px; color: #1b3c33; font-weight: 700; margin: 0; font-family: monospace; word-break: break-all;">{password}</p>
     </div>
     <div style="text-align: center; margin-bottom: 20px;">
-      <a href="https://decemberdelights.onrender.com/franchise/status" style="display: inline-block; padding: 12px 32px; background: #1b3c33; color: #fff; border-radius: 100px; text-decoration: none; font-weight: 700; font-size: 14px;">Track Application</a>
+      <a href="https://decemberdelights.vercel.app/franchise/status" style="display: inline-block; padding: 12px 32px; background: #1b3c33; color: #fff; border-radius: 100px; text-decoration: none; font-weight: 700; font-size: 14px;">Track Application</a>
     </div>
     <p style="font-size: 12px; color: #999; line-height: 1.6; margin: 0;">
       If you did not submit this application, please ignore this email.
@@ -49,7 +49,7 @@ def send_password_email(to_email: str, full_name: str, password: str, login_id: 
     first_name = full_name.split(" ")[0] if full_name else "Applicant"
 
     html = EMAIL_HTML.format(first_name=first_name, login_id=login_id, password=password)
-    plain = f"Welcome, {first_name}!\n\nYour franchise application has been received.\n\nLogin ID: {login_id}\nPassword: {password}\n\nTrack your application: https://decemberdelights.onrender.com/franchise/status"
+    plain = f"Welcome, {first_name}!\n\nYour franchise application has been received.\n\nLogin ID: {login_id}\nPassword: {password}\n\nTrack your application: https://decemberdelights.vercel.app/franchise/status"
 
     payload = json.dumps({
         "from": f"{from_name} <{from_email}>",

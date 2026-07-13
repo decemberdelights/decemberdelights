@@ -2,6 +2,7 @@
 
 import { useState, Fragment } from "react";
 import { App } from "../types";
+import { API } from "@/lib/api";
 
 interface ApplicationsTabProps {
   type: "franchise" | "careers" | "contacts";
@@ -16,7 +17,6 @@ interface ApplicationsTabProps {
 function docUrl(url: string) {
   if (!url) return "";
   if (url.startsWith("http")) return url;
-  const API = process.env.NEXT_PUBLIC_API_URL || "";
   return `${API}${url}`;
 }
 
