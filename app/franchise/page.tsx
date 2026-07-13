@@ -34,7 +34,13 @@ export default function FranchisePage() {
   const formRef = useRef<HTMLDivElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === "phone") {
+      const digits = value.replace(/\D/g, "").slice(0, 10);
+      setForm({ ...form, phone: digits });
+      return;
+    }
+    setForm({ ...form, [name]: value });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,8 +53,8 @@ export default function FranchisePage() {
     setErrorMsg("");
     if (s === 0) {
       if (!form.full_name.trim()) { setErrorMsg("Please enter your full name."); return false; }
-      if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setErrorMsg("Please enter a valid email address."); return false; }
-      if (!form.phone.trim() || form.phone.length < 10) { setErrorMsg("Please enter a valid phone number."); return false; }
+      if (!form.email.trim() || !/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(form.email)) { setErrorMsg("Please enter a valid email address."); return false; }
+      if (!form.phone.trim() || !/^\d{10}$/.test(form.phone)) { setErrorMsg("Please enter a valid 10-digit phone number."); return false; }
       if (!form.dob) { setErrorMsg("Please enter your date of birth."); return false; }
       const dobDate = new Date(form.dob);
       const today = new Date();
@@ -288,11 +294,11 @@ export default function FranchisePage() {
                     </div>
                     <div className="field-group">
                       <label style={labelStyle}><Mail size={14} /> Email Address *</label>
-                      <input required type="email" name="email" value={form.email} onChange={handleChange} onFocus={() => setFocusedField("email")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "email" ? "#1b3c33" : undefined }} placeholder="you@example.com" />
+                      <input required type="email" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$" name="email" value={form.email} onChange={handleChange} onFocus={() => setFocusedField("email")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "email" ? "#1b3c33" : undefined }} placeholder="you@example.com" />
                     </div>
                     <div className="field-group">
-                      <label style={labelStyle}><Phone size={14} /> Phone Number *</label>
-                      <input required name="phone" value={form.phone} onChange={handleChange} onFocus={() => setFocusedField("phone")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "phone" ? "#1b3c33" : undefined }} placeholder="+91 XXXXX XXXXX" />
+                      <label style={labelStyle}><Phone size={14} /> Phone Number * <span style={{ fontWeight: 400, color: "#bbb", fontSize: "0.8rem" }}>(10 digits)</span></label>
+                      <input required name="phone" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} value={form.phone} onChange={handleChange} onFocus={() => setFocusedField("phone")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "phone" ? "#1b3c33" : undefined }} placeholder="XXXXXXXXXX" />
                     </div>
                     <div className="field-group">
                       <label style={labelStyle}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /></svg> Date of Birth *</label>
