@@ -39,6 +39,14 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   reactStrictMode: true,
   compress: true,
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://december-delights-production-32ca.up.railway.app/api/:path*",
+      },
+    ];
+  },
   async headers() {
     return [
       {
