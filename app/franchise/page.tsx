@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useRef } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import TermsModal from "@/components/terms-modal";
 import { API } from "@/lib/api";
@@ -31,7 +31,7 @@ export default function FranchisePage() {
   const [status, setStatus] = useState<"idle" | "terms" | "submitting" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -87,9 +87,8 @@ export default function FranchisePage() {
     setStep(step - 1);
   };
 
-  const handleSubmitClick = (e: FormEvent) => {
-    e.preventDefault();
-    if (step !== 3) return;
+  const handleSubmitClick = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return;
     setStatus("terms");
   };
@@ -268,7 +267,7 @@ export default function FranchisePage() {
             </div>
           </div>
 
-          <form ref={formRef} onSubmit={handleSubmitClick}>
+          <div ref={formRef}>
             {/* Step 0: Personal */}
             {step === 0 && (
               <div className="form-section">
@@ -450,12 +449,12 @@ export default function FranchisePage() {
                   Continue <ArrowRight size={16} />
                 </button>
               ) : (
-                <button type="submit" style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
+                <button type="button" onClick={handleSubmitClick} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
                   Accept & Submit<ArrowRight size={16} />
                 </button>
               )}
             </div>
-          </form>
+          </div>
         </div>
       </section>
     </>
