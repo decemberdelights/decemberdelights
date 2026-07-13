@@ -230,6 +230,7 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
         <h4>Documents — {docs.full_name}</h4>
         <p style={{ fontSize: 12, color: "#6b6f6a", marginBottom: 16 }}>
           {docs.email} · {docs.phone}
+          {docs.investment_capability && <span style={{ marginLeft: 8, padding: "2px 10px", borderRadius: 20, background: "#FAEEDA", color: "#854f0b", fontWeight: 600, fontSize: 12 }}>{docs.investment_capability}</span>}
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {docFields.map(([key, label]) => {

@@ -37,6 +37,7 @@ export interface App {
   admin_notes?: string;
   created_at: string;
   preferred_location?: string;
+  investment_capability?: string;
   position?: string;
   subject?: string;
   message?: string;

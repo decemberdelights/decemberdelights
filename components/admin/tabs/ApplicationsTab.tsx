@@ -178,6 +178,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
                 <span>{item.email}</span>
                 {item.phone && <span>{item.phone}</span>}
                 {item.preferred_location && <span style={{ color: "#094b3d", fontWeight: 500 }}>{item.preferred_location}</span>}
+                {item.investment_capability && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#854f0b", fontWeight: 600, background: "#FAEEDA", padding: "2px 10px", borderRadius: 20, fontSize: 13 }}>{item.investment_capability}</span>}
               </div>
               {item.admin_notes && <div style={{ fontSize: 13, color: "#6b6f6a", marginTop: 6, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
             </div>
