@@ -21,7 +21,7 @@ export default function FranchiseSection() {
             <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Franchise With Us</span>
             <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
             <h2 className="franchise-heading">
-              <ScrollFloat containerClassName="!my-0">Partner With a Brand</ScrollFloat><br /><ScrollFloat containerClassName="!my-0">Crafted for Excellence</ScrollFloat>
+              <ScrollFloat containerClassName="!my-0">Grow With</ScrollFloat><br /><ScrollFloat containerClassName="!my-0">December Delights</ScrollFloat>
             </h2>
             <p style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 400, lineHeight: 1.8, color: "rgba(255,255,255,0.85)", marginBottom: "36px", maxWidth: "520px" }}>
               Born from international culinary expertise and a love for exceptional coffee, December Delights is more than a caf&eacute; — it&apos;s an experience your community will love. We provide the proven systems, training, and support you need to build a thriving business — while you bring the passion to your city.
