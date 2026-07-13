@@ -141,7 +141,7 @@ export default function CareersPage() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
               <span style={{ width: "40px", height: "1px", background: "#eab96a" }} />
-              <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Join Our Team</span>
+              <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Join Our Team</span>
             </div>
             <h1 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#fdf9f4", fontSize: "clamp(2.2rem, 6vw, 5rem)", lineHeight: 1, letterSpacing: "0.03em", marginBottom: "1.5rem" }}>
               We Are<br />Growing
@@ -159,7 +159,7 @@ export default function CareersPage() {
               { icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>, title: "People First", desc: "A supportive environment where your growth matters." },
               { icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>, title: "Team Spirit", desc: "Work alongside passionate individuals." },
             ].map((v) => (
-              <div key={v.title} style={{ background: "rgba(253,249,244,0.06)", border: "1px solid rgba(253,249,244,0.1)", borderRadius: "16px", padding: "1.5rem", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", gap: "1rem", transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.1)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.06)"; }}>
+              <div key={v.title} style={{ background: "rgba(253,249,244,0.08)", border: "1px solid rgba(253,249,244,0.12)", borderRadius: "16px", padding: "1.5rem", display: "flex", alignItems: "center", gap: "1rem", transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.12)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.08)"; }}>
                 <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "rgba(253,249,244,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#eab96a" }}>{v.icon}</div>
                 <div>
                   <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#fdf9f4", fontSize: "1.1rem", letterSpacing: "0.03em", marginBottom: "0.15rem" }}>{v.title}</h3>
@@ -176,7 +176,7 @@ export default function CareersPage() {
       <section id="openings" data-bg="light" className="careers-section-pad" style={{ padding: "6rem 5%", background: "#fff" }}>
         <div style={{ maxWidth: "960px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
-            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Open Positions</span>
+            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Open Positions</span>
             <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2.5rem, 5vw, 4rem)", letterSpacing: "0.03em", marginTop: "0.5rem" }}>Current Openings</h2>
             <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.95rem", marginTop: "0.75rem", maxWidth: "480px", margin: "0.75rem auto 0" }}>Join our growing team. Find a role that matches your passion and grow with us.</p>
           </div>
@@ -202,19 +202,19 @@ export default function CareersPage() {
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "1rem" }}>
                       <div>
                         <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.4rem", letterSpacing: "0.03em", marginBottom: "0.3rem" }}>{job.title}</h3>
-                        {job.department && <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#c8a97a", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{job.department}</p>}
+                        {job.department && <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#c8a97a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{job.department}</p>}
                       </div>
-                      <span style={{ padding: "0.3rem 0.85rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontSize: "0.65rem", fontWeight: 700, fontFamily: "var(--font-outfit), sans-serif", letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0 }}>{job.job_type}</span>
+                      <span style={{ padding: "0.3rem 0.85rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontSize: "0.8rem", fontWeight: 700, fontFamily: "var(--font-outfit), sans-serif", letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0 }}>{job.job_type}</span>
                     </div>
 
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
                       {job.location && (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.35rem 0.75rem", borderRadius: "100px", background: "#fff", border: "1px solid #e8e5e0", fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.75rem" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.35rem 0.75rem", borderRadius: "100px", background: "#fff", border: "1px solid #e8e5e0", fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem" }}>
                           <MapPin size={12} /> {job.location}
                         </span>
                       )}
                       {job.salary_range && (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.35rem 0.75rem", borderRadius: "100px", background: "#fff", border: "1px solid #e8e5e0", fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.75rem" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.35rem 0.75rem", borderRadius: "100px", background: "#fff", border: "1px solid #e8e5e0", fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem" }}>
                           <Clock size={12} /> {job.salary_range}
                         </span>
                       )}
@@ -225,7 +225,7 @@ export default function CareersPage() {
                     )}
 
                     {job.requirements && (
-                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.78rem", lineHeight: 1.5, marginBottom: "1.25rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{job.requirements}</p>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem", lineHeight: 1.5, marginBottom: "1.25rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{job.requirements}</p>
                     )}
 
                     <a href="#apply" className="careers-apply-btn" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.7rem 1.8rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.82rem", textDecoration: "none", whiteSpace: "nowrap", transition: "background 0.2s" }}
@@ -245,7 +245,7 @@ export default function CareersPage() {
       <section id="apply" data-bg="light" className="careers-section-pad" style={{ padding: "6rem 5%", background: "#fdf9f4" }}>
         <div style={{ maxWidth: "720px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Apply Now</span>
+            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Apply Now</span>
             <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2.5rem, 5vw, 4rem)", letterSpacing: "0.03em", marginTop: "0.5rem" }}>Career Application</h2>
           </div>
 
@@ -268,7 +268,7 @@ export default function CareersPage() {
                 <div>
                   <label style={labelStyle}><User size={16} /> Date of Birth *</label>
                   <input required type="date" name="dob" value={form.dob} onChange={handleChange} style={inputStyle} max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]} />
-                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", marginTop: "0.35rem" }}>You must be 18 years or older to apply.</p>
+                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem", marginTop: "0.35rem" }}>You must be 18 years or older to apply.</p>
                 </div>
                 <div>
                   <label style={labelStyle}><Briefcase size={16} /> Position</label>
@@ -302,7 +302,7 @@ export default function CareersPage() {
                     </div>
                     <div>
                       <p style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1b3c33", marginBottom: "0.1rem" }}>{resume ? resume.name : "Upload your resume"}</p>
-                      <p style={{ fontSize: "0.75rem", color: "#999" }}>PDF, DOC, or image. Max 16MB.</p>
+                      <p style={{ fontSize: "0.85rem", color: "#999" }}>PDF, DOC, or image. Max 16MB.</p>
                     </div>
                   </label>
                 </div>
@@ -331,7 +331,7 @@ export default function CareersPage() {
       <section id="track" data-bg="light" className="careers-section-pad" style={{ padding: "6rem 5%", background: "#fff" }}>
         <div style={{ maxWidth: "720px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Application Status</span>
+            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Application Status</span>
             <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2.5rem, 5vw, 4rem)", letterSpacing: "0.03em", marginTop: "0.5rem" }}>Track Your Application</h2>
             <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.95rem", marginTop: "0.75rem" }}>Enter your name and phone number to check your application status.</p>
           </div>
@@ -379,17 +379,17 @@ export default function CareersPage() {
                     <div key={app.id} style={{ background: "#fdf9f4", borderRadius: "20px", padding: "2rem", boxShadow: "0 2px 16px rgba(27,60,51,0.04)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
                         <div>
-                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.2rem" }}>Application #{app.id}</p>
+                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.2rem" }}>Application #{app.id}</p>
                           <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.3rem" }}>{app.position || "General Application"}</h3>
                           <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem" }}>{app.full_name}</p>
                         </div>
-                        <span style={{ padding: "0.35rem 1rem", borderRadius: "100px", background: st.bg, color: st.color, fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.75rem" }}>{st.label}</span>
+                        <span style={{ padding: "0.35rem 1rem", borderRadius: "100px", background: st.bg, color: st.color, fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem" }}>{st.label}</span>
                       </div>
 
                       {/* Progress */}
                       {isRejected ? (
                         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: "#e74c3c12", borderRadius: "12px" }}>
-                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.7rem", flexShrink: 0 }}>X</div>
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>X</div>
                           <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#e74c3c", fontWeight: 700, fontSize: "0.85rem" }}>Not Selected</span>
                         </div>
                       ) : (
@@ -406,7 +406,7 @@ export default function CareersPage() {
                                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? info.color : "#e0dcd6", display: "flex", alignItems: "center", justifyContent: "center", color: done ? "#fff" : "#bbb", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.6rem", border: current ? `2px solid ${info.color}` : "2px solid transparent", boxShadow: current ? `0 0 0 4px ${info.color}25` : "none", transition: "all 0.3s" }}>
                                     {done ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg> : (i + 1)}
                                   </div>
-                                   <span style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "clamp(0.55rem, 2.5vw, 0.6rem)", color: done ? info.color : "#bbb", fontWeight: current ? 700 : 400, textAlign: "center", lineHeight: 1.2 }}>{info.label}</span>
+                                   <span style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "clamp(0.7rem, 2.5vw, 0.8rem)", color: done ? info.color : "#bbb", fontWeight: current ? 700 : 400, textAlign: "center", lineHeight: 1.2 }}>{info.label}</span>
                                 </div>
                               );
                             })}
@@ -416,12 +416,12 @@ export default function CareersPage() {
 
                       {app.admin_notes && (
                         <div style={{ marginTop: "1rem", padding: "0.8rem 1rem", background: "#fff", borderRadius: "12px", border: "1px solid #e0dcd6" }}>
-                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.7rem", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Note from HR</p>
+                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Note from HR</p>
                           <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.85rem", lineHeight: 1.6 }}>{app.admin_notes}</p>
                         </div>
                       )}
 
-                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#bbb", fontSize: "0.75rem", marginTop: "0.75rem" }}>Applied: {new Date(app.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#bbb", fontSize: "0.85rem", marginTop: "0.75rem" }}>Applied: {new Date(app.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
                     </div>
                   );
                 })}

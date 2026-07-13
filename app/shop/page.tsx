@@ -172,7 +172,7 @@ export default function ShopPage() {
           </section>
         </main>
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); setOrderSuccess(false); }} />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); setOrderSuccess(false); }} />
           <div style={{ background: "#fff", borderRadius: "24px", padding: "3rem 2rem", width: "440px", maxWidth: "92vw", position: "relative", boxShadow: "0 25px 60px rgba(0,0,0,0.35)", textAlign: "center" }}>
             <div style={{ width: "72px", height: "72px", borderRadius: "50%", background: dark, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem", animation: "successPop 0.5s ease forwards, successPulse 2s ease infinite 0.5s" }}>
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "checkDraw 0.6s ease 0.3s both" }}>
@@ -250,7 +250,7 @@ export default function ShopPage() {
                         </div>
                       )}
                       {hasDiscount && (
-                        <div style={{ position: "absolute", top: "0.75rem", left: "0.75rem", background: "#e74c3c", color: "#fff", padding: "0.25rem 0.65rem", borderRadius: "6px", fontFamily: fontOutfit, fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.05em" }}>
+                        <div style={{ position: "absolute", top: "0.75rem", left: "0.75rem", background: "#e74c3c", color: "#fff", padding: "0.25rem 0.65rem", borderRadius: "6px", fontFamily: fontOutfit, fontSize: "0.8rem", fontWeight: 800, letterSpacing: "0.05em" }}>
                           {product.offer || `${discountPct}% OFF`}
                         </div>
                       )}
@@ -261,15 +261,15 @@ export default function ShopPage() {
                       )}
                     </div>
                     <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", flex: 1 }}>
-                      <p style={{ fontFamily: fontOutfit, color: accent, fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: "0.25rem" }}>{product.category}</p>
+                      <p style={{ fontFamily: fontOutfit, color: accent, fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: "0.25rem" }}>{product.category}</p>
                       <h3 style={{ fontFamily: fontBebas, color: dark, fontSize: "1.15rem", marginBottom: "0.35rem", letterSpacing: "0.02em" }}>{product.name}</h3>
                       {product.description && <p style={{ fontFamily: fontOutfit, color: "#3d4a3e", fontSize: "0.8rem", lineHeight: 1.5, marginBottom: "0.75rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>{product.description}</p>}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "0.75rem" }}>
                         <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
                           <span style={{ fontFamily: fontBebas, color: dark, fontSize: "1.35rem" }}>&#8377;{product.price}</span>
-                          {hasDiscount && <span style={{ fontFamily: fontOutfit, color: "#bbb", fontSize: "0.78rem", textDecoration: "line-through" }}>&#8377;{product.original_price}</span>}
+                          {hasDiscount && <span style={{ fontFamily: fontOutfit, color: "#bbb", fontSize: "0.85rem", textDecoration: "line-through" }}>&#8377;{product.original_price}</span>}
                         </div>
-                        {product.stock > 0 && <span style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.72rem" }}>{product.stock} in stock</span>}
+                        {product.stock > 0 && <span style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.85rem" }}>{product.stock} in stock</span>}
                       </div>
                       <div style={{ marginTop: "0.85rem" }}>
                         {inCart ? (
@@ -327,20 +327,20 @@ export default function ShopPage() {
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" /></svg>
           <span>View Cart</span>
-          <span style={{ background: "#fff", color: dark, width: "24px", height: "24px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 800 }}>{cartCount}</span>
+          <span style={{ background: "#fff", color: dark, width: "24px", height: "24px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem", fontWeight: 800 }}>{cartCount}</span>
         </button>
       )}
 
       {/* Cart Drawer */}
       {showCart && (
         <div style={{ position: "fixed", inset: 0, zIndex: 1000 }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)", transition: "opacity 0.3s" }} onClick={() => setShowCart(false)} />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", transition: "opacity 0.3s" }} onClick={() => setShowCart(false)} />
           <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "min(420px, 100%)", background: "#fff", display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", animation: "slideInRight 0.35s cubic-bezier(0.22,1,0.36,1)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
             {/* Header */}
             <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #f0ede4", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, background: "#fff" }}>
               <div>
                 <h2 style={{ fontFamily: fontBebas, color: dark, fontSize: "1.5rem", margin: 0 }}>Your Cart</h2>
-                <p style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.75rem", margin: "2px 0 0" }}>{cartCount} {cartCount === 1 ? "item" : "items"}</p>
+                <p style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.85rem", margin: "2px 0 0" }}>{cartCount} {cartCount === 1 ? "item" : "items"}</p>
               </div>
               <button onClick={() => setShowCart(false)} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "1px solid #eee", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", color: muted, transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#f5f3ef"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}>&times;</button>
             </div>
@@ -369,7 +369,7 @@ export default function ShopPage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h4 style={{ fontFamily: fontOutfit, color: dark, fontSize: "0.85rem", fontWeight: 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{item.product.name}</h4>
-                        <p style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.72rem", margin: "2px 0 0" }}>&#8377;{item.product.price} each</p>
+                        <p style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.85rem", margin: "2px 0 0" }}>&#8377;{item.product.price} each</p>
                       </div>
                       <button onClick={() => removeFromCart(item.product.id)} style={{ background: "none", border: "none", color: "#ccc", cursor: "pointer", padding: "4px", fontSize: "1rem", lineHeight: 1, flexShrink: 0, transition: "color 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#e74c3c"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#ccc"; }}>&times;</button>
                     </div>
@@ -405,7 +405,7 @@ export default function ShopPage() {
       {/* Checkout Modal */}
       {showCheckout && (
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)" }} onClick={() => setShowCheckout(false)} />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={() => setShowCheckout(false)} />
           <div style={{ background: "#fff", borderRadius: "20px", padding: "2rem", width: "460px", maxWidth: "95vw", position: "relative", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.3)", paddingBottom: "calc(2rem + env(safe-area-inset-bottom, 0px))" }}>
             <button onClick={() => setShowCheckout(false)} style={{ position: "absolute", top: "1rem", right: "1rem", width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #eee", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", color: muted }}>&times;</button>
             <h2 style={{ fontFamily: fontBebas, color: dark, fontSize: "1.5rem", marginBottom: "1.5rem" }}>Checkout</h2>

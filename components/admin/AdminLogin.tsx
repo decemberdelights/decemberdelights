@@ -42,21 +42,21 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
   };
 
   return (
-    <div style={{ position: "relative", zIndex: 2, background: "rgba(255,255,255,0.07)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "44px 36px", width: "100%", maxWidth: 400, boxShadow: "0 12px 32px rgba(0,0,0,0.18)" }}>
+    <div style={{ position: "relative", zIndex: 2, background: "#fff", border: "1px solid #e8e5e0", borderRadius: 16, padding: "44px 36px", width: "100%", maxWidth: 400, boxShadow: "0 8px 32px rgba(0,0,0,0.1)" }}>
       <img src="/logo-icon.png" alt="" style={{ width: 48, height: 48, margin: "0 auto 16px", borderRadius: 12, display: "block" }} />
-      <h2 style={{ textAlign: "center", fontSize: 18, letterSpacing: 1, color: "#fff", marginBottom: 4 }}>DD ADMIN</h2>
-      <p style={{ textAlign: "center", fontSize: 12, color: "rgba(200,169,122,0.9)", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 28 }}>Admin Portal</p>
+      <h2 style={{ textAlign: "center", fontSize: 20, letterSpacing: 1, color: "#1b3c33", marginBottom: 4, fontFamily: "var(--font-bebas-neue), sans-serif" }}>DD ADMIN</h2>
+      <p style={{ textAlign: "center", fontSize: 12, color: "#999", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 28, fontFamily: "var(--font-outfit), sans-serif" }}>Admin Portal</p>
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.4px", display: "block", marginBottom: 4 }}>Username</label>
-          <input style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", fontSize: 13, background: "rgba(255,255,255,0.08)", color: "#fff", outline: "none", boxSizing: "border-box" as const }} value={username} onChange={e => setUsername(e.target.value)} autoFocus disabled={loading} />
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "#586159", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6, fontFamily: "var(--font-outfit), sans-serif" }}>Username</label>
+          <input style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid #e0ddd8", fontSize: 14, background: "#fff", color: "#1b3c33", outline: "none", boxSizing: "border-box" as const, fontFamily: "var(--font-outfit), sans-serif" }} value={username} onChange={e => setUsername(e.target.value)} autoFocus disabled={loading} />
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.4px", display: "block", marginBottom: 4 }}>Password</label>
-          <input style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", fontSize: 13, background: "rgba(255,255,255,0.08)", color: "#fff", outline: "none", boxSizing: "border-box" as const }} type="password" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} />
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "#586159", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6, fontFamily: "var(--font-outfit), sans-serif" }}>Password</label>
+          <input style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid #e0ddd8", fontSize: 14, background: "#fff", color: "#1b3c33", outline: "none", boxSizing: "border-box" as const, fontFamily: "var(--font-outfit), sans-serif" }} type="password" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} />
         </div>
-        {error && <p style={{ color: "#ff6b6b", fontSize: 12, marginTop: 8, textAlign: "center" }}>{error}</p>}
-        <button style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: loading ? "rgba(23,58,48,0.5)" : "#173a30", color: "#fff", fontWeight: 600, fontSize: 13, cursor: loading ? "not-allowed" : "pointer", marginTop: 12, opacity: loading ? 0.7 : 1 }} type="submit" disabled={loading}>
+        {error && <p style={{ color: "#e74c3c", fontSize: 13, marginTop: 8, textAlign: "center", fontFamily: "var(--font-outfit), sans-serif" }}>{error}</p>}
+        <button style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: loading ? "#999" : "#1b3c33", color: "#fff", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", marginTop: 12, fontFamily: "var(--font-outfit), sans-serif", letterSpacing: "0.03em" }} type="submit" disabled={loading}>
           {loading ? "Signing in..." : "Sign In"}
         </button>
       </form>

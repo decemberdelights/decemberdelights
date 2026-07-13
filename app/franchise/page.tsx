@@ -154,10 +154,10 @@ export default function FranchisePage() {
             <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.85rem", fontWeight: 700 }}>Your Login Credentials</p>
           </div>
           <div style={{ background: "#fff", borderRadius: "12px", padding: "1rem 1.25rem", border: "1px solid #e8e5e0" }}>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.25rem" }}>Password</p>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.25rem" }}>Password</p>
             <p style={{ fontFamily: "'SF Mono', 'Fira Code', monospace", color: "#1b3c33", fontSize: "1rem", fontWeight: 700, wordBreak: "break-all" }}>{password}</p>
           </div>
-          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", marginTop: "0.75rem" }}>Format: FirstnameDDMMYY@ — based on your name and date of birth.</p>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem", marginTop: "0.75rem" }}>Format: FirstnameDDMMYY@ — based on your name and date of birth.</p>
         </div>
       </SuccessState>
     );
@@ -194,7 +194,7 @@ export default function FranchisePage() {
         <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "8rem 5% 4rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
             <span style={{ width: "32px", height: "1px", background: "#eab96a" }} />
-            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase" }}>Franchise Opportunity</span>
+            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase" }}>Franchise Opportunity</span>
           </div>
           <h1 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#fdf9f4", fontSize: "clamp(2.5rem, 7vw, 5.5rem)", lineHeight: 0.95, letterSpacing: "0.02em", marginBottom: "1.25rem" }}>
             Own a<br />
@@ -227,7 +227,7 @@ export default function FranchisePage() {
               <div key={b.num} style={{ background: "#fff", padding: "1.5rem 1.25rem", textAlign: "center" }}>
                 <span style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#eab96a", fontSize: "0.85rem", letterSpacing: "0.1em" }}>{b.num}</span>
                 <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1rem", letterSpacing: "0.03em", margin: "0.25rem 0" }}>{b.label}</h3>
-                <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem" }}>{b.desc}</p>
+                <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>{b.desc}</p>
               </div>
             ))}
           </div>
@@ -238,7 +238,7 @@ export default function FranchisePage() {
       <section id="apply" data-bg="light" style={{ padding: "5rem 5% 6rem", background: "#fdf9f4" }}>
         <div style={{ maxWidth: "680px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase" }}>Get Started</span>
+            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase" }}>Get Started</span>
             <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2rem, 5vw, 3.5rem)", letterSpacing: "0.03em", marginTop: "0.5rem" }}>Franchise Application</h2>
             <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.9rem", marginTop: "0.5rem" }}>Complete the form below in 3 easy steps.</p>
           </div>
@@ -262,7 +262,7 @@ export default function FranchisePage() {
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: "2rem", marginBottom: "2rem" }}>
             {STEPS.map((s, i) => (
-              <span key={s} style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.75rem", fontWeight: i === step ? 700 : 500, color: i === step ? "#1b3c33" : i < step ? "#586159" : "#bbb", letterSpacing: "0.05em" }}>{s}</span>
+              <span key={s} style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", fontWeight: i === step ? 700 : 500, color: i === step ? "#1b3c33" : i < step ? "#586159" : "#bbb", letterSpacing: "0.05em" }}>{s}</span>
             ))}
           </div>
 
@@ -277,7 +277,7 @@ export default function FranchisePage() {
                     </div>
                     <div>
                       <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Personal Information</h3>
-                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem" }}>Step 1 of 3</p>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 1 of 3</p>
                     </div>
                   </div>
                   <div className="franchise-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
@@ -298,7 +298,7 @@ export default function FranchisePage() {
                       <input required type="date" name="dob" value={form.dob} onChange={handleChange} onFocus={() => setFocusedField("dob")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "dob" ? "#1b3c33" : undefined }} max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]} />
                     </div>
                   </div>
-                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#bbb", fontSize: "0.72rem", marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#bbb", fontSize: "0.85rem", marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
                     You must be 18 or older. Your password will be auto-generated as FirstnameDDMMYY@
                   </p>
@@ -316,7 +316,7 @@ export default function FranchisePage() {
                     </div>
                     <div>
                       <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Business Details</h3>
-                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem" }}>Step 2 of 3</p>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 2 of 3</p>
                     </div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -351,7 +351,7 @@ export default function FranchisePage() {
                     </div>
                     <div>
                       <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Upload Documents</h3>
-                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem" }}>Step 3 of 3</p>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 3 of 3</p>
                     </div>
                   </div>
                   <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #f0ede8" }}>Upload your documents for verification. PDF, JPG, PNG accepted. Max 10MB per file.</p>
@@ -364,7 +364,7 @@ export default function FranchisePage() {
                         </div>
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.82rem", color: "#1b3c33", marginBottom: "0.1rem" }}>{label}{required && " *"}</p>
-                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.7rem", color: files[key] ? "#586159" : "#bbb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{files[key] ? files[key]!.name : "Tap to upload"}</p>
+                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", color: files[key] ? "#586159" : "#bbb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{files[key] ? files[key]!.name : "Tap to upload"}</p>
                         </div>
                       </label>
                     ))}

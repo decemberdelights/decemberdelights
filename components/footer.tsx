@@ -22,7 +22,7 @@ export default function Footer() {
           <div key={col.title}>
             <h4 style={{
               fontFamily: "'Montserrat', sans-serif",
-              fontSize: "0.7rem",
+              fontSize: "0.85rem",
               fontWeight: 800,
               letterSpacing: "0.18em",
               textTransform: "uppercase",

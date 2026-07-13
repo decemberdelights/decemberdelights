@@ -88,7 +88,7 @@ function TrackContent() {
       <section style={{ background: "linear-gradient(135deg, #094b3d 0%, #063a2f 50%, #1b3c33 100%)", padding: "8rem 2rem 5rem", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 30% 50%, rgba(200,169,122,0.08) 0%, transparent 50%)" }} />
         <div style={{ position: "relative", zIndex: 1 }}>
-          <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#c8a97a", fontSize: "0.8rem", letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "0.5rem" }}>December Delights</p>
+          <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#c8a97a", fontSize: "0.9rem", letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "0.5rem" }}>December Delights</p>
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", color: "#faf8f5", fontSize: "clamp(2.2rem, 5vw, 3.8rem)", fontWeight: 300, letterSpacing: "0.04em", lineHeight: 1.2, marginBottom: "1rem" }}>
             Track Your Order
           </h1>
@@ -101,7 +101,7 @@ function TrackContent() {
       {/* Search */}
       <section style={{ maxWidth: "560px", margin: "-2.5rem auto 0", padding: "0 1.5rem", position: "relative", zIndex: 2 }}>
         <div style={{ background: "#fff", borderRadius: "20px", padding: "1.75rem 2rem", boxShadow: "0 12px 48px rgba(27,60,51,0.12)", border: "1px solid rgba(27,60,51,0.04)" }}>
-          <label style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, color: "#1b3c33", fontSize: "0.8rem", display: "block", marginBottom: "0.6rem", letterSpacing: "0.05em" }}>Phone Number</label>
+          <label style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, color: "#1b3c33", fontSize: "0.9rem", display: "block", marginBottom: "0.6rem", letterSpacing: "0.05em" }}>Phone Number</label>
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <input
               type="tel"
@@ -168,12 +168,12 @@ function TrackContent() {
                   <div onClick={() => setExpandedId(expanded ? null : order.id)} style={{ padding: "1.5rem 1.75rem", cursor: "pointer" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
                       <div>
-                        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "0.7rem", color: "#999", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Order</p>
+                        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "0.9rem", color: "#999", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Order</p>
                         <h3 style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.5rem", fontWeight: 600 }}>#{order.id}</h3>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <p style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.4rem", fontWeight: 700 }}>&#8377;{order.total}</p>
-                        <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.72rem" }}>{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
+                        <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem" }}>{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
                       </div>
                     </div>
 
@@ -181,17 +181,17 @@ function TrackContent() {
                     <div style={{ position: "relative" }}>
                       {isCancelled ? (
                         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.85rem 1rem", background: "#fdf0ef", borderRadius: "12px" }}>
-                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.75rem", flexShrink: 0 }}>X</div>
+                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#e74c3c", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.85rem", flexShrink: 0 }}>X</div>
                           <div>
                             <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#e74c3c", fontWeight: 700, fontSize: "0.85rem" }}>Order Cancelled</p>
-                            <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#e74c3c", fontSize: "0.75rem", opacity: 0.7 }}>This order was cancelled</p>
+                            <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#e74c3c", fontSize: "0.85rem", opacity: 0.7 }}>This order was cancelled</p>
                           </div>
                         </div>
                       ) : (
                         <>
                           {/* Current status banner */}
                           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.85rem 1rem", background: `${st.color}10`, borderRadius: "12px", marginBottom: "1.25rem", border: `1px solid ${st.color}20` }}>
-                            <div style={{ width: 36, height: 36, borderRadius: "50%", background: st.color, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.65rem", flexShrink: 0, animation: currentIdx < STATUS_FLOW.length - 1 ? "pulseGlow 2s ease infinite" : "none" }}>
+                            <div style={{ width: 36, height: 36, borderRadius: "50%", background: st.color, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.85rem", flexShrink: 0, animation: currentIdx < STATUS_FLOW.length - 1 ? "pulseGlow 2s ease infinite" : "none" }}>
                               {currentIdx < STATUS_FLOW.length - 1 ? (
                                 <span style={{ color: "#fff" }}>{st.icon}</span>
                               ) : (
@@ -200,7 +200,7 @@ function TrackContent() {
                             </div>
                             <div>
                               <p style={{ fontFamily: "'Montserrat', sans-serif", color: st.color, fontWeight: 700, fontSize: "0.9rem" }}>{st.label}</p>
-                              <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.75rem" }}>{st.sub}</p>
+                              <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem" }}>{st.sub}</p>
                             </div>
                           </div>
 
@@ -234,26 +234,26 @@ function TrackContent() {
                     <div style={{ padding: "0 1.75rem 1.75rem", borderTop: "1px solid #f0ede8", animation: "fadeSlideUp 0.3s ease" }}>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1.25rem", marginBottom: "1.25rem" }}>
                         <div style={{ background: "#faf8f5", borderRadius: "12px", padding: "0.85rem 1rem" }}>
-                          <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.25rem" }}>Name</p>
+                          <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.25rem" }}>Name</p>
                           <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#1b3c33", fontWeight: 700, fontSize: "0.9rem" }}>{order.customer_name}</p>
                         </div>
                         <div style={{ background: "#faf8f5", borderRadius: "12px", padding: "0.85rem 1rem" }}>
-                          <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.25rem" }}>Phone</p>
+                          <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.25rem" }}>Phone</p>
                           <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#1b3c33", fontWeight: 700, fontSize: "0.9rem" }}>{order.customer_phone}</p>
                         </div>
                         <div style={{ gridColumn: "1 / -1", background: "#faf8f5", borderRadius: "12px", padding: "0.85rem 1rem" }}>
-                          <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.25rem" }}>Address</p>
+                          <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.25rem" }}>Address</p>
                           <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#1b3c33", fontSize: "0.9rem", lineHeight: 1.5 }}>{order.customer_address}</p>
                         </div>
                       </div>
 
                       <div style={{ background: "#faf8f5", borderRadius: "14px", padding: "1.1rem 1.25rem" }}>
-                        <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.6rem" }}>Items Ordered</p>
+                        <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.6rem" }}>Items Ordered</p>
                         {items.map((item, i) => (
                           <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "0.55rem 0", borderBottom: i < items.length - 1 ? "1px solid rgba(27,60,51,0.06)" : "none" }}>
                             <div>
                               <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#1b3c33", fontWeight: 600, fontSize: "0.88rem" }}>{item.name}</p>
-                              <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.75rem" }}>Qty: {item.quantity}</p>
+                              <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem" }}>Qty: {item.quantity}</p>
                             </div>
                             <p style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.05rem", fontWeight: 600 }}>&#8377;{item.price * item.quantity}</p>
                           </div>
@@ -271,7 +271,7 @@ function TrackContent() {
                           </div>
                           <div>
                             <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#27ae60", fontWeight: 700, fontSize: "0.88rem" }}>Ready for Pickup!</p>
-                            <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#27ae60", fontSize: "0.78rem", opacity: 0.8 }}>Please collect your order from the cafe</p>
+                            <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#27ae60", fontSize: "0.85rem", opacity: 0.8 }}>Please collect your order from the cafe</p>
                           </div>
                         </div>
                       )}

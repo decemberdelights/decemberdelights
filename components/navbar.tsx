@@ -77,21 +77,21 @@ export default function Navbar() {
           transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
           will-change: transform;
           transform: translateZ(0);
-          -webkit-backdrop-filter: blur(12px) saturate(150%);
-          backdrop-filter: blur(12px) saturate(150%);
-          background: rgba(255, 255, 255, 0.15);
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+          -webkit-backdrop-filter: none;
+          backdrop-filter: none;
+          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
         }
         .dd-nav.scrolled {
           transform: translateZ(0) scale(0.97) translateY(-2px);
         }
         .dd-nav.dark-bg {
-          background: rgba(0, 0, 0, 0.35);
-          border-color: rgba(255, 255, 255, 0.15);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-          -webkit-backdrop-filter: blur(16px) saturate(160%);
-          backdrop-filter: blur(16px) saturate(160%);
+          background: rgba(12, 26, 20, 0.92);
+          border-color: rgba(255, 255, 255, 0.1);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+          -webkit-backdrop-filter: none;
+          backdrop-filter: none;
         }
         .dd-nav:not(.dark-bg) {
           background: rgba(255, 255, 255, 0.65);

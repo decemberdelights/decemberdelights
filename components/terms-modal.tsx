@@ -158,7 +158,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
             </button>
           </div>
           {voiceWarning && (
-            <div style={{ marginBottom: "1rem", padding: "0.6rem 1rem", borderRadius: "10px", background: "rgba(200,169,126,0.1)", border: "1px solid rgba(200,169,126,0.25)", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.78rem", color: "#c8a97e" }}>
+            <div style={{ marginBottom: "1rem", padding: "0.6rem 1rem", borderRadius: "10px", background: "rgba(200,169,126,0.1)", border: "1px solid rgba(200,169,126,0.25)", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.9rem", color: "#c8a97e" }}>
               {voiceWarning}
             </div>
           )}
@@ -168,7 +168,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
             {TERMS[lang].map((term, i) => (
               <div key={i} style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <span style={{ fontFamily: "var(--font-bebas-neue), sans-serif", fontSize: "1rem", color: "#c8a97e", flexShrink: 0, minWidth: "1.5rem", textAlign: "right" }}>{String(i + 1).padStart(2, "0")}</span>
-                <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.82rem", color: "rgba(245,240,235,0.65)", lineHeight: 1.7, margin: 0 }}>{term}</p>
+                <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.9rem", color: "rgba(245,240,235,0.65)", lineHeight: 1.7, margin: 0 }}>{term}</p>
               </div>
             ))}
           </div>
@@ -176,14 +176,14 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
           {/* Accept checkbox */}
           <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", marginBottom: "1.25rem", padding: "0.75rem 1rem", borderRadius: "12px", background: accepted ? "rgba(200,169,126,0.1)" : "transparent", border: accepted ? "1px solid rgba(200,169,126,0.3)" : "1px solid transparent", transition: "all 0.2s" }}>
             <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} style={{ accentColor: "#c8a97e", width: "18px", height: "18px", flexShrink: 0 }} />
-            <span style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", color: "rgba(245,240,235,0.6)" }}>I have read and agree to all terms above</span>
+            <span style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.9rem", color: "rgba(245,240,235,0.6)" }}>I have read and agree to all terms above</span>
           </label>
 
           {/* Buttons */}
           <div className="terms-action-row">
             <button
               onClick={() => { stopSpeech(); onClose(); }}
-              style={{ flex: 1, padding: "0.85rem", borderRadius: "100px", border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "#f5f0eb", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}
+              style={{ flex: 1, padding: "0.85rem", borderRadius: "100px", border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "#f5f0eb", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.9rem", fontWeight: 600, cursor: "pointer" }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}>
               Cancel
@@ -191,7 +191,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
             <button
               onClick={() => { if (accepted) { stopSpeech(); onAccept?.(lang); } }}
               disabled={!accepted}
-              style={{ flex: 1, padding: "0.85rem", borderRadius: "100px", border: "none", background: accepted ? "#c8a97e" : "#333", color: accepted ? "#0a0a0a" : "#666", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", fontWeight: 700, cursor: accepted ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
+              style={{ flex: 1, padding: "0.85rem", borderRadius: "100px", border: "none", background: accepted ? "#c8a97e" : "#333", color: accepted ? "#0a0a0a" : "#666", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.9rem", fontWeight: 700, cursor: accepted ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
               onMouseEnter={(e) => { if (accepted) e.currentTarget.style.background = "#b89a6e"; }}
               onMouseLeave={(e) => { if (accepted) e.currentTarget.style.background = "#c8a97e"; }}>
               Accept & Submit
