@@ -53,7 +53,7 @@ export default function FranchisePage() {
     setErrorMsg("");
     if (s === 0) {
       if (!form.full_name.trim()) { setErrorMsg("Please enter your full name."); return false; }
-      if (!form.email.trim() || !/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(form.email)) { setErrorMsg("Please enter a valid email address."); return false; }
+      if (!form.email.trim() || !/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/.test(form.email)) { setErrorMsg("Please enter a valid email address."); return false; }
       if (!form.phone.trim() || !/^\d{10}$/.test(form.phone)) { setErrorMsg("Please enter a valid 10-digit phone number."); return false; }
       if (!form.dob) { setErrorMsg("Please enter your date of birth."); return false; }
       const dobDate = new Date(form.dob);
@@ -294,7 +294,7 @@ export default function FranchisePage() {
                     </div>
                     <div className="field-group">
                       <label style={labelStyle}><Mail size={14} /> Email Address *</label>
-                      <input required type="email" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$" name="email" value={form.email} onChange={handleChange} onFocus={() => setFocusedField("email")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "email" ? "#1b3c33" : undefined }} placeholder="you@example.com" />
+                      <input required type="email" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}" name="email" value={form.email} onChange={handleChange} onFocus={() => setFocusedField("email")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "email" ? "#1b3c33" : undefined }} placeholder="you@example.com" />
                     </div>
                     <div className="field-group">
                       <label style={labelStyle}><Phone size={14} /> Phone Number * <span style={{ fontWeight: 400, color: "#bbb", fontSize: "0.8rem" }}>(10 digits)</span></label>
