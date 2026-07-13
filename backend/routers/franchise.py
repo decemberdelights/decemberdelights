@@ -2,6 +2,8 @@ import os
 import uuid
 import re
 import logging
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form, Cookie, Request
 from typing import Optional
 from supabase_client import supabase
@@ -13,6 +15,8 @@ from email_utils import send_password_email, test_email_connection
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_executor = ThreadPoolExecutor(max_workers=4)
 
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
 ALLOWED_MIMETYPES = {
@@ -104,23 +108,34 @@ async def create_franchise(
     if existing.data:
         raise HTTPException(status_code=400, detail="Application already exists with this phone number")
 
+    password_hash = await asyncio.to_thread(hash_password, password)
+
+    uploaded_urls = await asyncio.gather(
+        save_upload(aadhaar, full_name, "Aadhaar"),
+        save_upload(pan, full_name, "PAN"),
+        save_upload(bank_statement, full_name, "Bank Statement"),
+        save_upload(id_proof, full_name, "ID Proof"),
+        save_upload(address_proof, full_name, "Address Proof"),
+        save_upload(other_docs, full_name, "Other Documents"),
+    )
+
     data = {
         "full_name": full_name[:200],
         "email": email[:200],
         "phone": phone[:20],
-        "password_hash": hash_password(password),
+        "password_hash": password_hash,
         "business_experience": business_experience[:2000],
         "preferred_location": preferred_location[:200],
         "investment_capability": investment_capability[:200],
         "message": message[:2000],
         "tc_accepted": tc_accepted == "true",
         "tc_language": tc_language[:10],
-        "aadhaar": await save_upload(aadhaar, full_name, "Aadhaar"),
-        "pan": await save_upload(pan, full_name, "PAN"),
-        "bank_statement": await save_upload(bank_statement, full_name, "Bank Statement"),
-        "id_proof": await save_upload(id_proof, full_name, "ID Proof"),
-        "address_proof": await save_upload(address_proof, full_name, "Address Proof"),
-        "other_docs": await save_upload(other_docs, full_name, "Other Documents"),
+        "aadhaar": uploaded_urls[0],
+        "pan": uploaded_urls[1],
+        "bank_statement": uploaded_urls[2],
+        "id_proof": uploaded_urls[3],
+        "address_proof": uploaded_urls[4],
+        "other_docs": uploaded_urls[5],
     }
     result = supabase.table("franchise_applications").insert(data).execute()
     app_id = result.data[0]["id"]
@@ -128,8 +143,10 @@ async def create_franchise(
     supabase.table("franchise_applications").update({"login_id": login_id}).eq("id", app_id).execute()
 
     logger.info(f"Franchise app {app_id} created for {email}. Sending password email...")
-    email_sent = send_password_email(to_email=email, full_name=full_name, password=password, login_id=login_id)
-    logger.info(f"Email sent result: {email_sent} for {email}")
+    asyncio.get_event_loop().run_in_executor(
+        _executor,
+        lambda: send_password_email(to_email=email, full_name=full_name, password=password, login_id=login_id),
+    )
 
     return {"ok": True, "id": app_id}
 
