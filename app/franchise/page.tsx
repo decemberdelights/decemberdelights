@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import TermsModal from "@/components/terms-modal";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
@@ -182,13 +183,14 @@ export default function FranchisePage() {
   return (
     <>
       <style>{`
-        .franchise-hero { position: relative; min-height: 55vh; background: #0c1a14; display: flex; align-items: center; overflow: hidden; }
+        .franchise-hero { position: relative; min-height: 60vh; background: #0c1a14; display: flex; align-items: center; overflow: hidden; }
         .franchise-hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 70% 40%, rgba(234,185,106,0.08) 0%, transparent 60%); }
         .step-indicator { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 3rem; }
         .step-dot { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-outfit), sans-serif; font-weight: 700; font-size: 0.85rem; transition: all 0.3s; flex-shrink: 0; }
         .step-line { flex: 1; height: 2px; max-width: 80px; transition: background 0.3s; }
         .form-section { animation: fadeSlideUp 0.35s ease both; }
         @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes floatSvg { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
         .doc-card { display: flex; align-items: center; gap: 0.85rem; padding: 1rem 1.25rem; border-radius: 14px; cursor: pointer; transition: all 0.2s; border: 1.5px dashed #d4d0ca; background: transparent; }
         .doc-card:hover { border-color: #1b3c33; background: rgba(27,60,51,0.02); }
         .doc-card.has-file { border-style: solid; border-color: #1b3c33; background: #f7f3ee; }
@@ -201,30 +203,36 @@ export default function FranchisePage() {
           .franchise-form-card { padding: 1.5rem !important; }
           .step-dot { width: 34px; height: 34px; font-size: 0.75rem; }
           .step-line { max-width: 48px; }
+          .franchise-hero-image { display: none !important; }
         }
       `}</style>
 
       {/* Hero */}
       <section className="franchise-hero" data-bg="dark">
-        <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "8rem 5% 4rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
-            <span style={{ width: "32px", height: "1px", background: "#eab96a" }} />
-            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase" }}>Franchise Opportunity</span>
+        <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "8rem 5% 4rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "2rem" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+              <span style={{ width: "32px", height: "1px", background: "#eab96a" }} />
+              <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase" }}>Franchise Opportunity</span>
+            </div>
+            <h1 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#fdf9f4", fontSize: "clamp(2.5rem, 7vw, 5.5rem)", lineHeight: 0.95, letterSpacing: "0.02em", marginBottom: "1.25rem" }}>
+              Own a<br />
+              <span style={{ color: "#eab96a" }}>December Delights</span>
+            </h1>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(253,249,244,0.7)", fontSize: "1rem", lineHeight: 1.7, maxWidth: "440px", marginBottom: "2rem" }}>
+              Bring the premium cafe experience to your city. We provide the brand, recipes, and complete support — you bring the passion.
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <a href="#apply" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.25rem", borderRadius: "100px", background: "#fdf9f4", color: "#0c1a14", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.9rem", textDecoration: "none", letterSpacing: "0.03em", transition: "transform 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.02)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
+                Start Application <ArrowRight size={15} />
+              </a>
+              <Link href="/franchise/status" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.25rem", borderRadius: "100px", border: "1.5px solid rgba(253,249,244,0.2)", background: "transparent", color: "#fdf9f4", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none", transition: "border-color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(253,249,244,0.4)"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(253,249,244,0.2)"; }}>
+                Track Application
+              </Link>
+            </div>
           </div>
-          <h1 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#fdf9f4", fontSize: "clamp(2.5rem, 7vw, 5.5rem)", lineHeight: 0.95, letterSpacing: "0.02em", marginBottom: "1.25rem" }}>
-            Own a<br />
-            <span style={{ color: "#eab96a" }}>December Delights</span>
-          </h1>
-          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(253,249,244,0.7)", fontSize: "1rem", lineHeight: 1.7, maxWidth: "440px", marginBottom: "2rem" }}>
-            Bring the premium cafe experience to your city. We provide the brand, recipes, and complete support — you bring the passion.
-          </p>
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <a href="#apply" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.25rem", borderRadius: "100px", background: "#fdf9f4", color: "#0c1a14", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.9rem", textDecoration: "none", letterSpacing: "0.03em", transition: "transform 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.02)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
-              Start Application <ArrowRight size={15} />
-            </a>
-            <Link href="/franchise/status" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.25rem", borderRadius: "100px", border: "1.5px solid rgba(253,249,244,0.2)", background: "transparent", color: "#fdf9f4", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none", transition: "border-color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(253,249,244,0.4)"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(253,249,244,0.2)"; }}>
-              Track Application
-            </Link>
+          <div className="franchise-hero-image" style={{ flex: "0 0 auto", animation: "floatSvg 4s ease-in-out infinite" }}>
+            <Image src="/working.svg" alt="Franchise With Us" width={380} height={380} style={{ width: "auto", height: "auto" }} />
           </div>
         </div>
       </section>
