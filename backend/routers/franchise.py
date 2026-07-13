@@ -3,20 +3,20 @@ import uuid
 import re
 import logging
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form, Cookie, Request
 from typing import Optional
 from supabase_client import supabase
 from schemas import FranchiseLogin, FranchiseOut
 from auth import hash_password, verify_password, create_token, decode_token
 from security import franchise_limiter, get_client_ip, validate_email, validate_phone, sanitize_input
-from email_utils import send_password_email, test_email_connection
+
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-_executor = ThreadPoolExecutor(max_workers=4)
+
 
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
 ALLOWED_MIMETYPES = {
@@ -142,11 +142,7 @@ async def create_franchise(
     login_id = f"DD{phone[-4:]}{str(app_id).zfill(4)}"
     supabase.table("franchise_applications").update({"login_id": login_id}).eq("id", app_id).execute()
 
-    logger.info(f"Franchise app {app_id} created for {email}. Sending password email...")
-    asyncio.get_event_loop().run_in_executor(
-        _executor,
-        lambda: send_password_email(to_email=email, full_name=full_name, password=password, login_id=login_id),
-    )
+    logger.info(f"Franchise app {app_id} created for {email}")
 
     return {"ok": True, "id": app_id}
 
@@ -191,6 +187,4 @@ def franchise_logout(response: Response):
     return {"ok": True}
 
 
-@router.get("/api/email/test")
-def test_email():
-    return test_email_connection()
+

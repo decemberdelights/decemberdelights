@@ -115,7 +115,7 @@ export default function FranchisePage() {
     return (
       <SuccessState
         title="Application Received"
-        description="Your franchise application has been submitted successfully. We've sent your login credentials to your email. You can also use them below."
+        description="Your franchise application has been submitted successfully. Use the credentials below to log in and track your application status."
         actions={[
           { label: "Check Status", onClick: () => window.location.href = "/franchise/status", primary: true },
           { label: "Back to Home", onClick: () => window.location.href = "/" },
