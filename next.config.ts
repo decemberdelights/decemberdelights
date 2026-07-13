@@ -40,10 +40,12 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
   async rewrites() {
+    const backendUrl = process.env.BACKEND_URL || "";
+    if (!backendUrl) return [];
     return [
       {
         source: "/api/:path*",
-        destination: "https://december-delights-production-32ca.up.railway.app/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },
