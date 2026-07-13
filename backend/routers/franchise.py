@@ -32,6 +32,11 @@ def _sanitize_filename(name: str) -> str:
     return name[:80] if name else "applicant"
 
 
+def _sync_upload(filename: str, content: bytes, content_type: str) -> str:
+    supabase.storage.from_("franchise-docs").upload(filename, content, {"content-type": content_type})
+    return supabase.storage.from_("franchise-docs").get_public_url(filename)
+
+
 async def save_upload(file: Optional[UploadFile], applicant_name: str, field_name: str = "file") -> str:
     if not file or not file.filename:
         return ""
@@ -47,9 +52,7 @@ async def save_upload(file: Optional[UploadFile], applicant_name: str, field_nam
     safe_name = _sanitize_filename(applicant_name)
     safe_field = field_name.lower().replace(" ", "_")
     filename = f"{safe_name}_{safe_field}_{uuid.uuid4().hex[:8]}{ext}"
-    supabase.storage.from_("franchise-docs").upload(filename, content, {"content-type": file.content_type})
-    public_url = supabase.storage.from_("franchise-docs").get_public_url(filename)
-    return public_url
+    return await asyncio.to_thread(_sync_upload, filename, content, file.content_type)
 
 
 def delete_app_files(app: dict):
@@ -104,7 +107,9 @@ async def create_franchise(
     if not any(c.isdigit() for c in password):
         raise HTTPException(status_code=400, detail="Password must contain at least one digit")
 
-    existing = supabase.table("franchise_applications").select("*").eq("phone", phone).execute()
+    existing = await asyncio.to_thread(
+        lambda: supabase.table("franchise_applications").select("id").eq("phone", phone).execute()
+    )
     if existing.data:
         raise HTTPException(status_code=400, detail="Application already exists with this phone number")
 
@@ -137,10 +142,14 @@ async def create_franchise(
         "address_proof": uploaded_urls[4],
         "other_docs": uploaded_urls[5],
     }
-    result = supabase.table("franchise_applications").insert(data).execute()
+    result = await asyncio.to_thread(
+        lambda: supabase.table("franchise_applications").insert(data).execute()
+    )
     app_id = result.data[0]["id"]
     login_id = f"DD{phone[-4:]}{str(app_id).zfill(4)}"
-    supabase.table("franchise_applications").update({"login_id": login_id}).eq("id", app_id).execute()
+    await asyncio.to_thread(
+        lambda: supabase.table("franchise_applications").update({"login_id": login_id}).eq("id", app_id).execute()
+    )
 
     logger.info(f"Franchise app {app_id} created for {email}")
 

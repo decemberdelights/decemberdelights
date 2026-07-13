@@ -45,7 +45,15 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
   const [accepted, setAccepted] = useState(false);
   const [lang, setLang] = useState<"en" | "te" | "hi">("en");
   const [speaking, setSpeaking] = useState(false);
+  const [voiceWarning, setVoiceWarning] = useState("");
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const checkVoiceSupport = useCallback((language: string): boolean => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return false;
+    const voices = window.speechSynthesis.getVoices();
+    const langPrefix = language === "te" ? "te" : language === "hi" ? "hi" : "en";
+    return voices.some(v => v.lang.startsWith(langPrefix));
+  }, []);
 
   const stopSpeech = useCallback(() => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -58,6 +66,11 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
   const speak = useCallback(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     stopSpeech();
+    if (!checkVoiceSupport(lang)) {
+      setVoiceWarning(lang === "hi" ? "Hindi voice not available on this device. Please read the terms manually." : lang === "te" ? "Telugu voice not available on this device. Please read the terms manually." : "Voice not available on this device.");
+      return;
+    }
+    setVoiceWarning("");
     const text = TERMS[lang].join(". ");
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang === "te" ? "te-IN" : lang === "hi" ? "hi-IN" : "en-US";
@@ -67,7 +80,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
     utteranceRef.current = u;
     window.speechSynthesis.speak(u);
     setSpeaking(true);
-  }, [lang, stopSpeech]);
+  }, [lang, stopSpeech, checkVoiceSupport]);
 
   if (!open) return null;
 
@@ -130,7 +143,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
           {/* Language + TTS */}
           <div className="terms-lang-row">
             {(["en", "te", "hi"] as const).map((l) => (
-              <button key={l} onClick={() => { stopSpeech(); setLang(l); }}
+              <button key={l} onClick={() => { stopSpeech(); setLang(l); setVoiceWarning(""); }}
                 style={{ padding: "0.45rem 1rem", borderRadius: "100px", border: lang === l ? "1.5px solid #c8a97e" : "1.5px solid rgba(255,255,255,0.1)", background: lang === l ? "rgba(200,169,126,0.15)" : "transparent", color: lang === l ? "#c8a97e" : "rgba(245,240,235,0.4)", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.8rem", fontWeight: lang === l ? 700 : 500, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <span>{LANG_FLAGS[l]}</span> {LANG_LABELS[l]}
               </button>
@@ -144,6 +157,11 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
               )}
             </button>
           </div>
+          {voiceWarning && (
+            <div style={{ marginBottom: "1rem", padding: "0.6rem 1rem", borderRadius: "10px", background: "rgba(200,169,126,0.1)", border: "1px solid rgba(200,169,126,0.25)", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.78rem", color: "#c8a97e" }}>
+              {voiceWarning}
+            </div>
+          )}
 
           {/* Terms */}
           <div style={{ marginBottom: "1.5rem" }}>

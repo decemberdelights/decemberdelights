@@ -1,6 +1,7 @@
 import os
 import uuid
 import re
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from supabase_client import supabase
 from auth import require_super_admin
@@ -16,6 +17,11 @@ def _sanitize_filename(name: str) -> str:
     name = re.sub(r'[^\w\s-]', '', name)
     name = re.sub(r'\s+', '_', name.strip())
     return name[:80] if name else "applicant"
+
+
+def _sync_upload(filename: str, content: bytes, content_type: str) -> str:
+    supabase.storage.from_("career-docs").upload(filename, content, {"content-type": content_type})
+    return supabase.storage.from_("career-docs").get_public_url(filename)
 
 
 def delete_career_files(app: dict):
@@ -68,8 +74,7 @@ async def create_career(
         if resume.content_type and resume.content_type not in {"application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}:
             raise HTTPException(status_code=400, detail=f"File content type {resume.content_type} not allowed")
         filename = f"{_sanitize_filename(full_name)}_resume_{uuid.uuid4().hex[:8]}{ext}"
-        supabase.storage.from_("career-docs").upload(filename, content, {"content-type": resume.content_type})
-        resume_url = supabase.storage.from_("career-docs").get_public_url(filename)
+        resume_url = await asyncio.to_thread(_sync_upload, filename, content, resume.content_type)
 
     data = {
         "full_name": full_name,
@@ -79,7 +84,9 @@ async def create_career(
         "message": message,
         "resume_url": resume_url,
     }
-    supabase.table("career_applications").insert(data).execute()
+    await asyncio.to_thread(
+        lambda: supabase.table("career_applications").insert(data).execute()
+    )
     return {"ok": True}
 
 
