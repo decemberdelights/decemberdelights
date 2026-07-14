@@ -5,7 +5,7 @@ import Link from "next/link";
 import TermsModal from "@/components/terms-modal";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
-import { User, Mail, Phone, Briefcase, MapPin, FileText, ArrowRight, Check, Upload } from "@/components/icons";
+import { User, Mail, Phone, Briefcase, MapPin, FileText, ArrowRight, Check } from "@/components/icons";
 import SuccessState from "@/components/SuccessState";
 
 const STEPS = ["Personal", "Business", "Documents", "Review"];

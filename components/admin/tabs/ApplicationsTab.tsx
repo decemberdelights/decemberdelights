@@ -28,7 +28,6 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
   const [deleteReason, setDeleteReason] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const blobsRef = useState<Record<string, string>>({})[0];
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {

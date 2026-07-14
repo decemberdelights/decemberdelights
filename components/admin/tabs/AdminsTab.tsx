@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { AdminUser } from "../types";
-import { API } from "@/lib/api";
 import FilterBar from "../FilterBar";
 
 interface AdminsTabProps {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, FormEvent, useEffect } from "react";
-import Link from "next/link";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle, selectBackgroundImage } from "@/lib/styles";
 import { User, Mail, Phone, Briefcase, FileText, ArrowRight, Upload, MapPin, Clock } from "@/components/icons";
