@@ -44,7 +44,7 @@ export default function FranchisePage() {
   };
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
-  const ALLOWED_TYPES = {
+  const ALLOWED_TYPES: Record<string, string> = {
     "application/pdf": ".pdf",
     "image/jpeg": ".jpg",
     "image/png": ".png",
