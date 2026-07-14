@@ -1,0 +1,163 @@
+import os
+import uuid
+import re
+import asyncio
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from supabase_client import supabase
+from auth import require_super_admin
+from security import validate_email, validate_phone, sanitize_input
+
+router = APIRouter()
+
+ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
+MAX_FILE_SIZE = 5 * 1024 * 1024
+
+
+def _sanitize_filename(name: str) -> str:
+    name = re.sub(r'[^\w\s-]', '', name)
+    name = re.sub(r'\s+', '_', name.strip())
+    return name[:80] if name else "applicant"
+
+
+def _sync_upload(filename: str, content: bytes, content_type: str) -> str:
+    supabase.storage.from_("career-docs").upload(filename, content, {"content-type": content_type})
+    return supabase.storage.from_("career-docs").get_public_url(filename)
+
+
+def delete_career_files(app: dict):
+    for field in ["resume_url"]:
+        url = app.get(field, "")
+        if url and "/career-docs/" in url:
+            filename = url.split("/")[-1]
+            try:
+                supabase.storage.from_("career-docs").remove([filename])
+            except Exception:
+                pass
+
+
+@router.get("/api/jobs")
+def get_jobs():
+    result = supabase.table("jobs").select("*").eq("is_active", True).execute()
+    return result.data or []
+
+
+@router.post("/api/careers")
+async def create_career(
+    full_name: str = Form(...),
+    email: str = Form(...),
+    phone: str = Form(...),
+    position: str = Form(""),
+    message: str = Form(""),
+    resume: UploadFile = File(None),
+):
+    full_name = sanitize_input(full_name, 200)
+    email = sanitize_input(email, 200)
+    phone = sanitize_input(phone, 20)
+    position = sanitize_input(position, 200)
+    message = sanitize_input(message, 2000)
+
+    if not full_name:
+        raise HTTPException(status_code=400, detail="Full name is required")
+    if not validate_email(email):
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    if not validate_phone(phone):
+        raise HTTPException(status_code=400, detail="Invalid phone number")
+
+    resume_url = ""
+    if resume and resume.filename:
+        ext = os.path.splitext(resume.filename)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(status_code=400, detail=f"File type {ext} not allowed")
+        content = await resume.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+        if resume.content_type and resume.content_type not in {"application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}:
+            raise HTTPException(status_code=400, detail=f"File content type {resume.content_type} not allowed")
+        filename = f"{_sanitize_filename(full_name)}_resume_{uuid.uuid4().hex[:8]}{ext}"
+        resume_url = await asyncio.to_thread(_sync_upload, filename, content, resume.content_type)
+
+    data = {
+        "full_name": full_name,
+        "email": email,
+        "phone": phone,
+        "position": position,
+        "message": message,
+        "resume_url": resume_url,
+    }
+    await asyncio.to_thread(
+        lambda: supabase.table("career_applications").insert(data).execute()
+    )
+    return {"ok": True}
+
+
+@router.get("/api/admin/jobs")
+def get_admin_jobs(_=Depends(require_super_admin)):
+    result = supabase.table("jobs").select("*").order("id", desc=True).execute()
+    return result.data or []
+
+
+@router.post("/api/admin/jobs")
+def create_job(
+    title: str = Form(""),
+    department: str = Form(""),
+    location: str = Form(""),
+    description: str = Form(""),
+    requirements: str = Form(""),
+    salary_range: str = Form(""),
+    job_type: str = Form("full-time"),
+    is_active: str = Form("true"),
+    _=Depends(require_super_admin),
+):
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    data = {
+        "title": title,
+        "department": department,
+        "location": location,
+        "description": description,
+        "requirements": requirements,
+        "salary_range": salary_range,
+        "job_type": job_type,
+        "is_active": is_active.lower() == "true",
+    }
+    result = supabase.table("jobs").insert(data).execute()
+    return {"id": result.data[0]["id"]}
+
+
+@router.put("/api/admin/jobs/{job_id}")
+def update_job(
+    job_id: int,
+    title: str = Form(""),
+    department: str = Form(""),
+    location: str = Form(""),
+    description: str = Form(""),
+    requirements: str = Form(""),
+    salary_range: str = Form(""),
+    job_type: str = Form("full-time"),
+    is_active: str = Form("true"),
+    _=Depends(require_super_admin),
+):
+    existing = supabase.table("jobs").select("*").eq("id", job_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Job not found")
+    data = {
+        "title": title,
+        "department": department,
+        "location": location,
+        "description": description,
+        "requirements": requirements,
+        "salary_range": salary_range,
+        "job_type": job_type,
+        "is_active": is_active.lower() == "true",
+    }
+    supabase.table("jobs").update(data).eq("id", job_id).execute()
+    return {"ok": True}
+
+
+@router.delete("/api/admin/jobs/{job_id}")
+def delete_job(job_id: int, _=Depends(require_super_admin)):
+    existing = supabase.table("jobs").select("*").eq("id", job_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Job not found")
+    supabase.table("jobs").delete().eq("id", job_id).execute()
+    return {"ok": True}
