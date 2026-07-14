@@ -6,6 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from supabase_client import supabase
 from auth import require_super_admin
 from security import validate_email, validate_phone, sanitize_input
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -39,6 +42,23 @@ def delete_career_files(app: dict):
 def get_jobs():
     result = supabase.table("jobs").select("*").eq("is_active", True).execute()
     return result.data or []
+
+
+@router.get("/api/careers/track")
+def track_career_application(name: str = "", phone: str = ""):
+    if not name or len(name) < 2:
+        raise HTTPException(status_code=400, detail="Name is required")
+    if not phone or len(phone) < 5:
+        raise HTTPException(status_code=400, detail="Phone is required")
+    try:
+        result = supabase.table("career_applications").select("id,full_name,phone,position,status,created_at").eq("phone", phone).order("created_at", desc=True).limit(10).execute()
+        apps = result.data or []
+        if name:
+            apps = [a for a in apps if name.lower() in (a.get("full_name", "")).lower()]
+        return apps
+    except Exception as e:
+        logger.error(f"Failed to track career application: {e}")
+        raise HTTPException(status_code=500, detail="Failed to track application")
 
 
 @router.post("/api/careers")
@@ -92,8 +112,12 @@ async def create_career(
 
 @router.get("/api/admin/jobs")
 def get_admin_jobs(_=Depends(require_super_admin)):
-    result = supabase.table("jobs").select("*").order("id", desc=True).execute()
-    return result.data or []
+    try:
+        result = supabase.table("jobs").select("*").order("id", desc=True).execute()
+        return result.data or []
+    except Exception as e:
+        logger.error(f"Failed to fetch admin jobs: {e}")
+        return []
 
 
 @router.post("/api/admin/jobs")

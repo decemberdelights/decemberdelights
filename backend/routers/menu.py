@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
 from typing import List, Optional
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
@@ -52,8 +54,12 @@ def get_menu():
 
 @router.get("/api/menu/all")
 def get_all_menu(_=Depends(get_current_admin)):
-    result = supabase.table("menu_items").select("*").order("sort_order").execute()
-    return result.data or []
+    try:
+        result = supabase.table("menu_items").select("*").order("sort_order").execute()
+        return result.data or []
+    except Exception as e:
+        logger.error(f"Failed to fetch all menu items: {e}")
+        return []
 
 
 @router.post("/api/admin/menu")

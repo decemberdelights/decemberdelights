@@ -4,7 +4,9 @@ from typing import Optional
 from supabase_client import supabase
 from auth import verify_password, create_token, decode_token
 from security import login_limiter, get_client_ip
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -20,7 +22,10 @@ def auth_check(request: Request, session: Optional[str] = Cookie(None)):
     payload = decode_token(token)
     if not payload or payload.get("type") != "admin":
         return {"authenticated": False}
-    user_id = int(payload.get("sub"))
+    try:
+        user_id = int(payload.get("sub"))
+    except (ValueError, TypeError):
+        return {"authenticated": False}
     result = supabase.table("admin_users").select("*").eq("id", user_id).execute()
     if not result.data or not result.data[0].get("is_active", True):
         return {"authenticated": False}

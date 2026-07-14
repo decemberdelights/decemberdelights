@@ -269,28 +269,46 @@ def get_order_stats(_=Depends(get_current_admin)):
 
 @router.post("/api/admin/orders")
 def create_order(data: dict, _=Depends(get_current_admin)):
-    result = supabase.table("orders").insert(data).execute()
-    return result.data[0]
+    try:
+        allowed_fields = {"customer_name", "customer_email", "customer_phone", "customer_address", "items", "total", "status", "payment_method", "payment_status", "notes"}
+        safe_data = {k: v for k, v in data.items() if k in allowed_fields}
+        result = supabase.table("orders").insert(safe_data).execute()
+        return result.data[0]
+    except Exception as e:
+        logger.error(f"Failed to create order: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create order")
 
 
 @router.get("/api/admin/orders/{order_id}")
 def get_order(order_id: int, _=Depends(get_current_admin)):
-    result = supabase.table("orders").select("*").eq("id", order_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return result.data[0]
+    try:
+        result = supabase.table("orders").select("*").eq("id", order_id).execute()
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Order not found")
+        return result.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch order {order_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch order")
 
 
 @router.put("/api/admin/orders/{order_id}")
 def update_order(order_id: int, data: dict, _=Depends(get_current_admin)):
-    existing = supabase.table("orders").select("*").eq("id", order_id).execute()
-    if not existing.data:
-        raise HTTPException(status_code=404, detail="Order not found")
-    allowed_fields = {"status", "payment_status", "payment_method", "notes", "customer_address", "admin_notes"}
-    safe_data = {k: v for k, v in data.items() if k in allowed_fields}
-    supabase.table("orders").update(safe_data).eq("id", order_id).execute()
-    updated = supabase.table("orders").select("*").eq("id", order_id).execute()
-    return updated.data[0]
+    try:
+        existing = supabase.table("orders").select("*").eq("id", order_id).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Order not found")
+        allowed_fields = {"status", "payment_status", "payment_method", "notes", "customer_address", "admin_notes"}
+        safe_data = {k: v for k, v in data.items() if k in allowed_fields}
+        supabase.table("orders").update(safe_data).eq("id", order_id).execute()
+        updated = supabase.table("orders").select("*").eq("id", order_id).execute()
+        return updated.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update order {order_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update order")
 
 
 @router.put("/api/admin/orders/{order_id}/status")

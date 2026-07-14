@@ -168,7 +168,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return;
     let timer: NodeJS.Timeout;
-    const reset = () => { clearTimeout(timer); timer = setTimeout(() => { localStorage.removeItem("admin_token"); setAuthed(false); }, 4 * 60 * 1000); };
+    const reset = () => { clearTimeout(timer); timer = setTimeout(() => { localStorage.removeItem("admin_token"); setAuthed(false); }, 3 * 60 * 1000); };
     const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
     events.forEach((e) => document.addEventListener(e, reset, { passive: true }));
     reset();
@@ -292,7 +292,7 @@ export default function AdminPage() {
         orderId={cancelOrderId}
         onConfirm={async (reason) => {
           if (!cancelOrderId) return;
-          await api(`/api/admin/orders/${cancelOrderId}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "cancelled", notes: reason }) });
+          await api(`/api/admin/orders/${cancelOrderId}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "cancelled", admin_notes: reason }) });
           setCancelOrderId(null);
           refresh();
         }}

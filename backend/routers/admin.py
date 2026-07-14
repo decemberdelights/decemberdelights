@@ -6,6 +6,7 @@ from security import validate_application_status, sanitize_input
 from routers.franchise import delete_app_files
 from routers.careers import delete_career_files
 from typing import Optional
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,6 @@ def _safe_query(table, select="*", filters=None, order=None, limit=None, count_o
 
 @router.get("/api/admin/stats")
 def get_stats(_=Depends(get_current_admin)):
-    from datetime import datetime, timezone
     today = datetime.now(timezone.utc).date()
     month_start = today.replace(day=1)
 
@@ -233,9 +233,13 @@ def get_logs(limit: int = 100, _=Depends(get_current_admin)):
 
 @router.get("/api/admin/franchise/cities")
 def get_franchise_cities(_=Depends(get_current_admin)):
-    result = supabase.table("franchise_applications").select("city").neq("city", "").execute()
-    cities = list(set(r["city"] for r in (result.data or []) if r.get("city")))
-    return cities
+    try:
+        result = supabase.table("franchise_applications").select("city").neq("city", "").execute()
+        cities = list(set(r["city"] for r in (result.data or []) if r.get("city")))
+        return cities
+    except Exception as e:
+        logger.error(f"Failed to fetch franchise cities: {e}")
+        return []
 
 
 @router.post("/api/admin/reset-database")
