@@ -75,7 +75,6 @@ def _extract_user(token: str) -> dict:
 def get_current_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     session: Optional[str] = Cookie(None),
-    request: Request = None,
 ) -> dict:
     token = None
     if credentials:

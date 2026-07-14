@@ -167,33 +167,36 @@ interface ViewDocsModalProps {
 
 export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
   const [blobs, setBlobs] = useState<Record<string, string>>({});
+  const blobsRef = useRef<Record<string, string>>({});
   const prevDocsRef = useRef<App | null>(null);
   useEscapeKey(onClose, !!docs);
 
   useEffect(() => {
     return () => {
-      Object.values(blobs).forEach(url => URL.revokeObjectURL(url));
+      Object.values(blobsRef.current).forEach(url => URL.revokeObjectURL(url));
     };
   }, []);
 
   useEffect(() => {
     if (prevDocsRef.current && prevDocsRef.current !== docs) {
-      Object.values(blobs).forEach(url => URL.revokeObjectURL(url));
+      Object.values(blobsRef.current).forEach(url => URL.revokeObjectURL(url));
+      blobsRef.current = {};
       setBlobs({});
     }
     prevDocsRef.current = docs;
   }, [docs]);
 
   const loadDoc = useCallback(async (url: string, key: string) => {
-    if (blobs[key]) return;
+    if (blobsRef.current[key]) return;
     try {
       const r = await fetch(`${API}${url}`, { credentials: "include" });
       if (!r.ok) return;
       const blob = await r.blob();
       const blobUrl = URL.createObjectURL(blob);
+      blobsRef.current[key] = blobUrl;
       setBlobs(prev => ({ ...prev, [key]: blobUrl }));
     } catch { /* ignore */ }
-  }, [blobs]);
+  }, []);
 
   const openFile = useCallback((url: string) => {
     window.open(`${API}${url}`, "_blank");
@@ -204,14 +207,14 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
     const docFields = ["aadhaar", "pan", "bank_statement", "id_proof", "address_proof", "other_docs"] as const;
     for (const key of docFields) {
       const url = (docs as unknown as Record<string, string>)[key];
-      if (url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url) && !blobs[key]) {
+      if (url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) {
         loadDoc(url, key);
       }
     }
-    if (docs.resume_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(docs.resume_url) && !blobs["resume"]) {
+    if (docs.resume_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(docs.resume_url)) {
       loadDoc(docs.resume_url, "resume");
     }
-  }, [docs, blobs, loadDoc]);
+  }, [docs, loadDoc]);
 
   if (!docs) return null;
 

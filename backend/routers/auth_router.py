@@ -1,4 +1,3 @@
-import os
 from fastapi import APIRouter, Depends, Response, HTTPException, Cookie, Request
 from typing import Optional
 from supabase_client import supabase

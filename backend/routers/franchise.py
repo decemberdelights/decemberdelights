@@ -62,12 +62,13 @@ def delete_app_files(app: dict):
             filename = url.split("/")[-1]
             try:
                 supabase.storage.from_("franchise-docs").remove([filename])
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to delete file {filename}: {e}")
 
 
 @router.post("/api/franchise")
 async def create_franchise(
+    request: Request,
     full_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
@@ -88,6 +89,11 @@ async def create_franchise(
     full_name = sanitize_input(full_name, 200)
     email = sanitize_input(email, 200)
     phone = sanitize_input(phone, 20)
+
+    client_ip = get_client_ip(request)
+    rate_key = f"franchise_create:{client_ip}"
+    franchise_limiter.check(rate_key)
+
     business_experience = sanitize_input(business_experience, 2000)
     preferred_location = sanitize_input(preferred_location, 200)
     investment_capability = sanitize_input(investment_capability, 200)
@@ -152,6 +158,7 @@ async def create_franchise(
     )
 
     logger.info(f"Franchise app {app_id} created for {email}")
+    franchise_limiter.reset(rate_key)
 
     return {"ok": True, "id": app_id}
 
@@ -188,7 +195,6 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response)
     franchise_limiter.reset(rate_key)
 
     token = create_token({"sub": str(app["id"]), "type": "franchise"})
-    secure_flag = os.environ.get("ENV", "development") != "development"
     response.set_cookie("franchise_session", token, httponly=True, samesite="none", max_age=86400, secure=True)
     return {"application": FranchiseOut(**app).model_dump()}
 

@@ -242,6 +242,12 @@ export default function AdminPage() {
       return <JobsTab jobs={jobs} onAdd={() => { setEditingItem({ title: "", department: "", location: "", description: "", requirements: "", salary_range: "", job_type: "full-time", is_active: true }); setEditType("add"); }} onEdit={(j) => { setEditingItem({ ...j }); setEditType("edit"); }} onDelete={(id) => deleteItem("jobs", id)} />;
     }
 
+    if (tab === "admins" && role !== "super_admin") {
+      return <div style={{ textAlign: "center", padding: "4rem" }}><p style={{ color: "#a32d2d", fontSize: 14 }}>Access denied. Super admin privileges required.</p></div>;
+    }
+    if (tab === "logs" && role !== "super_admin") {
+      return <div style={{ textAlign: "center", padding: "4rem" }}><p style={{ color: "#a32d2d", fontSize: 14 }}>Access denied. Super admin privileges required.</p></div>;
+    }
     if (tab === "admins" && role === "super_admin") {
       if (loading && adminUsers.length === 0) return <AdminsSkeleton />;
       return <AdminsTab adminUsers={adminUsers} stats={stats} api={api} onRefresh={refresh} />;

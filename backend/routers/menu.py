@@ -4,7 +4,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
-from typing import List, Optional
+from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -74,6 +74,10 @@ async def create_menu(
     _=Depends(get_current_admin),
 ):
     image_url = await save_menu_image(image, name) if image else ""
+    try:
+        sort_val = int(sort_order)
+    except (ValueError, TypeError):
+        sort_val = 0
     data = {
         "name": name,
         "category": category,
@@ -81,7 +85,7 @@ async def create_menu(
         "price": price,
         "image_url": image_url,
         "is_active": is_active.lower() == "true",
-        "sort_order": int(sort_order) if sort_order.isdigit() else 0,
+        "sort_order": sort_val,
     }
     result = supabase.table("menu_items").insert(data).execute()
     return {"id": result.data[0]["id"]}
@@ -109,6 +113,10 @@ async def update_menu(
         if new_url:
             image_url = new_url
 
+    try:
+        sort_val = int(sort_order)
+    except (ValueError, TypeError):
+        sort_val = 0
     data = {
         "name": name,
         "category": category,
@@ -116,7 +124,7 @@ async def update_menu(
         "price": price,
         "image_url": image_url,
         "is_active": is_active.lower() == "true",
-        "sort_order": int(sort_order) if sort_order.isdigit() else 0,
+        "sort_order": sort_val,
     }
     supabase.table("menu_items").update(data).eq("id", item_id).execute()
     return {"ok": True}

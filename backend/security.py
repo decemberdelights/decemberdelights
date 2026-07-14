@@ -66,8 +66,10 @@ def validate_application_status(status: str) -> bool:
 
 
 def get_client_ip(request: Request) -> str:
-    """Get client IP, respecting X-Forwarded-For."""
+    """Get client IP, respecting X-Forwarded-For only from known proxies."""
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+        parts = forwarded.split(",")
+        return parts[0].strip()
+    host = request.client.host if request.client else "unknown"
+    return host

@@ -4,7 +4,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
-from typing import List, Optional
+from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,17 +77,33 @@ async def create_product(
     _=Depends(get_current_admin),
 ):
     image_url = await save_product_image(image, name) if image else ""
+    try:
+        price_val = float(price) if price else 0
+    except (ValueError, TypeError):
+        price_val = 0
+    try:
+        orig_price_val = float(original_price) if original_price else 0
+    except (ValueError, TypeError):
+        orig_price_val = 0
+    try:
+        stock_val = int(stock)
+    except (ValueError, TypeError):
+        stock_val = 0
+    try:
+        sort_val = int(sort_order)
+    except (ValueError, TypeError):
+        sort_val = 0
     data = {
         "name": name,
         "description": description,
-        "price": float(price) if price else 0,
-        "original_price": float(original_price) if original_price else 0,
+        "price": price_val,
+        "original_price": orig_price_val,
         "category": category,
         "image_url": image_url,
-        "stock": int(stock) if stock.isdigit() else 0,
+        "stock": stock_val,
         "is_active": is_active.lower() == "true",
         "offer": offer,
-        "sort_order": int(sort_order) if sort_order.isdigit() else 0,
+        "sort_order": sort_val,
     }
     result = supabase.table("products").insert(data).execute()
     return {"id": result.data[0]["id"]}
@@ -118,17 +134,33 @@ async def update_product(
         if new_url:
             image_url = new_url
 
+    try:
+        price_val = float(price) if price else 0
+    except (ValueError, TypeError):
+        price_val = 0
+    try:
+        orig_price_val = float(original_price) if original_price else 0
+    except (ValueError, TypeError):
+        orig_price_val = 0
+    try:
+        stock_val = int(stock)
+    except (ValueError, TypeError):
+        stock_val = 0
+    try:
+        sort_val = int(sort_order)
+    except (ValueError, TypeError):
+        sort_val = 0
     data = {
         "name": name,
         "description": description,
-        "price": float(price) if price else 0,
-        "original_price": float(original_price) if original_price else 0,
+        "price": price_val,
+        "original_price": orig_price_val,
         "category": category,
         "image_url": image_url,
-        "stock": int(stock) if stock.isdigit() else 0,
+        "stock": stock_val,
         "is_active": is_active.lower() == "true",
         "offer": offer,
-        "sort_order": int(sort_order) if sort_order.isdigit() else 0,
+        "sort_order": sort_val,
     }
     supabase.table("products").update(data).eq("id", product_id).execute()
     return {"ok": True}

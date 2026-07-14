@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from supabase_client import supabase
-from schemas import AdminLogin
 from auth import require_super_admin, hash_password
 from security import sanitize_input
 from pydantic import BaseModel

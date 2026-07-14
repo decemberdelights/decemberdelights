@@ -257,12 +257,18 @@ def reset_database(_=Depends(require_super_admin)):
     cleared = {}
     for table in tables_to_clear:
         try:
-            result = supabase.table(table).select("id").execute()
-            count = len(result.data) if result.data else 0
-            if count > 0:
-                ids = [r["id"] for r in result.data[:1000]]
+            total_deleted = 0
+            while True:
+                result = supabase.table(table).select("id").limit(1000).execute()
+                data = result.data or []
+                if not data:
+                    break
+                ids = [r["id"] for r in data]
                 supabase.table(table).delete().in_("id", ids).execute()
-                cleared[table] = count
+                total_deleted += len(ids)
+                if len(ids) < 1000:
+                    break
+            cleared[table] = total_deleted
         except Exception as e:
             logger.error(f"Failed to clear table {table}: {e}")
             cleared[table] = "error"

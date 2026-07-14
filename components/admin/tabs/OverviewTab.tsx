@@ -20,23 +20,6 @@ export default function OverviewTab({ stats, setTab, todayOrders = 0, monthOrder
 
   return (
     <>
-      <style>{`
-        .ov-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 28px; }
-        .ov-grid .stat-card { padding: 28px 26px; border-radius: 14px; }
-        .ov-grid .stat-card .label { font-size: 15px; color: #6b6f6a; margin-bottom: 10px; font-weight: 500; }
-        .ov-grid .stat-card .value { font-size: 36px; font-weight: 700; letter-spacing: -0.5px; color: #1b2b25; }
-        .ov-app-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-        .ov-app-breakdown { display: flex; flex-direction: column; gap: 12px; }
-        .ov-app-item { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-radius: 10px; background: #f9f8f4; border: 1px solid #e4e1d6; }
-        .ov-app-item .lbl { font-size: 15px; color: #1b2b25; font-weight: 500; }
-        .ov-app-item .num { font-size: 26px; font-weight: 700; color: #1b2b25; }
-        .ov-app-item.approved .num { color: #3b6d11; }
-        .ov-app-item.pending .num { color: #854f0b; }
-        .ov-app-item.declined .num { color: #a32d2d; }
-        .ov-action-box { background: #f9f8f4; border-radius: 10px; border: 1px solid #e4e1d6; padding: 24px; text-align: center; color: #6b6f6a; font-size: 16px; display: flex; align-items: center; justify-content: center; }
-        @media(max-width:768px) { .ov-grid { grid-template-columns: 1fr; } .ov-app-row { grid-template-columns: 1fr; } }
-      `}</style>
-
       <div className="topbar">
         <h2>DASHBOARD OVERVIEW</h2>
         <div className="role-pill">Overview</div>

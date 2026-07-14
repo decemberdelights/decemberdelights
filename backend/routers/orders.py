@@ -20,6 +20,10 @@ class DeleteRequest(BaseModel):
     reason: str = ""
 
 
+def _normalize_phone(phone: str) -> str:
+    return phone.replace(" ", "").replace("-", "").replace("+", "")
+
+
 def log_activity(username: str, action: str, target_type: str, target_id: int, details: str = ""):
     try:
         supabase.table("activity_logs").insert({
@@ -37,7 +41,9 @@ def log_activity(username: str, action: str, target_type: str, target_id: int, d
 def create_public_order(data: dict, request: Request):
     from security import get_client_ip
     client_ip = get_client_ip(request)
-    order_limiter.check(f"order:{client_ip}")
+    rate_key = f"order:{client_ip}"
+    order_limiter.check(rate_key)
+    order_limiter.record(rate_key)
 
     data["customer_name"] = sanitize_input(data.get("customer_name", ""), 200)
     data["customer_email"] = sanitize_input(data.get("customer_email", ""), 200)
@@ -49,7 +55,7 @@ def create_public_order(data: dict, request: Request):
         raise HTTPException(status_code=400, detail="Name, phone, and address are required")
 
     phone = data["customer_phone"]
-    cleaned = phone.replace(" ", "").replace("-", "").replace("+", "")
+    cleaned = _normalize_phone(phone)
     if not cleaned.isdigit() or len(cleaned) < 7 or len(cleaned) > 15:
         raise HTTPException(status_code=400, detail="Invalid phone number format")
 
@@ -127,7 +133,7 @@ def create_public_order(data: dict, request: Request):
         "notes": data.get("notes", ""),
     }
     result = supabase.table("orders").insert(order_data).execute()
-    order_limiter.reset(f"order:{client_ip}")
+    order_limiter.reset(rate_key)
     return {"id": result.data[0]["id"], "status": result.data[0]["status"]}
 
 
@@ -135,22 +141,27 @@ def create_public_order(data: dict, request: Request):
 def track_order(phone: str, request: Request):
     from security import get_client_ip
     client_ip = get_client_ip(request)
-    track_limiter.check(f"track:{client_ip}")
-    track_limiter.record(f"track:{client_ip}")
+    rate_key = f"track:{client_ip}"
+    track_limiter.check(rate_key)
+    track_limiter.record(rate_key)
 
-    cleaned = phone.replace(" ", "").replace("-", "").replace("+", "")
+    cleaned = _normalize_phone(phone)
     if not cleaned.isdigit() or len(cleaned) < 7:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").eq("customer_phone", phone).order("created_at", desc=True).limit(5).execute()
-    return result.data or []
+    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").order("created_at", desc=True).limit(20).execute()
+    orders = result.data or []
+    matching = [o for o in orders if _normalize_phone(o.get("customer_phone", "")) == cleaned]
+    return matching[:5]
 
 
 @router.post("/api/contact")
 def submit_contact(data: dict, request: Request):
     from security import get_client_ip
     client_ip = get_client_ip(request)
-    contact_limiter.check(f"contact:{client_ip}")
+    rate_key = f"contact:{client_ip}"
+    contact_limiter.check(rate_key)
+    contact_limiter.record(rate_key)
 
     name = sanitize_input(data.get("name", ""), 200)
     email = sanitize_input(data.get("email", ""), 200)
@@ -171,7 +182,7 @@ def submit_contact(data: dict, request: Request):
         "message": message,
         "status": "pending",
     }).execute()
-    contact_limiter.reset(f"contact:{client_ip}")
+    contact_limiter.reset(rate_key)
     return {"ok": True, "id": result.data[0]["id"]}
 
 
@@ -324,7 +335,7 @@ def update_order_status(order_id: int, data: dict, admin=Depends(get_current_adm
     old_status = order.get("status", "")
     update_data = {"status": status_val}
     if data.get("admin_notes"):
-        update_data["notes"] = sanitize_input(data["admin_notes"], 1000)
+        update_data["admin_notes"] = sanitize_input(data["admin_notes"], 1000)
 
     if status_val == "cancelled" and old_status != "cancelled":
         try:

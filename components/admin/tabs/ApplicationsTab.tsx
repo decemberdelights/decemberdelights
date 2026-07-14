@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { App } from "../types";
 import { API } from "@/lib/api";
 import FilterBar from "../FilterBar";
@@ -28,6 +28,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
   const [deleteReason, setDeleteReason] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const blobsRef = useState<Record<string, string>>({})[0];
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
@@ -46,6 +47,34 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
     return statuses.map(s => ({ label: s === "under_process" ? "Under Process" : s.charAt(0).toUpperCase() + s.slice(1), value: s }));
   }, [items]);
 
+  const loadImage = useCallback(async (url: string, key: string) => {
+    if (!url) return;
+    const fullUrl = docUrl(url);
+    if (!fullUrl) return;
+    try {
+      const r = await fetch(fullUrl);
+      if (!r.ok) return;
+      const blob = await r.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setImgBlobs(prev => ({ ...prev, [key]: blobUrl }));
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (!expandedId) return;
+    const item = items.find(i => i.id === expandedId);
+    if (!item) return;
+    if (type === "franchise") {
+      for (const [key] of docFields) {
+        const url = (item as unknown as Record<string, string>)[key];
+        if (url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) loadImage(url, `${item.id}-${key}`);
+      }
+    }
+    if (item.resume_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.resume_url)) {
+      loadImage(item.resume_url, `${item.id}-resume`);
+    }
+  }, [expandedId, items, type, loadImage]);
+
   const titles = {
     franchise: "FRANCHISE APPLICATIONS",
     careers: "CAREER APPLICATIONS",
@@ -59,18 +88,6 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
   const statusBgs: Record<string, string> = {
     pending: "#FAEEDA", submitted: "#dce8f5", approved: "#EAF3DE",
     rejected: "#FCEBEB", under_process: "#e8f0f8",
-  };
-
-  const loadImage = async (url: string, key: string) => {
-    if (imgBlobs[key]) return;
-    const fullUrl = docUrl(url);
-    if (!fullUrl) return;
-    try {
-      const r = await fetch(fullUrl);
-      if (!r.ok) return;
-      const blob = await r.blob();
-      setImgBlobs(prev => ({ ...prev, [key]: URL.createObjectURL(blob) }));
-    } catch { /* ignore */ }
   };
 
   const openFile = (url: string) => { window.open(docUrl(url), "_blank"); };
@@ -110,7 +127,6 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
             const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
             const isPdf = /\.pdf$/i.test(url);
             const imgKey = `${item.id}-${key}`;
-            if (isImage && !imgBlobs[imgKey]) loadImage(url, imgKey);
             const fullUrl = docUrl(url);
             const fileName = url.split("/").pop() || `${label}.pdf`;
             return (
@@ -144,7 +160,6 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.resume_url);
     const isPdf = /\.pdf$/i.test(item.resume_url);
     const imgKey = `${item.id}-resume`;
-    if (isImage && !imgBlobs[imgKey]) loadImage(item.resume_url, imgKey);
     const fullUrl = docUrl(item.resume_url);
     const fileName = item.resume_url.split("/").pop() || "resume.pdf";
     return (

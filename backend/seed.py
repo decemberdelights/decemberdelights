@@ -25,5 +25,3 @@ try:
         logger.info(f"Super admin '{admin_username}' already exists, skipping seed")
 except Exception as e:
     logger.warning(f"Seed failed: {e}")
-
-logger.info("Seed complete!")
