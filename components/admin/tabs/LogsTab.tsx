@@ -1,5 +1,8 @@
 "use client";
 
+import { useState, useMemo } from "react";
+import FilterBar from "../FilterBar";
+
 interface Log {
   id: number;
   admin_username: string;
@@ -15,20 +18,49 @@ interface LogsTabProps {
 }
 
 export default function LogsTab({ logs }: LogsTabProps) {
+  const [adminFilter, setAdminFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const admins = useMemo(() => [...new Set(logs.map(l => l.admin_username).filter(Boolean))], [logs]);
+  const actions = useMemo(() => [...new Set(logs.map(l => l.action).filter(Boolean))], [logs]);
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      if (adminFilter && log.admin_username !== adminFilter) return false;
+      if (actionFilter && log.action !== actionFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const searchable = [log.admin_username, log.action, log.target_type, log.details].filter(Boolean).join(" ").toLowerCase();
+        if (!searchable.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [logs, adminFilter, actionFilter, searchQuery]);
   return (
     <>
       <div className="topbar">
         <h2>ACTIVITY LOG</h2>
         <div className="role-pill">Last 100 actions</div>
       </div>
+
+      <FilterBar
+        search={{ placeholder: "Search by admin, action, details...", value: searchQuery, onChange: setSearchQuery }}
+        selects={[
+          { label: "All Admins", value: adminFilter, onChange: setAdminFilter, options: admins.map(a => ({ label: a, value: a })) },
+          { label: "All Actions", value: actionFilter, onChange: setActionFilter, options: actions.map(a => ({ label: a, value: a })) },
+        ]}
+        counts={[{ label: "Showing", total: logs.length, filtered: filteredLogs.length }]}
+      />
+
       <div className="panel">
-        {logs.length === 0 && <div className="empty">No activity recorded yet.</div>}
-        {logs.length > 0 && (
+        {filteredLogs.length === 0 && <div className="empty">{logs.length === 0 ? "No activity recorded yet." : "No logs match your filters."}</div>}
+        {filteredLogs.length > 0 && (
           <div className="table-wrap">
           <table>
             <thead><tr><th>Admin</th><th>Action</th><th>Target</th><th>Details</th><th>Time</th></tr></thead>
             <tbody>
-              {logs.map((log) => (
+              {filteredLogs.map((log) => (
                 <tr key={log.id}>
                   <td style={{ fontWeight: 600, color: "#1b2b25" }}>{log.admin_username}</td>
                   <td style={{ color: "#1b2b25" }}>{log.action}</td>

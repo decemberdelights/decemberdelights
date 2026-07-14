@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Order, OrderStats } from "../types";
+import FilterBar from "../FilterBar";
 
 interface OrdersTabProps {
   orders: Order[];
@@ -12,12 +13,30 @@ interface OrdersTabProps {
   onCancelOrder: (id: number) => void;
 }
 
+import { useState } from "react";
+
 export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOrder, onCancelOrder }: OrdersTabProps) {
-  const parsedOrders = useMemo(() => orders.slice(0, 20).map(o => {
-    let parsedItems: unknown[] = [];
-    try { parsedItems = JSON.parse(o.items); } catch { /* ignore */ }
-    return { ...o, parsedItems };
-  }), [orders]);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const parsedOrders = useMemo(() => {
+    const filtered = orders.filter(o => {
+      if (statusFilter && o.status !== statusFilter) return false;
+      if (paymentFilter && o.payment_status !== paymentFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const searchable = [o.customer_name, o.customer_phone, o.customer_email, o.customer_address].filter(Boolean).join(" ").toLowerCase();
+        if (!searchable.includes(q)) return false;
+      }
+      return true;
+    });
+    return filtered.slice(0, 50).map(o => {
+      let parsedItems: unknown[] = [];
+      try { parsedItems = JSON.parse(o.items); } catch { /* ignore */ }
+      return { ...o, parsedItems };
+    });
+  }, [orders, statusFilter, paymentFilter, searchQuery]);
 
   const updateStatus = async (orderId: number, status: string) => {
     await api(`/api/admin/orders/${orderId}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
@@ -41,6 +60,21 @@ export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOr
         <div className="stat-card teal"><div><div className="label">Packing</div><div className="value" style={{ color: "#185fa5" }}>{orderStats.preparing}</div></div></div>
         <div className="stat-card" style={{ borderLeftColor: "#3b6d11" }}><div><div className="label">Delivered</div><div className="value" style={{ color: "#3b6d11" }}>{orderStats.delivered}</div></div></div>
       </div>
+
+      <FilterBar
+        search={{ placeholder: "Search by name, phone, email, address...", value: searchQuery, onChange: setSearchQuery }}
+        selects={[
+          { label: "All Status", value: statusFilter, onChange: setStatusFilter, options: [
+            { label: "Pending", value: "pending" }, { label: "Preparing", value: "preparing" },
+            { label: "Delivered", value: "delivered" }, { label: "Cancelled", value: "cancelled" },
+          ]},
+          { label: "All Payment", value: paymentFilter, onChange: setPaymentFilter, options: [
+            { label: "Paid", value: "paid" }, { label: "Unpaid", value: "unpaid" },
+          ]},
+        ]}
+        counts={[{ label: "Showing", total: orders.length, filtered: parsedOrders.length }]}
+      />
+
       <div className="panel">
         <div className="panel-head"><h3>Recent Orders</h3><div className="sub">{orders.length} total orders</div></div>
         <div className="table-wrap">

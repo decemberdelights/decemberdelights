@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AdminUser } from "../types";
 import { API } from "@/lib/api";
+import FilterBar from "../FilterBar";
 
 interface AdminsTabProps {
   adminUsers: AdminUser[];
@@ -16,6 +17,17 @@ export default function AdminsTab({ adminUsers, stats, api, onRefresh }: AdminsT
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [roleFilter, setRoleFilter] = useState("");
+  const [activeFilter, setActiveFilter] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    return adminUsers.filter(u => {
+      if (roleFilter && u.role !== roleFilter) return false;
+      if (activeFilter === "active" && !u.is_active) return false;
+      if (activeFilter === "inactive" && u.is_active) return false;
+      return true;
+    });
+  }, [adminUsers, roleFilter, activeFilter]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +73,15 @@ export default function AdminsTab({ adminUsers, stats, api, onRefresh }: AdminsT
         <h2>ADMIN USERS</h2>
         <div className="role-pill">{adminUsers.length} / 4 slots</div>
       </div>
+
+      <FilterBar
+        selects={[
+          { label: "All Roles", value: roleFilter, onChange: setRoleFilter, options: [{ label: "Super Admin", value: "super_admin" }, { label: "Admin", value: "admin" }] },
+          { label: "All Status", value: activeFilter, onChange: setActiveFilter, options: [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }] },
+        ]}
+        counts={[{ label: "Showing", total: adminUsers.length, filtered: filteredUsers.length }]}
+      />
+
       <div className="panel">
         <div className="panel-head">
           <div>
@@ -69,7 +90,7 @@ export default function AdminsTab({ adminUsers, stats, api, onRefresh }: AdminsT
           </div>
         </div>
         <div className="admin-list">
-          {adminUsers.map(u => (
+          {filteredUsers.map(u => (
             <div key={u.id} className="admin-row">
               <div className="who">
                 <div className="avatar">{u.username.slice(0, 2).toUpperCase()}</div>
@@ -87,7 +108,7 @@ export default function AdminsTab({ adminUsers, stats, api, onRefresh }: AdminsT
             </div>
           ))}
         </div>
-        {adminUsers.length === 0 && <div className="empty">No admin users found.</div>}
+        {filteredUsers.length === 0 && <div className="empty">{adminUsers.length === 0 ? "No admin users found." : "No admins match your filters."}</div>}
         {adminUsers.length < 4 && (
           <div style={{ marginTop: 16, borderTop: "1px solid #e4e1d6", paddingTop: 16 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#6b6f6a", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.4px" }}>Add New Admin</div>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { App } from "../types";
 import { API } from "@/lib/api";
+import FilterBar from "../FilterBar";
 
 interface ApplicationsTabProps {
   type: "franchise" | "careers" | "contacts";
@@ -25,6 +26,25 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
   const [imgBlobs, setImgBlobs] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      if (statusFilter && item.status !== statusFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const searchable = [item.full_name, item.name, item.email, item.phone, item.position, item.subject, item.preferred_location].filter(Boolean).join(" ").toLowerCase();
+        if (!searchable.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [items, statusFilter, searchQuery]);
+
+  const statusOptions = useMemo(() => {
+    const statuses = [...new Set(items.map(i => i.status))];
+    return statuses.map(s => ({ label: s === "under_process" ? "Under Process" : s.charAt(0).toUpperCase() + s.slice(1), value: s }));
+  }, [items]);
 
   const titles = {
     franchise: "FRANCHISE APPLICATIONS",
@@ -300,11 +320,17 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
         <div className="role-pill">{items.length} total</div>
       </div>
 
+      <FilterBar
+        search={{ placeholder: "Search by name, email, phone, position...", value: searchQuery, onChange: setSearchQuery }}
+        selects={[{ label: "All Status", value: statusFilter, onChange: setStatusFilter, options: statusOptions }]}
+        counts={[{ label: "Showing", total: items.length, filtered: filteredItems.length }]}
+      />
+
       <div>
-        {items.length === 0 && <div className="empty">No {type === "franchise" ? "franchise applications" : type === "careers" ? "career applications" : "contact messages"}.</div>}
-        {type === "franchise" && items.map(item => renderFranchiseCard(item))}
-        {type === "careers" && items.map(item => renderCareerCard(item))}
-        {type === "contacts" && items.map(item => renderContactCard(item))}
+        {filteredItems.length === 0 && <div className="empty">{items.length === 0 ? `No ${type === "franchise" ? "franchise applications" : type === "careers" ? "career applications" : "contact messages"}.` : "No items match your filters."}</div>}
+        {type === "franchise" && filteredItems.map(item => renderFranchiseCard(item))}
+        {type === "careers" && filteredItems.map(item => renderCareerCard(item))}
+        {type === "contacts" && filteredItems.map(item => renderContactCard(item))}
       </div>
 
       {deleteTarget && (
