@@ -6,7 +6,9 @@ from security import validate_application_status, sanitize_input
 from routers.franchise import delete_app_files
 from routers.careers import delete_career_files
 from typing import Optional
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -15,13 +17,38 @@ class DeleteRequest(BaseModel):
 
 
 def log_activity(username: str, action: str, target_type: str, target_id: int, details: str = ""):
-    supabase.table("activity_logs").insert({
-        "admin_username": username,
-        "action": action,
-        "target_type": target_type,
-        "target_id": target_id,
-        "details": details,
-    }).execute()
+    try:
+        supabase.table("activity_logs").insert({
+            "admin_username": username,
+            "action": action,
+            "target_type": target_type,
+            "target_id": target_id,
+            "details": details,
+        }).execute()
+    except Exception as e:
+        logger.error(f"Failed to log activity: {e}")
+
+
+def _safe_query(table, select="*", filters=None, order=None, limit=None, count_only=False):
+    try:
+        q = supabase.table(table).select(select)
+        if filters:
+            for col, val, op in filters:
+                if op == "eq":
+                    q = q.eq(col, val)
+                elif op == "neq":
+                    q = q.neq(col, val)
+        if order:
+            q = q.order(order[0], desc=order[1] if len(order) > 1 else False)
+        if limit:
+            q = q.limit(limit)
+        result = q.execute()
+        if count_only:
+            return result.count or 0
+        return result.data or []
+    except Exception as e:
+        logger.error(f"Query failed on {table}: {e}")
+        return [] if not count_only else 0
 
 
 @router.get("/api/admin/stats")
@@ -30,21 +57,29 @@ def get_stats(_=Depends(get_current_admin)):
     today = datetime.now(timezone.utc).date()
     month_start = today.replace(day=1)
 
-    franchise_data = supabase.table("franchise_applications").select("id,status,created_at").execute().data or []
-    career_data = supabase.table("career_applications").select("id,status").execute().data or []
-    contact_data = supabase.table("contact_messages").select("id,status").execute().data or []
-    menu_count = supabase.table("menu_items").select("id", count="exact").execute().count or 0
-    product_data = supabase.table("products").select("id,is_active").execute().data or []
-    job_count = supabase.table("jobs").select("id", count="exact").eq("is_active", True).execute().count or 0
-    order_data = supabase.table("orders").select("id,total,status,created_at").execute().data or []
-    admin_count = supabase.table("admin_users").select("id", count="exact").execute().count or 0
+    franchise_data = _safe_query("franchise_applications", select="id,status,created_at")
+    career_data = _safe_query("career_applications", select="id,status")
+    contact_data = _safe_query("contact_messages", select="id,status")
+    menu_count = _safe_query("menu_items", select="id", count_only=True)
+    product_data = _safe_query("products", select="id,is_active")
+    job_count = _safe_query("jobs", select="id", filters=[("is_active", True, "eq")], count_only=True)
+    order_data = _safe_query("orders", select="id,total,status,created_at")
+    admin_count = _safe_query("admin_users", select="id", count_only=True)
 
     total_revenue = sum(o.get("total", 0) for o in order_data)
 
     def _count(items, **kw):
         return sum(1 for i in items if all(i.get(k) == v for k, v in kw.items()))
 
-    today_orders_list = [o for o in order_data if o.get("created_at") and datetime.fromisoformat(o["created_at"]).date() == today]
+    today_orders_list = []
+    for o in order_data:
+        ca = o.get("created_at")
+        if ca:
+            try:
+                if datetime.fromisoformat(ca).date() == today:
+                    today_orders_list.append(o)
+            except (ValueError, TypeError):
+                pass
 
     return {
         "franchise_count": len(franchise_data),
@@ -72,15 +107,27 @@ def get_stats(_=Depends(get_current_admin)):
         "today_orders": len(today_orders_list),
         "today_revenue": sum(o.get("total", 0) for o in today_orders_list),
         "products_online": sum(1 for p in product_data if p.get("is_active")),
-        "franchise_month_count": sum(1 for f in franchise_data if f.get("created_at") and datetime.fromisoformat(f["created_at"]).date() >= month_start),
+        "franchise_month_count": sum(
+            1 for f in franchise_data
+            if f.get("created_at") and
+            _parse_date_safe(f["created_at"]) and
+            _parse_date_safe(f["created_at"]) >= month_start
+        ),
     }
+
+
+def _parse_date_safe(date_str):
+    try:
+        return datetime.fromisoformat(date_str).date()
+    except (ValueError, TypeError):
+        return None
 
 
 @router.get("/api/admin/applications")
 def get_applications(_=Depends(get_current_admin)):
-    franchise = supabase.table("franchise_applications").select("*").order("created_at", desc=True).execute().data or []
-    careers = supabase.table("career_applications").select("*").order("created_at", desc=True).execute().data or []
-    contacts = supabase.table("contact_messages").select("*").order("created_at", desc=True).execute().data or []
+    franchise = _safe_query("franchise_applications", order=("created_at", True), limit=500)
+    careers = _safe_query("career_applications", order=("created_at", True), limit=500)
+    contacts = _safe_query("contact_messages", order=("created_at", True), limit=500)
     return {"franchise": franchise, "careers": careers, "contacts": contacts}
 
 
@@ -175,11 +222,12 @@ def delete_contact(app_id: int, data: Optional[DeleteRequest] = None, admin=Depe
 
 @router.get("/api/admin/logs")
 def get_logs(limit: int = 100, _=Depends(get_current_admin)):
-    result = supabase.table("activity_logs").select("*").order("created_at", desc=True).limit(limit).execute()
-    logs = result.data or []
+    if limit > 500:
+        limit = 500
+    result = _safe_query("activity_logs", order=("created_at", True), limit=limit)
     return {"logs": [
         {"id": l["id"], "admin_username": l["admin_username"], "action": l["action"], "target_type": l["target_type"], "target_id": l["target_id"], "details": l.get("details", ""), "created_at": l.get("created_at", "")}
-        for l in logs
+        for l in result
     ]}
 
 
@@ -192,7 +240,6 @@ def get_franchise_cities(_=Depends(get_current_admin)):
 
 @router.post("/api/admin/reset-database")
 def reset_database(_=Depends(require_super_admin)):
-    from routers.orders import log_activity as log_order_activity
     tables_to_clear = [
         "activity_logs",
         "orders",
@@ -209,9 +256,10 @@ def reset_database(_=Depends(require_super_admin)):
             result = supabase.table(table).select("id").execute()
             count = len(result.data) if result.data else 0
             if count > 0:
-                ids = [r["id"] for r in result.data]
+                ids = [r["id"] for r in result.data[:1000]]
                 supabase.table(table).delete().in_("id", ids).execute()
                 cleared[table] = count
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to clear table {table}: {e}")
             cleared[table] = "error"
     return {"ok": True, "cleared": cleared}

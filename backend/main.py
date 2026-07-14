@@ -52,8 +52,11 @@ app.add_middleware(
 async def limit_upload_size(request: Request, call_next):
     if request.method in ("POST", "PUT"):
         content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > 15 * 1024 * 1024:
-            return JSONResponse(status_code=413, content={"detail": "Request too large"})
+        try:
+            if content_length and int(content_length) > 15 * 1024 * 1024:
+                return JSONResponse(status_code=413, content={"detail": "Request too large"})
+        except (ValueError, TypeError):
+            return JSONResponse(status_code=400, content={"detail": "Invalid content-length header"})
     return await call_next(request)
 
 

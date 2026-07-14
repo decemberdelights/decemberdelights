@@ -2,14 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
-from security import validate_order_status, sanitize_input, RateLimiter
+from security import validate_order_status, sanitize_input, RateLimiter, validate_email
 from datetime import datetime, timedelta
 from typing import Optional
 import json
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 track_limiter = RateLimiter(max_attempts=10, window_seconds=60)
+order_limiter = RateLimiter(max_attempts=5, window_seconds=60)
+contact_limiter = RateLimiter(max_attempts=3, window_seconds=60)
 
 
 class DeleteRequest(BaseModel):
@@ -17,17 +21,24 @@ class DeleteRequest(BaseModel):
 
 
 def log_activity(username: str, action: str, target_type: str, target_id: int, details: str = ""):
-    supabase.table("activity_logs").insert({
-        "admin_username": username,
-        "action": action,
-        "target_type": target_type,
-        "target_id": target_id,
-        "details": details,
-    }).execute()
+    try:
+        supabase.table("activity_logs").insert({
+            "admin_username": username,
+            "action": action,
+            "target_type": target_type,
+            "target_id": target_id,
+            "details": details,
+        }).execute()
+    except Exception as e:
+        logger.error(f"Failed to log activity: {e}")
 
 
 @router.post("/api/orders")
-def create_public_order(data: dict):
+def create_public_order(data: dict, request: Request):
+    from security import get_client_ip
+    client_ip = get_client_ip(request)
+    order_limiter.check(f"order:{client_ip}")
+
     data["customer_name"] = sanitize_input(data.get("customer_name", ""), 200)
     data["customer_email"] = sanitize_input(data.get("customer_email", ""), 200)
     data["customer_phone"] = sanitize_input(data.get("customer_phone", ""), 20)
@@ -42,6 +53,9 @@ def create_public_order(data: dict):
     if not cleaned.isdigit() or len(cleaned) < 7 or len(cleaned) > 15:
         raise HTTPException(status_code=400, detail="Invalid phone number format")
 
+    if data.get("customer_email") and not validate_email(data["customer_email"]):
+        raise HTTPException(status_code=400, detail="Invalid email address")
+
     if not data.get("items"):
         raise HTTPException(status_code=400, detail="Order must contain at least one item")
 
@@ -55,11 +69,20 @@ def create_public_order(data: dict):
     for item in items:
         if not isinstance(item, dict) or not item.get("id") or not item.get("quantity"):
             raise HTTPException(status_code=400, detail="Each item must have id and quantity")
-        qty = int(item["quantity"])
+        try:
+            qty = int(item["quantity"])
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Invalid quantity value")
         if qty <= 0:
             raise HTTPException(status_code=400, detail="Item quantity must be at least 1")
 
-    product_ids = [int(item["id"]) for item in items]
+    product_ids = []
+    for item in items:
+        try:
+            product_ids.append(int(item["id"]))
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Invalid product ID")
+
     products_result = supabase.table("products").select("*").in_("id", product_ids).execute()
     products_map = {str(p["id"]): p for p in (products_result.data or [])}
 
@@ -78,10 +101,18 @@ def create_public_order(data: dict):
         sanitized_items.append({"id": int(pid), "name": product.get("name", ""), "price": price, "quantity": qty})
 
     for item in sanitized_items:
-        current = supabase.table("products").select("stock").eq("id", item["id"]).execute()
-        if current.data:
-            new_stock = current.data[0]["stock"] - item["quantity"]
-            supabase.table("products").update({"stock": new_stock}).eq("id", item["id"]).execute()
+        try:
+            current = supabase.table("products").select("stock").eq("id", item["id"]).execute()
+            if current.data:
+                current_stock = current.data[0]["stock"]
+                if current_stock < item["quantity"]:
+                    raise HTTPException(status_code=400, detail=f"Insufficient stock for {item['name']}")
+                supabase.table("products").update({"stock": current_stock - item["quantity"]}).eq("id", item["id"]).execute()
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Stock update failed for product {item['id']}: {e}")
+            raise HTTPException(status_code=500, detail="Failed to update stock")
 
     order_data = {
         "customer_name": data["customer_name"],
@@ -96,6 +127,7 @@ def create_public_order(data: dict):
         "notes": data.get("notes", ""),
     }
     result = supabase.table("orders").insert(order_data).execute()
+    order_limiter.reset(f"order:{client_ip}")
     return {"id": result.data[0]["id"], "status": result.data[0]["status"]}
 
 
@@ -115,8 +147,11 @@ def track_order(phone: str, request: Request):
 
 
 @router.post("/api/contact")
-def submit_contact(data: dict):
-    from security import validate_email
+def submit_contact(data: dict, request: Request):
+    from security import get_client_ip
+    client_ip = get_client_ip(request)
+    contact_limiter.check(f"contact:{client_ip}")
+
     name = sanitize_input(data.get("name", ""), 200)
     email = sanitize_input(data.get("email", ""), 200)
     phone = sanitize_input(data.get("phone", ""), 20)
@@ -136,18 +171,23 @@ def submit_contact(data: dict):
         "message": message,
         "status": "pending",
     }).execute()
+    contact_limiter.reset(f"contact:{client_ip}")
     return {"ok": True, "id": result.data[0]["id"]}
 
 
 @router.get("/api/admin/orders")
 def get_orders(_=Depends(get_current_admin)):
-    result = supabase.table("orders").select("*").order("created_at", desc=True).execute()
+    result = supabase.table("orders").select("*").order("created_at", desc=True).limit(500).execute()
     return result.data or []
 
 
 @router.get("/api/admin/orders/stats")
 def get_order_stats(_=Depends(get_current_admin)):
-    result = supabase.table("orders").select("*").execute()
+    try:
+        result = supabase.table("orders").select("id,total,status,created_at").execute()
+    except Exception as e:
+        logger.error(f"Failed to fetch orders for stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load order stats")
     orders = result.data or []
 
     from datetime import timezone as tz
@@ -159,7 +199,15 @@ def get_order_stats(_=Depends(get_current_admin)):
     for i in range(6, -1, -1):
         d = today - timedelta(days=i)
         key = d.strftime("%a")
-        day_orders = [o for o in orders if o.get("created_at") and datetime.fromisoformat(o["created_at"]).date() == d]
+        day_orders = []
+        for o in orders:
+            ca = o.get("created_at")
+            if ca:
+                try:
+                    if datetime.fromisoformat(ca).date() == d:
+                        day_orders.append(o)
+                except (ValueError, TypeError):
+                    pass
         daily[key] = {"orders": len(day_orders), "revenue": sum(o.get("total", 0) for o in day_orders)}
 
     monthly = {}
@@ -170,12 +218,36 @@ def get_order_stats(_=Depends(get_current_admin)):
             m += 12
             y -= 1
         key = datetime(y, m, 1).strftime("%b %Y")
-        month_orders = [o for o in orders if o.get("created_at") and datetime.fromisoformat(o["created_at"]).month == m and datetime.fromisoformat(o["created_at"]).year == y]
+        month_orders = []
+        for o in orders:
+            ca = o.get("created_at")
+            if ca:
+                try:
+                    dt = datetime.fromisoformat(ca)
+                    if dt.month == m and dt.year == y:
+                        month_orders.append(o)
+                except (ValueError, TypeError):
+                    pass
         monthly[key] = {"orders": len(month_orders), "revenue": sum(o.get("total", 0) for o in month_orders)}
 
-    today_orders = [o for o in orders if o.get("created_at") and datetime.fromisoformat(o["created_at"]).date() == today]
-    week_orders = [o for o in orders if o.get("created_at") and datetime.fromisoformat(o["created_at"]).date() >= week_start]
-    month_orders = [o for o in orders if o.get("created_at") and datetime.fromisoformat(o["created_at"]).date() >= month_start]
+    today_orders = []
+    week_orders = []
+    month_orders = []
+    for o in orders:
+        ca = o.get("created_at")
+        if not ca:
+            continue
+        try:
+            dt = datetime.fromisoformat(ca)
+            d = dt.date()
+            if d == today:
+                today_orders.append(o)
+            if d >= week_start:
+                week_orders.append(o)
+            if d >= month_start:
+                month_orders.append(o)
+        except (ValueError, TypeError):
+            pass
 
     return {
         "daily": daily,
@@ -214,13 +286,15 @@ def update_order(order_id: int, data: dict, _=Depends(get_current_admin)):
     existing = supabase.table("orders").select("*").eq("id", order_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Order not found")
-    supabase.table("orders").update(data).eq("id", order_id).execute()
+    allowed_fields = {"status", "payment_status", "payment_method", "notes", "customer_address", "admin_notes"}
+    safe_data = {k: v for k, v in data.items() if k in allowed_fields}
+    supabase.table("orders").update(safe_data).eq("id", order_id).execute()
     updated = supabase.table("orders").select("*").eq("id", order_id).execute()
     return updated.data[0]
 
 
 @router.put("/api/admin/orders/{order_id}/status")
-def update_order_status(order_id: int, data: dict, _=Depends(get_current_admin)):
+def update_order_status(order_id: int, data: dict, admin=Depends(get_current_admin)):
     status_val = data.get("status", "")
     if not validate_order_status(status_val):
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: pending, confirmed, preparing, packed, ready, delivered, cancelled")
@@ -245,15 +319,12 @@ def update_order_status(order_id: int, data: dict, _=Depends(get_current_admin))
                     if current.data:
                         new_stock = current.data[0]["stock"] + qty
                         supabase.table("products").update({"stock": new_stock}).eq("id", pid).execute()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to restore stock for order {order_id}: {e}")
 
     supabase.table("orders").update(update_data).eq("id", order_id).execute()
     updated = supabase.table("orders").select("*").eq("id", order_id).execute()
-    try:
-        log_activity(admin["username"], f"status:{status_val}", "order", order_id, f"Order #{order_id} ({order.get('customer_name', '')}) → {status_val}")
-    except Exception:
-        pass
+    log_activity(admin["username"], f"status:{status_val}", "order", order_id, f"Order #{order_id} ({order.get('customer_name', '')}) → {status_val}")
     return updated.data[0]
 
 

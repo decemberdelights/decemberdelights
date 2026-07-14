@@ -59,7 +59,10 @@ def _extract_user(token: str) -> dict:
     payload = decode_token(token)
     if not payload or payload.get("type") != "admin":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
-    user_id = int(payload.get("sub"))
+    try:
+        user_id = int(payload.get("sub"))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     result = supabase.table("admin_users").select("*").eq("id", user_id).execute()
     if not result.data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")

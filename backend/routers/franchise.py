@@ -163,7 +163,10 @@ def franchise_status(franchise_session: Optional[str] = Cookie(None)):
     payload = decode_token(franchise_session)
     if not payload or payload.get("type") != "franchise":
         raise HTTPException(status_code=401, detail="Invalid session")
-    app_id = int(payload.get("sub"))
+    try:
+        app_id = int(payload.get("sub"))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=401, detail="Invalid token")
     result = supabase.table("franchise_applications").select("*").eq("id", app_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Application not found")
