@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
+from security import sanitize_input
 from typing import Optional
 import logging
 
@@ -77,6 +78,9 @@ async def create_menu(
     _=Depends(get_current_admin),
 ):
     image_url = await save_menu_image(image, name) if image else ""
+    name = sanitize_input(name, 200)
+    category = sanitize_input(category, 100)
+    description = sanitize_input(description, 2000)
     try:
         sort_val = int(sort_order)
     except (ValueError, TypeError):
@@ -116,6 +120,9 @@ async def update_menu(
         if new_url:
             image_url = new_url
 
+    name = sanitize_input(name, 200)
+    category = sanitize_input(category, 100)
+    description = sanitize_input(description, 2000)
     try:
         sort_val = int(sort_order)
     except (ValueError, TypeError):

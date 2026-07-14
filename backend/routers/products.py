@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
+from security import sanitize_input
 from typing import Optional
 import logging
 
@@ -82,6 +83,10 @@ async def create_product(
     _=Depends(get_current_admin),
 ):
     image_url = await save_product_image(image, name) if image else ""
+    name = sanitize_input(name, 200)
+    description = sanitize_input(description, 2000)
+    category = sanitize_input(category, 100)
+    offer = sanitize_input(offer, 200)
     try:
         price_val = float(price) if price else 0
     except (ValueError, TypeError):
@@ -139,6 +144,10 @@ async def update_product(
         if new_url:
             image_url = new_url
 
+    name = sanitize_input(name, 200)
+    description = sanitize_input(description, 2000)
+    category = sanitize_input(category, 100)
+    offer = sanitize_input(offer, 200)
     try:
         price_val = float(price) if price else 0
     except (ValueError, TypeError):

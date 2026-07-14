@@ -51,6 +51,10 @@ def create_admin_user(data: AdminUserCreate, _=Depends(require_super_admin)):
             raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
         if not data.password or len(data.password) < 8:
             raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        if not any(c.isupper() for c in data.password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
+        if not any(c.isdigit() for c in data.password):
+            raise HTTPException(status_code=400, detail="Password must contain at least one digit")
 
         existing = supabase.table("admin_users").select("*").eq("username", data.username).execute()
         if existing.data:

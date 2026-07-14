@@ -149,7 +149,7 @@ def track_order(phone: str, request: Request):
     if not cleaned.isdigit() or len(cleaned) < 7:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").order("created_at", desc=True).limit(500).execute()
+    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").order("created_at", desc=True).limit(50).execute()
     orders = result.data or []
     matching = [o for o in orders if _normalize_phone(o.get("customer_phone", "")) == cleaned]
     return matching[:5]
