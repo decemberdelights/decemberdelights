@@ -43,9 +43,34 @@ export default function FranchisePage() {
     setForm({ ...form, [name]: value });
   };
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const ALLOWED_TYPES = {
+    "application/pdf": ".pdf",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFiles({ ...files, [e.target.name]: e.target.files![0] });
+      const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE) {
+        setErrorMsg(`File "${file.name}" is ${formatFileSize(file.size)}. Maximum allowed is 10MB.`);
+        return;
+      }
+      if (file.type && !ALLOWED_TYPES[file.type]) {
+        setErrorMsg(`File type "${file.type}" is not allowed. Accepted: PDF, JPG, PNG, DOC, DOCX.`);
+        return;
+      }
+      setErrorMsg("");
+      setFiles({ ...files, [e.target.name]: file });
     }
   };
 
@@ -145,7 +170,8 @@ export default function FranchisePage() {
           <div style={{ width: "56px", height: "56px", border: "3px solid #e0ddd8", borderTopColor: "#1b3c33", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 1.5rem" }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <p style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.3rem", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Submitting Your Application</p>
-          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.9rem" }}>This will only take a moment...</p>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.9rem", marginBottom: "0.25rem" }}>Uploading documents and creating your account...</p>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem" }}>Please don&apos;t close this page</p>
         </div>
       </main>
     );
@@ -377,7 +403,7 @@ export default function FranchisePage() {
                         </div>
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.82rem", color: "#1b3c33", marginBottom: "0.1rem" }}>{label}{required && " *"}</p>
-                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", color: files[key] ? "#586159" : "#bbb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{files[key] ? files[key]!.name : "Tap to upload"}</p>
+                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", color: files[key] ? "#586159" : "#bbb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{files[key] ? `${files[key]!.name} (${formatFileSize(files[key]!.size)})` : "Tap to upload"}</p>
                         </div>
                       </label>
                     ))}

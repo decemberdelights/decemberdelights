@@ -243,7 +243,7 @@ export default function ShopPage() {
                   <div key={product.id} style={{ background: "#fff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 16px rgba(27,60,51,0.06)", transition: "transform 0.3s, box-shadow 0.3s", display: "flex", flexDirection: "column" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(27,60,51,0.12)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 16px rgba(27,60,51,0.06)"; }}>
                     <div style={{ position: "relative", height: "220px", overflow: "hidden", background: "#f5f3ef" }}>
                       {product.image_url ? (
-                        <Image src={product.image_url?.startsWith("http") ? product.image_url : `${API}${product.image_url}`} alt={product.name} fill style={{ objectFit: "cover" }} />
+                        <Image src={product.image_url?.startsWith("http") ? product.image_url : `${API}${product.image_url}`} alt={product.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" style={{ objectFit: "cover" }} loading="lazy" placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YwZWRlOCIvPjwvc3ZnPg==" />
                       ) : (
                         <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #1b3c33 0%, #2d5a4a 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <span style={{ fontSize: "3rem", opacity: 0.4 }}>&#9749;</span>

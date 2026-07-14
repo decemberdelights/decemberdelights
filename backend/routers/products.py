@@ -2,6 +2,7 @@ import os
 import uuid
 import re
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import JSONResponse
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
 from typing import Optional
@@ -42,14 +43,18 @@ async def save_product_image(file: Optional[UploadFile], product_name: str) -> s
 @router.get("/api/products")
 def get_products():
     result = supabase.table("products").select("*").eq("is_active", True).order("sort_order").execute()
-    return result.data or []
+    response = JSONResponse(content=result.data or [])
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
+    return response
 
 
 @router.get("/api/products/categories")
 def get_product_categories():
     result = supabase.table("products").select("category").eq("is_active", True).execute()
     cats = list(set(r["category"] for r in (result.data or []) if r["category"]))
-    return cats
+    response = JSONResponse(content=cats)
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
+    return response
 
 
 @router.get("/api/admin/products")

@@ -2,6 +2,7 @@ import os
 import uuid
 import re
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import JSONResponse
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
 from typing import Optional
@@ -49,7 +50,9 @@ def get_menu():
         if cat not in menu:
             menu[cat] = []
         menu[cat].append(item)
-    return menu
+    response = JSONResponse(content=menu)
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
+    return response
 
 
 @router.get("/api/menu/all")
