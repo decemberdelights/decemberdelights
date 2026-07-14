@@ -36,11 +36,14 @@ login_limiter = RateLimiter(max_attempts=5, window_seconds=300)
 franchise_limiter = RateLimiter(max_attempts=5, window_seconds=300)
 
 
+_HTML_TAG_RE = re.compile(r'<[^>]+>')
+
 def sanitize_input(value: str, max_length: int = 1000) -> str:
-    """Strip and limit string length."""
+    """Strip HTML tags, whitespace, and limit string length."""
     if not isinstance(value, str):
         return ""
-    return value.strip()[:max_length]
+    cleaned = _HTML_TAG_RE.sub("", value)
+    return cleaned.strip()[:max_length]
 
 
 def validate_email(email: str) -> bool:

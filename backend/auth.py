@@ -18,11 +18,8 @@ logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.environ.get("JWT_SECRET", "")
 if not SECRET_KEY:
-    if os.environ.get("ENV") == "production":
-        logger.critical("JWT_SECRET environment variable is NOT SET in production. Server cannot start securely.")
-        raise RuntimeError("JWT_SECRET environment variable is required in production")
-    SECRET_KEY = "dev-secret-only-not-for-production"
-    logger.warning("JWT_SECRET not set. Using dev fallback — NOT safe for production.")
+    logger.critical("JWT_SECRET environment variable is NOT SET. Server cannot start securely.")
+    raise RuntimeError("JWT_SECRET environment variable is required")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 

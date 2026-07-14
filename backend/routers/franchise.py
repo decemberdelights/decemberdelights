@@ -10,6 +10,7 @@ from supabase_client import supabase
 from schemas import FranchiseLogin, FranchiseOut
 from auth import hash_password, verify_password, create_token, decode_token
 from security import franchise_limiter, get_client_ip, validate_email, validate_phone, sanitize_input
+from csrf import generate_csrf_token, set_csrf_cookie
 
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ async def create_franchise(
         lambda: supabase.table("franchise_applications").insert(data).execute()
     )
     app_id = result.data[0]["id"]
-    login_id = f"DD{phone[-4:]}{str(app_id).zfill(4)}"
+    login_id = f"DD-{uuid.uuid4().hex[:12].upper()}"
     await asyncio.to_thread(
         lambda: supabase.table("franchise_applications").update({"login_id": login_id}).eq("id", app_id).execute()
     )
@@ -195,13 +196,16 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response)
     franchise_limiter.reset(rate_key)
 
     token = create_token({"sub": str(app["id"]), "type": "franchise"})
-    response.set_cookie("franchise_session", token, httponly=True, samesite="none", max_age=86400, secure=True)
+    response.set_cookie("franchise_session", token, httponly=True, samesite="none", max_age=86400, secure=True, path="/")
+    csrf_token = generate_csrf_token()
+    set_csrf_cookie(response, csrf_token)
     return {"application": FranchiseOut(**app).model_dump()}
 
 
 @router.post("/api/franchise/logout")
 def franchise_logout(response: Response):
-    response.delete_cookie("franchise_session", samesite="none", secure=True)
+    response.delete_cookie("franchise_session", samesite="none", secure=True, path="/")
+    response.delete_cookie("csrf_token", samesite="none", secure=True, path="/")
     return {"ok": True}
 
 

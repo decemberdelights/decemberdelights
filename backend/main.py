@@ -20,6 +20,7 @@ else:
 sys.path.insert(0, os.path.dirname(__file__))
 
 from routers import menu, products, auth_router, admin, franchise, careers, admin_users, orders
+from csrf import CSRF_COOKIE_NAME, CSRF_HEADER_NAME, validate_csrf
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,20 +44,35 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
 @app.middleware("http")
 async def limit_upload_size(request: Request, call_next):
-    if request.method in ("POST", "PUT"):
+    if request.method in ("POST", "PUT", "DELETE"):
         content_length = request.headers.get("content-length")
         try:
             if content_length and int(content_length) > 15 * 1024 * 1024:
                 return JSONResponse(status_code=413, content={"detail": "Request too large"})
         except (ValueError, TypeError):
             return JSONResponse(status_code=400, content={"detail": "Invalid content-length header"})
+
+        path = request.url.path
+        csrf_exempt = {
+            "/api/auth/login", "/api/auth/logout", "/api/auth/check",
+            "/api/orders", "/api/contact", "/api/franchise",
+            "/api/franchise/login", "/api/franchise/logout",
+            "/api/careers/track", "/api/health",
+        }
+        is_admin_action = path.startswith("/api/admin/") or path.startswith("/api/menu/") or path.startswith("/api/products/") or path.startswith("/api/jobs/")
+        if is_admin_action and path not in csrf_exempt:
+            try:
+                validate_csrf(request)
+            except HTTPException:
+                return JSONResponse(status_code=403, content={"detail": "CSRF validation failed"})
+
     return await call_next(request)
 
 
@@ -99,7 +115,7 @@ def health_check():
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
-        return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "disconnected", "error": str(e)})
+        return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "disconnected"})
 
 
 if __name__ == "__main__":

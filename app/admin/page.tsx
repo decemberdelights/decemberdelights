@@ -51,31 +51,36 @@ export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tabError, setTabError] = useState(false);
 
+  const getCsrfToken = useCallback(() => {
+    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : "";
+  }, []);
+
   const apiWithTimeout = useCallback(async (path: string, opts?: RequestInit, timeoutMs = 30000) => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
-    const token = localStorage.getItem("admin_token") || "";
     const headers: Record<string, string> = { ...(opts?.headers as Record<string, string> || {}) };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const method = (opts?.method || "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD") {
+      const csrf = getCsrfToken();
+      if (csrf) headers["X-CSRF-Token"] = csrf;
+    }
     try {
       const r = await fetch(`${API}${path}`, { credentials: "include", ...opts, headers, signal: controller.signal });
-      if (r.status === 401) { localStorage.removeItem("admin_token"); setAuthed(false); throw new Error("Unauthorized"); }
+      if (r.status === 401) { setAuthed(false); throw new Error("Unauthorized"); }
       return r;
     } finally { clearTimeout(id); }
-  }, []);
+  }, [getCsrfToken]);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
     return apiWithTimeout(path, opts, 30000);
   }, [apiWithTimeout]);
 
   useEffect(() => {
-    const token = localStorage.getItem("admin_token") || "";
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    fetch(`${API}/api/auth/check`, { credentials: "include", headers })
+    fetch(`${API}/api/auth/check`, { credentials: "include" })
       .then(r => r.json())
-      .then(d => { setAuthed(d.authenticated); setRole(d.role || ""); if (!d.authenticated) localStorage.removeItem("admin_token"); })
-      .catch(() => { localStorage.removeItem("admin_token"); setAuthed(false); });
+      .then(d => { setAuthed(d.authenticated); setRole(d.role || ""); })
+      .catch(() => { setAuthed(false); });
   }, []);
 
   const loadAll = useCallback(async (retries = 2) => {
@@ -161,14 +166,13 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     await fetch(`${API}/api/auth/logout`, { method: "POST", credentials: "include" });
-    localStorage.removeItem("admin_token");
     setAuthed(false);
   };
 
   useEffect(() => {
     if (!authed) return;
     let timer: NodeJS.Timeout;
-    const reset = () => { clearTimeout(timer); timer = setTimeout(() => { localStorage.removeItem("admin_token"); setAuthed(false); }, 3 * 60 * 1000); };
+    const reset = () => { clearTimeout(timer); timer = setTimeout(() => { setAuthed(false); }, 3 * 60 * 1000); };
     const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
     events.forEach((e) => document.addEventListener(e, reset, { passive: true }));
     reset();

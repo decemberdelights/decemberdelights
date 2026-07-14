@@ -3,6 +3,7 @@ from typing import Optional
 from supabase_client import supabase
 from auth import verify_password, create_token, decode_token
 from security import login_limiter, get_client_ip
+from csrf import generate_csrf_token, set_csrf_cookie
 import logging
 
 logger = logging.getLogger(__name__)
@@ -55,11 +56,14 @@ def auth_login(request: Request, creds: dict, response: Response):
     login_limiter.reset(rate_key)
 
     token = create_token({"sub": str(user["id"]), "type": "admin", "role": user["role"]})
-    response.set_cookie("session", token, httponly=True, samesite="none", max_age=86400, secure=True)
-    return {"ok": True, "role": user["role"], "username": user["username"], "token": token}
+    response.set_cookie("session", token, httponly=True, samesite="none", max_age=86400, secure=True, path="/")
+    csrf_token = generate_csrf_token()
+    set_csrf_cookie(response, csrf_token)
+    return {"ok": True, "role": user["role"], "username": user["username"]}
 
 
 @router.post("/api/auth/logout")
 def auth_logout(response: Response):
-    response.delete_cookie("session", samesite="none", secure=True)
+    response.delete_cookie("session", samesite="none", secure=True, path="/")
+    response.delete_cookie("csrf_token", samesite="none", secure=True, path="/")
     return {"ok": True}

@@ -149,7 +149,7 @@ def track_order(phone: str, request: Request):
     if not cleaned.isdigit() or len(cleaned) < 7:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").order("created_at", desc=True).limit(20).execute()
+    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").order("created_at", desc=True).limit(500).execute()
     orders = result.data or []
     matching = [o for o in orders if _normalize_phone(o.get("customer_phone", "")) == cleaned]
     return matching[:5]
@@ -195,7 +195,7 @@ def get_orders(_=Depends(get_current_admin)):
 @router.get("/api/admin/orders/stats")
 def get_order_stats(_=Depends(get_current_admin)):
     try:
-        result = supabase.table("orders").select("id,total,status,created_at").execute()
+        result = supabase.table("orders").select("total,status,created_at").execute()
     except Exception as e:
         logger.error(f"Failed to fetch orders for stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to load order stats")
