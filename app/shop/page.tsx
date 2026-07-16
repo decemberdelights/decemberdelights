@@ -51,7 +51,7 @@ export default function ShopPage() {
   const [orderId, setOrderId] = useState(0);
   const [orderPhone, setOrderPhone] = useState("");
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ customer_name: "", customer_phone: "", customer_address: "" });
+  const [form, setForm] = useState({ customer_name: "", customer_phone: "", customer_email: "", customer_address: "" });
   const [formError, setFormError] = useState("");
   const [addedId, setAddedId] = useState<number | null>(null);
   const redirectTimer = useRef<NodeJS.Timeout | null>(null);
@@ -131,6 +131,7 @@ export default function ShopPage() {
       body: JSON.stringify({
         customer_name: form.customer_name,
         customer_phone: form.customer_phone,
+        customer_email: form.customer_email,
         customer_address: form.customer_address,
         items: JSON.stringify(cart.map((c) => ({ id: c.product.id, name: c.product.name, price: c.product.price, quantity: c.quantity }))),
         total: cartTotal,
@@ -145,7 +146,7 @@ export default function ShopPage() {
       setCart([]);
       setShowCheckout(false);
       setShowCart(false);
-      setForm({ customer_name: "", customer_phone: "", customer_address: "" });
+      setForm({ customer_name: "", customer_phone: "", customer_email: "", customer_address: "" });
       redirectTimer.current = setTimeout(() => {
         router.push(`/track?phone=${encodeURIComponent(phone)}`);
       }, 4000);
@@ -431,6 +432,10 @@ export default function ShopPage() {
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: dark, marginBottom: "0.3rem", fontFamily: fontOutfit }}>Mobile Number *</label>
                 <input value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} style={{ width: "100%", padding: "0.7rem 1rem", borderRadius: "10px", border: "1.5px solid #ddd", fontFamily: fontOutfit, fontSize: "0.9rem", outline: "none", color: dark, background: "#fff", boxSizing: "border-box" as const }} placeholder="10-digit mobile number" />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: dark, marginBottom: "0.3rem", fontFamily: fontOutfit }}>Email (for order confirmation)</label>
+                <input type="email" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} style={{ width: "100%", padding: "0.7rem 1rem", borderRadius: "10px", border: "1.5px solid #ddd", fontFamily: fontOutfit, fontSize: "0.9rem", outline: "none", color: dark, background: "#fff", boxSizing: "border-box" as const }} placeholder="your@email.com" />
               </div>
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: dark, marginBottom: "0.3rem", fontFamily: fontOutfit }}>Address *</label>
