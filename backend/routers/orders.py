@@ -113,7 +113,11 @@ def create_public_order(data: dict, request: Request):
                 current_stock = current.data[0]["stock"]
                 if current_stock < item["quantity"]:
                     raise HTTPException(status_code=400, detail=f"Insufficient stock for {item['name']}")
-                supabase.table("products").update({"stock": current_stock - item["quantity"]}).eq("id", item["id"]).execute()
+                new_stock = current_stock - item["quantity"]
+                supabase.table("products").update({"stock": new_stock}).eq("id", item["id"]).execute()
+                verify = supabase.table("products").select("stock").eq("id", item["id"]).execute()
+                if verify.data and verify.data[0]["stock"] < 0:
+                    supabase.table("products").update({"stock": 0}).eq("id", item["id"]).execute()
         except HTTPException:
             raise
         except Exception as e:

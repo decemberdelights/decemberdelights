@@ -127,16 +127,10 @@ export default function FranchisePage() {
   const handleTcAccept = async (language: string) => {
     setStatus("submitting");
 
-    const dobParts = form.dob.split("-");
-    const dobShort = dobParts[2] + dobParts[1] + dobParts[0].slice(-2);
-    const firstName = form.full_name.split(" ")[0];
-    const autoPassword = `${firstName.charAt(0).toUpperCase()}${firstName.slice(1).toLowerCase()}${dobShort}@`;
-
     const formData = new FormData();
     formData.append("full_name", form.full_name);
     formData.append("email", form.email);
     formData.append("phone", form.phone);
-    formData.append("password", autoPassword);
     Object.entries(files).forEach(([key, file]) => { if (file) formData.append(key, file); });
     formData.append("business_experience", form.business_experience);
     formData.append("preferred_location", form.preferred_location);
@@ -178,11 +172,10 @@ export default function FranchisePage() {
   }
 
   if (status === "success") {
-    const password = `${form.full_name.split(" ")[0].charAt(0).toUpperCase()}${form.full_name.split(" ")[0].slice(1).toLowerCase()}${form.dob.split("-")[2]}${form.dob.split("-")[1]}${form.dob.split("-")[0].slice(-2)}@`;
     return (
       <SuccessState
         title="Application Received"
-        description="Your franchise application has been submitted successfully. Use the credentials below to log in and track your application status."
+        description="Your franchise application has been submitted successfully. Your login credentials have been sent to your email address."
         actions={[
           { label: "Check Status", onClick: () => window.location.href = "/franchise/status", primary: true },
           { label: "Back to Home", onClick: () => window.location.href = "/" },
@@ -193,13 +186,11 @@ export default function FranchisePage() {
             <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: "#1b3c33", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
             </div>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.85rem", fontWeight: 700 }}>Your Login Credentials</p>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.85rem", fontWeight: 700 }}>Check Your Email</p>
           </div>
-          <div style={{ background: "#fff", borderRadius: "12px", padding: "1rem 1.25rem", border: "1px solid #e8e5e0" }}>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.25rem" }}>Password</p>
-            <p style={{ fontFamily: "'SF Mono', 'Fira Code', monospace", color: "#1b3c33", fontSize: "1rem", fontWeight: 700, wordBreak: "break-all" }}>{password}</p>
-          </div>
-          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem", marginTop: "0.75rem" }}>Format: FirstnameDDMMYY@ — based on your name and date of birth.</p>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", lineHeight: 1.6 }}>
+            We&apos;ve sent your <strong>Login ID</strong> and <strong>Password</strong> to your registered email address. Please check your inbox (and spam folder) to log in.
+          </p>
         </div>
       </SuccessState>
     );

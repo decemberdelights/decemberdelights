@@ -3,6 +3,8 @@ import uuid
 import re
 import logging
 import asyncio
+import secrets
+import string
 
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form, Cookie, Request
 from typing import Optional
@@ -17,6 +19,19 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def _generate_secure_password() -> str:
+    alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits
+    while True:
+        password = (
+            secrets.choice(string.ascii_uppercase)
+            + secrets.choice(string.ascii_lowercase)
+            + "".join(secrets.choice(alphabet) for _ in range(6))
+            + secrets.choice(string.digits)
+            + "!"
+        )
+        if (any(c.isupper() for c in password) and any(c.isdigit() for c in password)):
+            return password
 
 
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
@@ -73,7 +88,6 @@ async def create_franchise(
     full_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
-    password: str = Form(...),
     business_experience: str = Form(""),
     preferred_location: str = Form(""),
     investment_capability: str = Form(""),
@@ -107,12 +121,6 @@ async def create_franchise(
         raise HTTPException(status_code=400, detail="Invalid email address")
     if not validate_phone(phone):
         raise HTTPException(status_code=400, detail="Invalid phone number")
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-    if not any(c.isupper() for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
-    if not any(c.isdigit() for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one digit")
 
     existing = await asyncio.to_thread(
         lambda: supabase.table("franchise_applications").select("id").eq("phone", phone).execute()
@@ -120,6 +128,7 @@ async def create_franchise(
     if existing.data:
         raise HTTPException(status_code=400, detail="Application already exists with this phone number")
 
+    password = _generate_secure_password()
     password_hash = await asyncio.to_thread(hash_password, password)
 
     uploaded_urls = await asyncio.gather(

@@ -135,13 +135,13 @@ def create_job(
     if not title:
         raise HTTPException(status_code=400, detail="Title is required")
     data = {
-        "title": title,
-        "department": department,
-        "location": location,
-        "description": description,
-        "requirements": requirements,
-        "salary_range": salary_range,
-        "job_type": job_type,
+        "title": sanitize_input(title, 200),
+        "department": sanitize_input(department, 200),
+        "location": sanitize_input(location, 200),
+        "description": sanitize_input(description, 5000),
+        "requirements": sanitize_input(requirements, 5000),
+        "salary_range": sanitize_input(salary_range, 100),
+        "job_type": sanitize_input(job_type, 50),
         "is_active": is_active.lower() == "true",
     }
     result = supabase.table("jobs").insert(data).execute()
@@ -165,13 +165,13 @@ def update_job(
     if not existing.data:
         raise HTTPException(status_code=404, detail="Job not found")
     data = {
-        "title": title,
-        "department": department,
-        "location": location,
-        "description": description,
-        "requirements": requirements,
-        "salary_range": salary_range,
-        "job_type": job_type,
+        "title": sanitize_input(title, 200),
+        "department": sanitize_input(department, 200),
+        "location": sanitize_input(location, 200),
+        "description": sanitize_input(description, 5000),
+        "requirements": sanitize_input(requirements, 5000),
+        "salary_range": sanitize_input(salary_range, 100),
+        "job_type": sanitize_input(job_type, 50),
         "is_active": is_active.lower() == "true",
     }
     supabase.table("jobs").update(data).eq("id", job_id).execute()
