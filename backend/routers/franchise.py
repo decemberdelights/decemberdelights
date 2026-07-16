@@ -6,7 +6,7 @@ import asyncio
 import secrets
 import string
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form, Cookie, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form, Cookie, Request, BackgroundTasks
 from typing import Optional
 from supabase_client import supabase
 from schemas import FranchiseLogin, FranchiseOut
@@ -85,6 +85,7 @@ def delete_app_files(app: dict):
 @router.post("/api/franchise")
 async def create_franchise(
     request: Request,
+    background_tasks: BackgroundTasks,
     full_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
@@ -172,7 +173,7 @@ async def create_franchise(
 
     try:
         from email_service import send_franchise_acknowledgment
-        await asyncio.to_thread(send_franchise_acknowledgment, full_name, email, phone, password, login_id)
+        background_tasks.add_task(send_franchise_acknowledgment, full_name, email, phone, password, login_id)
     except Exception as e:
         logger.warning(f"Franchise acknowledgment email failed: {e}")
 

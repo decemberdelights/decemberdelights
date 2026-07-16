@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
@@ -38,7 +38,7 @@ def log_activity(username: str, action: str, target_type: str, target_id: int, d
 
 
 @router.post("/api/orders")
-def create_public_order(data: dict, request: Request):
+def create_public_order(data: dict, request: Request, background_tasks: BackgroundTasks):
     from security import get_client_ip
     client_ip = get_client_ip(request)
     rate_key = f"order:{client_ip}"
@@ -141,14 +141,7 @@ def create_public_order(data: dict, request: Request):
 
     try:
         from email_service import send_order_confirmation
-        send_order_confirmation(
-            customer_name=data["customer_name"],
-            customer_email=data.get("customer_email", ""),
-            order_id=result.data[0]["id"],
-            items=sanitized_items,
-            total=calculated_total,
-            phone=data["customer_phone"],
-        )
+        background_tasks.add_task(send_order_confirmation, data["customer_name"], data.get("customer_email", ""), result.data[0]["id"], sanitized_items, calculated_total, data["customer_phone"])
     except Exception as e:
         logger.warning(f"Order confirmation email failed: {e}")
 
