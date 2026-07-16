@@ -181,13 +181,24 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!authed) return;
-    const interval = setInterval(() => {
-      if (tab === "orders" || tab === "overview") {
+    const { supabase } = require("@/lib/supabase");
+    const channel = supabase
+      .channel("admin-orders")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
         refresh();
-      }
-    }, 90000);
-    return () => clearInterval(interval);
-  }, [authed, tab, refresh]);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "franchise_applications" }, () => {
+        refresh();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "career_applications" }, () => {
+        refresh();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "contact_messages" }, () => {
+        refresh();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [authed, refresh]);
 
   if (authed === null) return <div className="admin-page"><div className="app" style={{ alignItems: "center", justifyContent: "center" }}><p style={{ color: "#888" }}>Loading...</p></div></div>;
 
