@@ -196,6 +196,15 @@ export default function AdminPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "contact_messages" }, () => {
         refresh();
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "menu_items" }, () => {
+        refresh();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => {
+        refresh();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
+        refresh();
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [authed, refresh]);
