@@ -179,6 +179,16 @@ export default function AdminPage() {
     return () => { clearTimeout(timer); events.forEach((e) => document.removeEventListener(e, reset)); };
   }, [authed]);
 
+  useEffect(() => {
+    if (!authed) return;
+    const interval = setInterval(() => {
+      if (tab === "orders" || tab === "overview") {
+        refresh();
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [authed, tab, refresh]);
+
   if (authed === null) return <div className="admin-page"><div className="app" style={{ alignItems: "center", justifyContent: "center" }}><p style={{ color: "#888" }}>Loading...</p></div></div>;
 
   if (!authed) {
