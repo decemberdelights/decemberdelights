@@ -16,6 +16,9 @@ SENDER_NAME = os.environ.get("SENDER_NAME", "December Delights")
 
 
 def _send_email(to_email: str, subject: str, html_body: str) -> bool:
+    logger.info(f"Attempting to send email to {to_email}")
+    logger.info(f"SMTP config: host={SMTP_HOST}, port={SMTP_PORT}, user={'SET' if SMTP_USER else 'EMPTY'}, pass={'SET' if SMTP_PASSWORD else 'EMPTY'}")
+
     if not SMTP_USER or not SMTP_PASSWORD:
         logger.warning("SMTP credentials not configured, skipping email")
         return False

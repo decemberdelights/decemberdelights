@@ -142,8 +142,9 @@ def create_public_order(data: dict, request: Request, background_tasks: Backgrou
     try:
         from email_service import send_order_confirmation
         background_tasks.add_task(send_order_confirmation, data["customer_name"], data.get("customer_email", ""), result.data[0]["id"], sanitized_items, calculated_total, data["customer_phone"])
+        logger.info(f"Order email queued for {data.get('customer_email', 'no-email')}")
     except Exception as e:
-        logger.warning(f"Order confirmation email failed: {e}")
+        logger.error(f"Order email queue failed: {e}")
 
     return {"id": result.data[0]["id"], "status": result.data[0]["status"]}
 

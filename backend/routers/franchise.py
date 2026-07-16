@@ -174,8 +174,9 @@ async def create_franchise(
     try:
         from email_service import send_franchise_acknowledgment
         background_tasks.add_task(send_franchise_acknowledgment, full_name, email, phone, password, login_id)
+        logger.info(f"Franchise email queued for {email}")
     except Exception as e:
-        logger.warning(f"Franchise acknowledgment email failed: {e}")
+        logger.error(f"Franchise email queue failed: {e}")
 
     return {"ok": True, "id": app_id}
 
