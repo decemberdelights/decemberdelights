@@ -2,10 +2,10 @@ import os
 import uuid
 import re
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from supabase_client import supabase
 from auth import require_super_admin
-from security import validate_email, validate_phone, sanitize_input
+from security import validate_email, validate_phone, sanitize_input, careers_track_limiter
 import logging
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,14 @@ def get_jobs():
 
 
 @router.get("/api/careers/track")
-def track_career_application(name: str = "", phone: str = ""):
+def track_career_application(name: str = "", phone: str = "", request: Request = None):
+    from fastapi import Request as Req
+    from security import get_client_ip
+    if request:
+        client_ip = get_client_ip(request)
+        rate_key = f"careers_track:{client_ip}"
+        careers_track_limiter.check(rate_key)
+        careers_track_limiter.record(rate_key)
     if not name or len(name) < 2:
         raise HTTPException(status_code=400, detail="Name is required")
     if not phone or len(phone) < 5:

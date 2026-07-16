@@ -1,5 +1,7 @@
 import time
 import re
+import html
+import secrets
 from collections import defaultdict
 from typing import Optional
 from fastapi import HTTPException, Request
@@ -34,6 +36,7 @@ class RateLimiter:
 
 login_limiter = RateLimiter(max_attempts=5, window_seconds=300)
 franchise_limiter = RateLimiter(max_attempts=5, window_seconds=300)
+careers_track_limiter = RateLimiter(max_attempts=10, window_seconds=60)
 
 
 _HTML_TAG_RE = re.compile(r'<[^>]+>')
@@ -43,7 +46,27 @@ def sanitize_input(value: str, max_length: int = 1000) -> str:
     if not isinstance(value, str):
         return ""
     cleaned = _HTML_TAG_RE.sub("", value)
+    cleaned = html.escape(cleaned)
     return cleaned.strip()[:max_length]
+
+
+def html_escape(value: str) -> str:
+    """Escape HTML entities for safe interpolation in emails/HTML."""
+    if not isinstance(value, str):
+        return ""
+    return html.escape(value)
+
+
+def sanitize_log(value: str) -> str:
+    """Sanitize input for logging to prevent log injection."""
+    if not isinstance(value, str):
+        return ""
+    return value.replace("\n", " ").replace("\r", " ").replace("\t", " ")[:200]
+
+
+def generate_csrf_token() -> str:
+    """Generate a cryptographically secure CSRF token."""
+    return secrets.token_hex(32)
 
 
 def validate_email(email: str) -> bool:
@@ -69,10 +92,5 @@ def validate_application_status(status: str) -> bool:
 
 
 def get_client_ip(request: Request) -> str:
-    """Get client IP. Only trust X-Forwarded-For from known proxies."""
-    host = request.client.host if request.client else "unknown"
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded and host in ("127.0.0.1", "::1", "10.0.0.0/8"):
-        parts = forwarded.split(",")
-        return parts[0].strip()
-    return host
+    """Get real client IP. Never trust X-Forwarded-For for rate limiting."""
+    return request.client.host if request.client else "unknown"

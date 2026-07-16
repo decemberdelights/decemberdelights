@@ -21,7 +21,7 @@ if not SECRET_KEY:
     logger.critical("JWT_SECRET environment variable is NOT SET. Server cannot start securely.")
     raise RuntimeError("JWT_SECRET environment variable is required")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 24
+ACCESS_TOKEN_EXPIRE_HOURS = 4
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

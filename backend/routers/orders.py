@@ -81,6 +81,8 @@ def create_public_order(data: dict, request: Request, background_tasks: Backgrou
             raise HTTPException(status_code=400, detail="Invalid quantity value")
         if qty <= 0:
             raise HTTPException(status_code=400, detail="Item quantity must be at least 1")
+        if qty > 100:
+            raise HTTPException(status_code=400, detail="Maximum 100 per item")
 
     product_ids = []
     for item in items:

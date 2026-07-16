@@ -4,6 +4,7 @@ import smtplib
 import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from security import html_escape
 
 logger = logging.getLogger(__name__)
 
@@ -47,16 +48,19 @@ def send_order_confirmation(customer_name: str, customer_email: str, order_id: i
     if not customer_email:
         return False
 
+    safe_name = html_escape(customer_name)
+    safe_phone = html_escape(phone)
+
     items_html = ""
     for item in items:
-        name = item.get("name", "Item")
+        name = html_escape(item.get("name", "Item"))
         qty = item.get("quantity", 0)
         price = item.get("price", 0)
         items_html += f"""
         <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #eee;">{name}</td>
             <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">{qty}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">₹{price * qty:.2f}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">&#8377;{price * qty:.2f}</td>
         </tr>"""
 
     html = f"""
@@ -66,11 +70,11 @@ def send_order_confirmation(customer_name: str, customer_email: str, order_id: i
     <body style="font-family:Arial,sans-serif;background-color:#f9f9f9;padding:20px;">
         <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
             <div style="background-color:#4a2c2a;padding:24px;text-align:center;">
-                <h1 style="color:#ffffff;margin:0;font-size:22px;">☕ December Delights</h1>
+                <h1 style="color:#ffffff;margin:0;font-size:22px;">December Delights</h1>
             </div>
             <div style="padding:32px;">
                 <h2 style="color:#4a2c2a;margin-top:0;">Order Confirmed!</h2>
-                <p style="color:#555;font-size:16px;">Hi <strong>{customer_name}</strong>,</p>
+                <p style="color:#555;font-size:16px;">Hi <strong>{safe_name}</strong>,</p>
                 <p style="color:#555;font-size:16px;">Thank you for your order. Here are your order details:</p>
 
                 <div style="background:#f8f4f0;border-radius:6px;padding:12px 16px;margin:20px 0;">
@@ -89,7 +93,7 @@ def send_order_confirmation(customer_name: str, customer_email: str, order_id: i
                     <tfoot>
                         <tr>
                             <td colspan="2" style="padding:12px;font-weight:bold;font-size:16px;text-align:right;">Total:</td>
-                            <td style="padding:12px;font-weight:bold;font-size:16px;text-align:right;color:#4a2c2a;">₹{total:.2f}</td>
+                            <td style="padding:12px;font-weight:bold;font-size:16px;text-align:right;color:#4a2c2a;">&#8377;{total:.2f}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -98,7 +102,7 @@ def send_order_confirmation(customer_name: str, customer_email: str, order_id: i
 
                 <div style="background:#f8f4f0;border-radius:6px;padding:16px;margin:20px 0;">
                     <p style="margin:0 0 6px 0;color:#4a2c2a;font-size:14px;"><strong>Track Your Order</strong></p>
-                    <p style="margin:0;color:#555;font-size:14px;">Use your phone number <strong>{phone}</strong> to track your order status on our website.</p>
+                    <p style="margin:0;color:#555;font-size:14px;">Use your phone number <strong>{safe_phone}</strong> to track your order status on our website.</p>
                 </div>
 
                 <div style="text-align:center;margin-top:24px;">
@@ -106,18 +110,23 @@ def send_order_confirmation(customer_name: str, customer_email: str, order_id: i
                 </div>
             </div>
             <div style="background:#f4f4f4;padding:16px;text-align:center;">
-                <p style="margin:0;color:#888;font-size:12px;">December Delights — Crafted with love ☕</p>
+                <p style="margin:0;color:#888;font-size:12px;">December Delights</p>
             </div>
         </div>
     </body>
     </html>"""
 
-    return _send_email(customer_email, f"Order Confirmed — #{order_id} | December Delights", html)
+    return _send_email(customer_email, f"Order Confirmed - #{order_id} | December Delights", html)
 
 
 def send_franchise_acknowledgment(full_name: str, email: str, phone: str, password: str, login_id: str) -> bool:
     if not email:
         return False
+
+    safe_name = html_escape(full_name)
+    safe_login_id = html_escape(login_id)
+    safe_password = html_escape(password)
+    safe_phone = html_escape(phone)
 
     html = f"""
     <!DOCTYPE html>
@@ -126,11 +135,11 @@ def send_franchise_acknowledgment(full_name: str, email: str, phone: str, passwo
     <body style="font-family:Arial,sans-serif;background-color:#f9f9f9;padding:20px;">
         <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
             <div style="background-color:#4a2c2a;padding:24px;text-align:center;">
-                <h1 style="color:#ffffff;margin:0;font-size:22px;">☕ December Delights — Franchise</h1>
+                <h1 style="color:#ffffff;margin:0;font-size:22px;">December Delights - Franchise</h1>
             </div>
             <div style="padding:32px;">
                 <h2 style="color:#4a2c2a;margin-top:0;">Application Received!</h2>
-                <p style="color:#555;font-size:16px;">Hi <strong>{full_name}</strong>,</p>
+                <p style="color:#555;font-size:16px;">Hi <strong>{safe_name}</strong>,</p>
                 <p style="color:#555;font-size:16px;">Thank you for applying to become a December Delights franchise partner. We've received your application and our team will review it shortly.</p>
 
                 <div style="background:#f8f4f0;border-radius:6px;padding:16px;margin:20px 0;">
@@ -138,19 +147,19 @@ def send_franchise_acknowledgment(full_name: str, email: str, phone: str, passwo
                     <table style="width:100%;border-collapse:collapse;">
                         <tr>
                             <td style="padding:6px 0;color:#888;font-size:14px;">Name:</td>
-                            <td style="padding:6px 0;color:#4a2c2a;font-size:14px;font-weight:bold;">{full_name}</td>
+                            <td style="padding:6px 0;color:#4a2c2a;font-size:14px;font-weight:bold;">{safe_name}</td>
                         </tr>
                         <tr>
                             <td style="padding:6px 0;color:#888;font-size:14px;">Login ID:</td>
-                            <td style="padding:6px 0;color:#4a2c2a;font-size:14px;font-weight:bold;letter-spacing:1px;">{login_id}</td>
+                            <td style="padding:6px 0;color:#4a2c2a;font-size:14px;font-weight:bold;letter-spacing:1px;">{safe_login_id}</td>
                         </tr>
                         <tr>
                             <td style="padding:6px 0;color:#888;font-size:14px;">Password:</td>
-                            <td style="padding:6px 0;color:#4a2c2a;font-size:14px;font-weight:bold;">{password}</td>
+                            <td style="padding:6px 0;color:#4a2c2a;font-size:14px;font-weight:bold;">{safe_password}</td>
                         </tr>
                         <tr>
                             <td style="padding:6px 0;color:#888;font-size:14px;">Phone:</td>
-                            <td style="padding:6px 0;color:#4a2c2a;font-size:14px;font-weight:bold;">{phone}</td>
+                            <td style="padding:6px 0;color:#4a2c2a;font-size:14px;font-weight:bold;">{safe_phone}</td>
                         </tr>
                     </table>
                 </div>
@@ -167,10 +176,10 @@ def send_franchise_acknowledgment(full_name: str, email: str, phone: str, passwo
                 </div>
             </div>
             <div style="background:#f4f4f4;padding:16px;text-align:center;">
-                <p style="margin:0;color:#888;font-size:12px;">December Delights — Crafted with love ☕</p>
+                <p style="margin:0;color:#888;font-size:12px;">December Delights</p>
             </div>
         </div>
     </body>
     </html>"""
 
-    return _send_email(email, f"Franchise Application Received — {full_name} | December Delights", html)
+    return _send_email(email, f"Franchise Application Received - {safe_name} | December Delights", html)

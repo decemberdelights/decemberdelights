@@ -91,13 +91,19 @@ async def create_product(
         price_val = float(price) if price else 0
     except (ValueError, TypeError):
         price_val = 0
+    if price_val < 0:
+        price_val = 0
     try:
         orig_price_val = float(original_price) if original_price else 0
     except (ValueError, TypeError):
         orig_price_val = 0
+    if orig_price_val < 0:
+        orig_price_val = 0
     try:
         stock_val = int(stock)
     except (ValueError, TypeError):
+        stock_val = 0
+    if stock_val < 0:
         stock_val = 0
     try:
         sort_val = int(sort_order)
@@ -152,13 +158,19 @@ async def update_product(
         price_val = float(price) if price else 0
     except (ValueError, TypeError):
         price_val = 0
+    if price_val < 0:
+        price_val = 0
     try:
         orig_price_val = float(original_price) if original_price else 0
     except (ValueError, TypeError):
         orig_price_val = 0
+    if orig_price_val < 0:
+        orig_price_val = 0
     try:
         stock_val = int(stock)
     except (ValueError, TypeError):
+        stock_val = 0
+    if stock_val < 0:
         stock_val = 0
     try:
         sort_val = int(sort_order)

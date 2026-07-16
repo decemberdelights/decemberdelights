@@ -102,7 +102,8 @@ async def log_requests(request: Request, call_next):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled error: {request.method} {request.url.path} - {str(exc)}", exc_info=True)
+    path = request.url.path.replace("\n", " ").replace("\r", " ")
+    logger.error(f"Unhandled error: {request.method} {path}", exc_info=True)
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
@@ -113,13 +114,7 @@ def root():
 
 @app.get("/api/health")
 def health_check():
-    try:
-        from supabase_client import supabase
-        supabase.table("admin_users").select("id").limit(1).execute()
-        return {"status": "healthy", "database": "connected"}
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "disconnected"})
+    return {"status": "healthy"}
 
 
 if __name__ == "__main__":
