@@ -19,7 +19,7 @@ export default function MenuPage() {
   const [active, setActive] = useState("");
 
   useEffect(() => {
-    fetch(`${API}/api/menu`)
+    fetch(`${API}/api/menu`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         setMenuData(data);

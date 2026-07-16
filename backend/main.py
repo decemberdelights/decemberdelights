@@ -93,6 +93,10 @@ async def log_requests(request: Request, call_next):
     process_time = time.time() - start_time
     if process_time > 5.0:
         logger.warning(f"Slow request: {request.method} {request.url.path} took {process_time:.2f}s")
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     return response
 
 

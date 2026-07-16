@@ -66,11 +66,11 @@ export default function ShopPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${API}/api/products`, { signal: controller.signal })
+    fetch(`${API}/api/products`, { signal: controller.signal, cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((data) => { setProducts(data); setLoading(false); })
       .catch((err) => { if (err.name !== "AbortError") { setFetchError(true); setLoading(false); } });
-    fetch(`${API}/api/products/categories`, { signal: controller.signal })
+    fetch(`${API}/api/products/categories`, { signal: controller.signal, cache: "no-store" })
       .then((r) => r.json())
       .then(setCategories)
       .catch(() => {});

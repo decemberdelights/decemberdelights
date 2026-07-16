@@ -30,7 +30,7 @@ export default function CareersPage() {
   const [trackSearched, setTrackSearched] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/jobs`)
+    fetch(`${API}/api/jobs`, { cache: "no-store" })
       .then((r) => r.json())
       .then(setJobs)
       .catch(() => {})
