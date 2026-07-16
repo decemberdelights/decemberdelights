@@ -134,6 +134,20 @@ def create_public_order(data: dict, request: Request):
     }
     result = supabase.table("orders").insert(order_data).execute()
     order_limiter.reset(rate_key)
+
+    try:
+        from email_service import send_order_confirmation
+        send_order_confirmation(
+            customer_name=data["customer_name"],
+            customer_email=data.get("customer_email", ""),
+            order_id=result.data[0]["id"],
+            items=sanitized_items,
+            total=calculated_total,
+            phone=data["customer_phone"],
+        )
+    except Exception as e:
+        logger.warning(f"Order confirmation email failed: {e}")
+
     return {"id": result.data[0]["id"], "status": result.data[0]["status"]}
 
 
