@@ -163,7 +163,7 @@ async def create_franchise(
 
     try:
         from email_service import send_franchise_acknowledgment
-        send_franchise_acknowledgment(full_name, email, phone, password, login_id)
+        await asyncio.to_thread(send_franchise_acknowledgment, full_name, email, phone, password, login_id)
     except Exception as e:
         logger.warning(f"Franchise acknowledgment email failed: {e}")
 
