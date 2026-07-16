@@ -185,7 +185,7 @@ export default function AdminPage() {
       if (tab === "orders" || tab === "overview") {
         refresh();
       }
-    }, 10000);
+    }, 30000);
     return () => clearInterval(interval);
   }, [authed, tab, refresh]);
 
