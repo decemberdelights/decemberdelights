@@ -8,7 +8,7 @@ from email.mime.multipart import MIMEMultipart
 logger = logging.getLogger(__name__)
 
 SMTP_HOST = os.environ.get("SMTP_HOST", "smtp-relay.brevo.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "465"))
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@decemberdelights.com")
@@ -33,8 +33,7 @@ def _send_email(to_email: str, subject: str, html_body: str) -> bool:
 
     try:
         context = ssl.create_default_context()
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls(context=context)
+        with smtplib.SMTP_SSL(SMTP_HOST, int(SMTP_PORT)) as server:
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
         logger.info(f"Email sent to {to_email}: {subject}")
