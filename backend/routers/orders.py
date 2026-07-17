@@ -99,7 +99,7 @@ def create_public_order(data: dict, request: Request, background_tasks: Backgrou
     for item in items:
         pid = str(item["id"])
         if pid not in products_map:
-            raise HTTPException(status_code=400, detail=f"Product ID {item['id']} not found")
+            raise HTTPException(status_code=400, detail="One or more products are unavailable")
         product = products_map[pid]
         qty = int(item["quantity"])
         if product.get("stock", 0) < qty:
@@ -111,15 +111,15 @@ def create_public_order(data: dict, request: Request, background_tasks: Backgrou
     for item in sanitized_items:
         try:
             current = supabase.table("products").select("stock").eq("id", item["id"]).execute()
-            if current.data:
-                current_stock = current.data[0]["stock"]
-                if current_stock < item["quantity"]:
-                    raise HTTPException(status_code=400, detail=f"Insufficient stock for {item['name']}")
-                new_stock = current_stock - item["quantity"]
-                supabase.table("products").update({"stock": new_stock}).eq("id", item["id"]).execute()
-                verify = supabase.table("products").select("stock").eq("id", item["id"]).execute()
-                if verify.data and verify.data[0]["stock"] < 0:
-                    supabase.table("products").update({"stock": 0}).eq("id", item["id"]).execute()
+            if not current.data:
+                raise HTTPException(status_code=400, detail="Product not found")
+            current_stock = current.data[0]["stock"]
+            if current_stock < item["quantity"]:
+                raise HTTPException(status_code=400, detail="Insufficient stock for one or more items")
+            new_stock = current_stock - item["quantity"]
+            result = supabase.table("products").update({"stock": new_stock}).eq("id", item["id"]).gte("stock", item["quantity"]).execute()
+            if not result.data:
+                raise HTTPException(status_code=400, detail="Insufficient stock — item was just purchased by someone else")
         except HTTPException:
             raise
         except Exception as e:
@@ -139,7 +139,6 @@ def create_public_order(data: dict, request: Request, background_tasks: Backgrou
         "notes": data.get("notes", ""),
     }
     result = supabase.table("orders").insert(order_data).execute()
-    order_limiter.reset(rate_key)
 
     try:
         from email_service import send_order_confirmation
@@ -163,10 +162,15 @@ def track_order(phone: str, request: Request):
     if not cleaned.isdigit() or len(cleaned) < 7:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").order("created_at", desc=True).limit(50).execute()
-    orders = result.data or []
-    matching = [o for o in orders if _normalize_phone(o.get("customer_phone", "")) == cleaned]
-    return matching[:5]
+    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").eq("customer_phone", phone).order("created_at", desc=True).limit(5).execute()
+    matching = result.data or []
+
+    if not matching:
+        result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").order("created_at", desc=True).limit(20).execute()
+        orders = result.data or []
+        matching = [o for o in orders if _normalize_phone(o.get("customer_phone", "")) == cleaned][:5]
+
+    return matching
 
 
 @router.post("/api/contact")
@@ -196,43 +200,36 @@ def submit_contact(data: dict, request: Request):
         "message": message,
         "status": "pending",
     }).execute()
-    contact_limiter.reset(rate_key)
     return {"ok": True, "id": result.data[0]["id"]}
 
 
 @router.get("/api/admin/orders")
-def get_orders(_=Depends(get_current_admin)):
-    result = supabase.table("orders").select("*").order("created_at", desc=True).limit(500).execute()
-    return result.data or []
+def get_orders(limit: int = 100, offset: int = 0, _=Depends(get_current_admin)):
+    limit = min(limit, 200)
+    result = supabase.table("orders").select("*").order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    total = supabase.table("orders").select("id", count="exact").execute()
+    return {"orders": result.data or [], "total": total.count or 0}
 
 
 @router.get("/api/admin/orders/stats")
 def get_order_stats(_=Depends(get_current_admin)):
-    try:
-        result = supabase.table("orders").select("total,status,created_at").execute()
-    except Exception as e:
-        logger.error(f"Failed to fetch orders for stats: {e}")
-        raise HTTPException(status_code=500, detail="Failed to load order stats")
-    orders = result.data or []
-
     from datetime import timezone as tz
     today = datetime.now(tz.utc).date()
     month_start = today.replace(day=1)
     week_start = today - timedelta(days=today.weekday())
 
+    try:
+        result = supabase.table("orders").select("total,status,created_at").order("created_at", desc=True).limit(1000).execute()
+    except Exception as e:
+        logger.error(f"Failed to fetch orders for stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load order stats")
+    orders = result.data or []
+
     daily = {}
     for i in range(6, -1, -1):
         d = today - timedelta(days=i)
         key = d.strftime("%a")
-        day_orders = []
-        for o in orders:
-            ca = o.get("created_at")
-            if ca:
-                try:
-                    if datetime.fromisoformat(ca).date() == d:
-                        day_orders.append(o)
-                except (ValueError, TypeError):
-                    pass
+        day_orders = [o for o in orders if _parse_created_date(o) == d]
         daily[key] = {"orders": len(day_orders), "revenue": sum(o.get("total", 0) for o in day_orders)}
 
     monthly = {}
@@ -243,36 +240,22 @@ def get_order_stats(_=Depends(get_current_admin)):
             m += 12
             y -= 1
         key = datetime(y, m, 1).strftime("%b %Y")
-        month_orders = []
-        for o in orders:
-            ca = o.get("created_at")
-            if ca:
-                try:
-                    dt = datetime.fromisoformat(ca)
-                    if dt.month == m and dt.year == y:
-                        month_orders.append(o)
-                except (ValueError, TypeError):
-                    pass
+        month_orders = [o for o in orders if _parse_created_month(o) == (m, y)]
         monthly[key] = {"orders": len(month_orders), "revenue": sum(o.get("total", 0) for o in month_orders)}
 
     today_orders = []
     week_orders = []
-    month_orders = []
+    month_orders_filtered = []
     for o in orders:
-        ca = o.get("created_at")
-        if not ca:
+        d = _parse_created_date(o)
+        if not d:
             continue
-        try:
-            dt = datetime.fromisoformat(ca)
-            d = dt.date()
-            if d == today:
-                today_orders.append(o)
-            if d >= week_start:
-                week_orders.append(o)
-            if d >= month_start:
-                month_orders.append(o)
-        except (ValueError, TypeError):
-            pass
+        if d == today:
+            today_orders.append(o)
+        if d >= week_start:
+            week_orders.append(o)
+        if d >= month_start:
+            month_orders_filtered.append(o)
 
     return {
         "daily": daily,
@@ -281,15 +264,36 @@ def get_order_stats(_=Depends(get_current_admin)):
         "today_revenue": sum(o.get("total", 0) for o in today_orders),
         "week_orders": len(week_orders),
         "week_revenue": sum(o.get("total", 0) for o in week_orders),
-        "month_orders": len(month_orders),
-        "month_revenue": sum(o.get("total", 0) for o in month_orders),
+        "month_orders": len(month_orders_filtered),
+        "month_revenue": sum(o.get("total", 0) for o in month_orders_filtered),
         "total_orders": len(orders),
         "total_revenue": sum(o.get("total", 0) for o in orders),
-        "pending": len([o for o in orders if o.get("status") == "pending"]),
-        "preparing": len([o for o in orders if o.get("status") == "preparing"]),
-        "delivered": len([o for o in orders if o.get("status") == "delivered"]),
-        "cancelled": len([o for o in orders if o.get("status") == "cancelled"]),
+        "pending": sum(1 for o in orders if o.get("status") == "pending"),
+        "preparing": sum(1 for o in orders if o.get("status") == "preparing"),
+        "delivered": sum(1 for o in orders if o.get("status") == "delivered"),
+        "cancelled": sum(1 for o in orders if o.get("status") == "cancelled"),
     }
+
+
+def _parse_created_date(o: dict):
+    ca = o.get("created_at")
+    if not ca:
+        return None
+    try:
+        return datetime.fromisoformat(ca).date()
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_created_month(o: dict):
+    ca = o.get("created_at")
+    if not ca:
+        return None
+    try:
+        dt = datetime.fromisoformat(ca)
+        return (dt.month, dt.year)
+    except (ValueError, TypeError):
+        return None
 
 
 @router.post("/api/admin/orders")

@@ -8,14 +8,25 @@ from fastapi import HTTPException, Request
 
 
 class RateLimiter:
-    """Simple in-memory rate limiter."""
+    """Simple in-memory rate limiter with TTL cleanup."""
 
     def __init__(self, max_attempts: int = 5, window_seconds: int = 300):
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
         self._attempts: dict[str, list[float]] = defaultdict(list)
+        self._last_cleanup = time.time()
+
+    def _cleanup(self):
+        now = time.time()
+        if now - self._last_cleanup < 60:
+            return
+        self._last_cleanup = now
+        stale_keys = [k for k, v in self._attempts.items() if not v or (now - v[-1] > self.window_seconds * 2)]
+        for k in stale_keys:
+            del self._attempts[k]
 
     def check(self, key: str) -> None:
+        self._cleanup()
         now = time.time()
         self._attempts[key] = [
             t for t in self._attempts[key] if now - t < self.window_seconds

@@ -7,7 +7,7 @@ import { User, Mail, Phone, Briefcase, FileText, ArrowRight, Upload, MapPin, Clo
 import { JobCardSkeleton } from "@/components/Skeleton";
 import SuccessState from "@/components/SuccessState";
 
-const MAX_RESUME_SIZE = 16 * 1024 * 1024; // 16MB
+const MAX_RESUME_SIZE = 5 * 1024 * 1024; // 5MB - matches backend limit
 
 interface JobOpening {
   id: number; title: string; department: string; location: string;
@@ -48,7 +48,7 @@ export default function CareersPage() {
 
     if (resume && resume.size > MAX_RESUME_SIZE) {
       setStatus("error");
-      setErrorMsg("Resume file too large. Maximum size is 16MB.");
+      setErrorMsg("Resume file too large. Maximum size is 5MB.");
       return;
     }
 
@@ -72,7 +72,7 @@ export default function CareersPage() {
     try {
       const res = await fetch(`${API}/api/careers`, { method: "POST", body: formData });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Submission failed");
+      if (!res.ok) throw new Error(data.detail || "Submission failed");
       setStatus("success");
     } catch (err: unknown) {
       setStatus("error");
@@ -301,7 +301,7 @@ export default function CareersPage() {
                     </div>
                     <div>
                       <p style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1b3c33", marginBottom: "0.1rem" }}>{resume ? resume.name : "Upload your resume"}</p>
-                      <p style={{ fontSize: "0.85rem", color: "#999" }}>PDF, DOC, or image. Max 16MB.</p>
+                      <p style={{ fontSize: "0.85rem", color: "#999" }}>PDF, DOC, or image. Max 5MB.</p>
                     </div>
                   </label>
                 </div>

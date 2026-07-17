@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { API } from "@/lib/api";
+import { formatPriceINR } from "@/lib/utils";
 import { OrderCardSkeleton } from "@/components/Skeleton";
 
 interface OrderItem {
@@ -172,7 +173,7 @@ function TrackContent() {
                         <h3 style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.5rem", fontWeight: 600 }}>#{order.id}</h3>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <p style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.4rem", fontWeight: 700 }}>&#8377;{order.total}</p>
+                        <p style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.4rem", fontWeight: 700 }}>{formatPriceINR(order.total)}</p>
                         <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem" }}>{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
                       </div>
                     </div>
@@ -255,12 +256,12 @@ function TrackContent() {
                               <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#1b3c33", fontWeight: 600, fontSize: "0.88rem" }}>{item.name}</p>
                               <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem" }}>Qty: {item.quantity}</p>
                             </div>
-                            <p style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.05rem", fontWeight: 600 }}>&#8377;{item.price * item.quantity}</p>
+                            <p style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.05rem", fontWeight: 600 }}>{formatPriceINR(item.price * item.quantity)}</p>
                           </div>
                         ))}
                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "2px solid #1b3c33" }}>
                           <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, color: "#1b3c33", fontSize: "0.9rem" }}>Total</span>
-                          <span style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.3rem", fontWeight: 700 }}>&#8377;{order.total}</span>
+                          <span style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.3rem", fontWeight: 700 }}>{formatPriceINR(order.total)}</span>
                         </div>
                       </div>
 

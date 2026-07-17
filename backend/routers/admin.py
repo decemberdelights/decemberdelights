@@ -57,62 +57,76 @@ def get_stats(_=Depends(get_current_admin)):
     today = datetime.now(timezone.utc).date()
     month_start = today.replace(day=1)
 
-    franchise_data = _safe_query("franchise_applications", select="id,status,created_at")
-    career_data = _safe_query("career_applications", select="id,status")
-    contact_data = _safe_query("contact_messages", select="id,status")
+    franchise_count = _safe_query("franchise_applications", select="id", count_only=True)
+    career_count = _safe_query("career_applications", select="id", count_only=True)
+    contact_count = _safe_query("contact_messages", select="id", count_only=True)
     menu_count = _safe_query("menu_items", select="id", count_only=True)
-    product_data = _safe_query("products", select="id,is_active")
+    product_count = _safe_query("products", select="id", count_only=True)
     job_count = _safe_query("jobs", select="id", filters=[("is_active", True, "eq")], count_only=True)
-    order_data = _safe_query("orders", select="id,total,status,created_at")
     admin_count = _safe_query("admin_users", select="id", count_only=True)
 
+    pending_franchise = _safe_query("franchise_applications", select="id", filters=[("status", "pending", "eq")], count_only=True)
+    submitted_franchise = _safe_query("franchise_applications", select="id", filters=[("status", "submitted", "eq")], count_only=True)
+    under_process_franchise = _safe_query("franchise_applications", select="id", filters=[("status", "under_process", "eq")], count_only=True)
+    approved_franchise = _safe_query("franchise_applications", select="id", filters=[("status", "approved", "eq")], count_only=True)
+    rejected_franchise = _safe_query("franchise_applications", select="id", filters=[("status", "rejected", "eq")], count_only=True)
+    pending_careers = _safe_query("career_applications", select="id", filters=[("status", "pending", "eq")], count_only=True)
+    approved_careers = _safe_query("career_applications", select="id", filters=[("status", "approved", "eq")], count_only=True)
+    rejected_careers = _safe_query("career_applications", select="id", filters=[("status", "rejected", "eq")], count_only=True)
+    pending_contacts = _safe_query("contact_messages", select="id", filters=[("status", "pending", "eq")], count_only=True)
+
+    order_data = _safe_query("orders", select="total,status,created_at")
     total_revenue = sum(o.get("total", 0) for o in order_data)
+    products_online = _safe_query("products", select="id,is_active")
+    online_count = sum(1 for p in products_online if p.get("is_active"))
 
-    def _count(items, **kw):
-        return sum(1 for i in items if all(i.get(k) == v for k, v in kw.items()))
-
-    today_orders_list = []
+    today_orders = 0
+    today_revenue = 0.0
     for o in order_data:
         ca = o.get("created_at")
         if ca:
             try:
                 if datetime.fromisoformat(ca).date() == today:
-                    today_orders_list.append(o)
+                    today_orders += 1
+                    today_revenue += o.get("total", 0)
             except (ValueError, TypeError):
                 pass
 
+    franchise_month = _safe_query("franchise_applications", select="id,created_at", limit=500)
+    month_count = sum(
+        1 for f in franchise_month
+        if f.get("created_at") and
+        _parse_date_safe(f["created_at"]) and
+        _parse_date_safe(f["created_at"]) >= month_start
+    )
+
     return {
-        "franchise_count": len(franchise_data),
-        "career_count": len(career_data),
-        "contact_count": len(contact_data),
+        "franchise_count": franchise_count,
+        "career_count": career_count,
+        "contact_count": contact_count,
         "menu_count": menu_count,
-        "product_count": len(product_data),
+        "product_count": product_count,
         "job_opening_count": job_count,
         "order_count": len(order_data),
         "total_revenue": total_revenue,
         "admin_count": admin_count,
-        "pending_franchise": _count(franchise_data, status="pending"),
-        "pending_careers": _count(career_data, status="pending"),
-        "pending_contacts": _count(contact_data, status="pending"),
-        "submitted_franchise": _count(franchise_data, status="submitted"),
-        "under_process_franchise": _count(franchise_data, status="under_process"),
-        "approved_franchise": _count(franchise_data, status="approved"),
-        "rejected_franchise": _count(franchise_data, status="rejected"),
-        "approved_careers": _count(career_data, status="approved"),
-        "rejected_careers": _count(career_data, status="rejected"),
-        "pending_orders": _count(order_data, status="pending"),
-        "preparing_orders": _count(order_data, status="preparing"),
-        "delivered_orders": _count(order_data, status="delivered"),
-        "cancelled_orders": _count(order_data, status="cancelled"),
-        "today_orders": len(today_orders_list),
-        "today_revenue": sum(o.get("total", 0) for o in today_orders_list),
-        "products_online": sum(1 for p in product_data if p.get("is_active")),
-        "franchise_month_count": sum(
-            1 for f in franchise_data
-            if f.get("created_at") and
-            _parse_date_safe(f["created_at"]) and
-            _parse_date_safe(f["created_at"]) >= month_start
-        ),
+        "pending_franchise": pending_franchise,
+        "pending_careers": pending_careers,
+        "pending_contacts": pending_contacts,
+        "submitted_franchise": submitted_franchise,
+        "under_process_franchise": under_process_franchise,
+        "approved_franchise": approved_franchise,
+        "rejected_franchise": rejected_franchise,
+        "approved_careers": approved_careers,
+        "rejected_careers": rejected_careers,
+        "pending_orders": sum(1 for o in order_data if o.get("status") == "pending"),
+        "preparing_orders": sum(1 for o in order_data if o.get("status") == "preparing"),
+        "delivered_orders": sum(1 for o in order_data if o.get("status") == "delivered"),
+        "cancelled_orders": sum(1 for o in order_data if o.get("status") == "cancelled"),
+        "today_orders": today_orders,
+        "today_revenue": today_revenue,
+        "products_online": online_count,
+        "franchise_month_count": month_count,
     }
 
 
@@ -124,11 +138,24 @@ def _parse_date_safe(date_str):
 
 
 @router.get("/api/admin/applications")
-def get_applications(_=Depends(get_current_admin)):
-    franchise = _safe_query("franchise_applications", order=("created_at", True), limit=500)
-    careers = _safe_query("career_applications", order=("created_at", True), limit=500)
-    contacts = _safe_query("contact_messages", order=("created_at", True), limit=500)
-    return {"franchise": franchise, "careers": careers, "contacts": contacts}
+def get_applications(offset: int = 0, limit: int = 50, _=Depends(get_current_admin)):
+    limit = min(limit, 200)
+    franchise = _safe_query("franchise_applications", order=("created_at", True), limit=limit)
+    careers = _safe_query("career_applications", order=("created_at", True), limit=limit)
+    contacts = _safe_query("contact_messages", order=("created_at", True), limit=limit)
+
+    franchise_total = _safe_query("franchise_applications", select="id", count_only=True)
+    careers_total = _safe_query("career_applications", select="id", count_only=True)
+    contacts_total = _safe_query("contact_messages", select="id", count_only=True)
+
+    return {
+        "franchise": franchise,
+        "careers": careers,
+        "contacts": contacts,
+        "franchise_total": franchise_total,
+        "careers_total": careers_total,
+        "contacts_total": contacts_total,
+    }
 
 
 @router.put("/api/admin/franchise/{app_id}")
@@ -243,7 +270,8 @@ def get_franchise_cities(_=Depends(get_current_admin)):
 
 
 @router.post("/api/admin/reset-database")
-def reset_database(_=Depends(require_super_admin)):
+def reset_database(admin=Depends(require_super_admin)):
+    log_activity(admin["username"], "reset_database", "system", 0, "Full database reset initiated")
     tables_to_clear = [
         "activity_logs",
         "orders",
@@ -272,4 +300,6 @@ def reset_database(_=Depends(require_super_admin)):
         except Exception as e:
             logger.error(f"Failed to clear table {table}: {e}")
             cleared[table] = "error"
+    total_cleared = sum(v for v in cleared.values() if isinstance(v, int))
+    log_activity(admin["username"], "reset_database_complete", "system", 0, f"Reset complete. Total rows deleted: {total_cleared}. Tables: {cleared}")
     return {"ok": True, "cleared": cleared}

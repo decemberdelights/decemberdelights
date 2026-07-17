@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { API } from "@/lib/api";
+import { formatPriceINR } from "@/lib/utils";
 import { ProductCardSkeleton } from "@/components/Skeleton";
 
 interface Product {
@@ -72,10 +73,27 @@ export default function ShopPage() {
       .catch((err) => { if (err.name !== "AbortError") { setFetchError(true); setLoading(false); } });
     fetch(`${API}/api/products/categories`, { signal: controller.signal, cache: "no-store" })
       .then((r) => r.json())
-      .then(setCategories)
+      .then((data) => setCategories(data))
       .catch(() => {});
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (products.length === 0) return;
+    setCart((prev) => {
+      let changed = false;
+      const next = prev.map((item) => {
+        const fresh = products.find((p) => p.id === item.product.id);
+        if (!fresh) { changed = true; return null; }
+        if (fresh.price !== item.product.price || fresh.stock !== item.product.stock) {
+          changed = true;
+          return { ...item, product: fresh, quantity: Math.min(item.quantity, fresh.stock) };
+        }
+        return item;
+      }).filter(Boolean) as CartItem[];
+      return changed ? next : prev;
+    });
+  }, [products]);
 
   const filtered = useMemo(() => activeCategory ? products.filter((p) => p.category === activeCategory) : products, [activeCategory, products]);
   const cartCount = useMemo(() => cart.reduce((s, c) => s + c.quantity, 0), [cart]);
@@ -119,41 +137,54 @@ export default function ShopPage() {
       setFormError("Please enter a valid phone number (7-15 digits)");
       return;
     }
+    if (form.customer_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email)) {
+      setFormError("Please enter a valid email address");
+      return;
+    }
     if (cart.length === 0) {
       setFormError("Your cart is empty");
       return;
     }
     setSaving(true);
     setFormError("");
-    const r = await fetch(`${API}/api/orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer_name: form.customer_name,
-        customer_phone: form.customer_phone,
-        customer_email: form.customer_email,
-        customer_address: form.customer_address,
-        items: JSON.stringify(cart.map((c) => ({ id: c.product.id, name: c.product.name, price: c.product.price, quantity: c.quantity }))),
-        total: cartTotal,
-      }),
-    });
-    const data = await r.json();
-    if (r.ok) {
-      const phone = form.customer_phone;
-      setOrderId(data.id);
-      setOrderPhone(phone);
-      setOrderSuccess(true);
-      setCart([]);
-      setShowCheckout(false);
-      setShowCart(false);
-      setForm({ customer_name: "", customer_phone: "", customer_email: "", customer_address: "" });
-      redirectTimer.current = setTimeout(() => {
-        router.push(`/track?phone=${encodeURIComponent(phone)}`);
-      }, 4000);
-    } else {
-      setFormError(data.error || "Order failed");
+    try {
+      const r = await fetch(`${API}/api/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_name: form.customer_name,
+          customer_phone: form.customer_phone,
+          customer_email: form.customer_email,
+          customer_address: form.customer_address,
+          items: JSON.stringify(cart.map((c) => ({ id: c.product.id, name: c.product.name, price: c.product.price, quantity: c.quantity }))),
+          total: cartTotal,
+        }),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        const phone = form.customer_phone;
+        setOrderId(data.id);
+        setOrderPhone(phone);
+        setOrderSuccess(true);
+        setCart([]);
+        setShowCheckout(false);
+        setShowCart(false);
+        setForm({ customer_name: "", customer_phone: "", customer_email: "", customer_address: "" });
+        fetch(`${API}/api/products`, { cache: "no-store" })
+          .then((r2) => r2.json())
+          .then((fresh) => setProducts(fresh))
+          .catch(() => {});
+        redirectTimer.current = setTimeout(() => {
+          router.push(`/track?phone=${encodeURIComponent(phone)}`);
+        }, 4000);
+      } else {
+        setFormError(data.detail || "Order failed. Please try again.");
+      }
+    } catch {
+      setFormError("Network error. Please check your connection and try again.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   useEffect(() => {
@@ -267,20 +298,23 @@ export default function ShopPage() {
                       {product.description && <p style={{ fontFamily: fontOutfit, color: "#3d4a3e", fontSize: "0.8rem", lineHeight: 1.5, marginBottom: "0.75rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>{product.description}</p>}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "0.75rem" }}>
                         <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-                          <span style={{ fontFamily: fontBebas, color: dark, fontSize: "1.35rem" }}>&#8377;{product.price}</span>
-                          {hasDiscount && <span style={{ fontFamily: fontOutfit, color: "#bbb", fontSize: "0.85rem", textDecoration: "line-through" }}>&#8377;{product.original_price}</span>}
+                          <span style={{ fontFamily: fontBebas, color: dark, fontSize: "1.35rem" }}>{formatPriceINR(product.price)}</span>
+                          {hasDiscount && <span style={{ fontFamily: fontOutfit, color: "#bbb", fontSize: "0.85rem", textDecoration: "line-through" }}>{formatPriceINR(product.original_price)}</span>}
                         </div>
                         {product.stock > 0 && <span style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.85rem" }}>{product.stock} in stock</span>}
                       </div>
                       <div style={{ marginTop: "0.85rem" }}>
                         {inCart ? (
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                              <button onClick={() => updateQty(product.id, -1)} style={{ width: "36px", height: "36px", borderRadius: "10px", border: `1.5px solid ${dark}`, background: "#fff", color: dark, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", transition: "all 0.15s" }}>-</button>
-                              <span style={{ fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.95rem", minWidth: "28px", textAlign: "center" as const, color: dark }}>{inCart.quantity}</span>
-                              <button onClick={() => updateQty(product.id, 1)} disabled={inCart.quantity >= product.stock} style={{ width: "36px", height: "36px", borderRadius: "10px", border: "none", background: dark, color: "#fff", fontWeight: 700, cursor: inCart.quantity >= product.stock ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", opacity: inCart.quantity >= product.stock ? 0.4 : 1, transition: "all 0.15s" }}>+</button>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <button onClick={() => updateQty(product.id, -1)} style={{ width: "36px", height: "36px", borderRadius: "10px", border: `1.5px solid ${dark}`, background: "#fff", color: dark, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", transition: "all 0.15s" }}>-</button>
+                                <span style={{ fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.95rem", minWidth: "28px", textAlign: "center" as const, color: dark }}>{inCart.quantity}</span>
+                                <button onClick={() => updateQty(product.id, 1)} disabled={inCart.quantity >= product.stock} style={{ width: "36px", height: "36px", borderRadius: "10px", border: "none", background: dark, color: "#fff", fontWeight: 700, cursor: inCart.quantity >= product.stock ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", opacity: inCart.quantity >= product.stock ? 0.4 : 1, transition: "all 0.15s" }}>+</button>
+                              </div>
+                              {inCart.quantity >= product.stock && <span style={{ fontFamily: fontOutfit, fontSize: "0.7rem", color: "#999", whiteSpace: "nowrap" }}>Max {product.stock} available</span>}
                             </div>
-                            <span style={{ fontFamily: fontOutfit, fontWeight: 800, fontSize: "0.9rem", color: dark }}>&#8377;{product.price * inCart.quantity}</span>
+                            <span style={{ fontFamily: fontOutfit, fontWeight: 800, fontSize: "0.9rem", color: dark }}>{formatPriceINR(product.price * inCart.quantity)}</span>
                           </div>
                         ) : (
                           <button onClick={() => addToCart(product)} disabled={product.stock <= 0} style={{ width: "100%", padding: "0.75rem", borderRadius: "12px", border: "none", background: product.stock > 0 ? dark : "#e0e0e0", color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.8rem", cursor: product.stock > 0 ? "pointer" : "not-allowed", letterSpacing: "0.03em", minHeight: "44px", transition: "all 0.2s" }}>
@@ -370,7 +404,7 @@ export default function ShopPage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h4 style={{ fontFamily: fontOutfit, color: dark, fontSize: "0.85rem", fontWeight: 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{item.product.name}</h4>
-                        <p style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.85rem", margin: "2px 0 0" }}>&#8377;{item.product.price} each</p>
+                        <p style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.85rem", margin: "2px 0 0" }}>{formatPriceINR(item.product.price)} each</p>
                       </div>
                       <button onClick={() => removeFromCart(item.product.id)} style={{ background: "none", border: "none", color: "#ccc", cursor: "pointer", padding: "4px", fontSize: "1rem", lineHeight: 1, flexShrink: 0, transition: "color 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#e74c3c"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#ccc"; }}>&times;</button>
                     </div>
@@ -380,7 +414,7 @@ export default function ShopPage() {
                         <span style={{ fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.85rem", minWidth: "36px", textAlign: "center" as const, color: dark }}>{item.quantity}</span>
                         <button onClick={() => updateQty(item.product.id, 1)} disabled={item.quantity >= item.product.stock} style={{ width: "32px", height: "32px", borderRadius: "8px", border: "none", background: dark, color: "#fff", cursor: item.quantity >= item.product.stock ? "not-allowed" : "pointer", fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, opacity: item.quantity >= item.product.stock ? 0.4 : 1, transition: "all 0.15s" }}>+</button>
                       </div>
-                      <span style={{ fontFamily: fontOutfit, fontWeight: 800, fontSize: "0.9rem", color: dark }}>&#8377;{item.product.price * item.quantity}</span>
+                       <span style={{ fontFamily: fontOutfit, fontWeight: 800, fontSize: "0.9rem", color: dark }}>{formatPriceINR(item.product.price * item.quantity)}</span>
                     </div>
                   </div>
                 </div>
@@ -392,7 +426,7 @@ export default function ShopPage() {
               <div style={{ padding: "1.25rem 1.5rem", borderTop: "1px solid #f0ede4", flexShrink: 0, background: "#fff", paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                   <span style={{ fontFamily: fontOutfit, fontWeight: 600, color: muted, fontSize: "0.9rem" }}>Total</span>
-                  <span style={{ fontFamily: fontBebas, color: dark, fontSize: "1.5rem" }}>&#8377;{cartTotal}</span>
+                  <span style={{ fontFamily: fontBebas, color: dark, fontSize: "1.5rem" }}>{formatPriceINR(cartTotal)}</span>
                 </div>
                 <button onClick={() => { setShowCart(false); setShowCheckout(true); }} style={{ width: "100%", padding: "1rem", borderRadius: "14px", border: "none", background: dark, color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 4px 16px rgba(27,60,51,0.2)" }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 8px 24px rgba(27,60,51,0.3)"; e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(27,60,51,0.2)"; e.currentTarget.style.transform = "none"; }}>
                   Proceed to Checkout
@@ -415,12 +449,12 @@ export default function ShopPage() {
               {cart.map((item) => (
                 <div key={item.product.id} style={{ display: "flex", justifyContent: "space-between", fontFamily: fontOutfit, fontSize: "0.85rem", marginBottom: "0.5rem", color: "#1a1a1a" }}>
                   <span>{item.product.name} x{item.quantity}</span>
-                  <span style={{ fontWeight: 700, color: dark }}>&#8377;{item.product.price * item.quantity}</span>
+                  <span style={{ fontWeight: 700, color: dark }}>{formatPriceINR(item.product.price * item.quantity)}</span>
                 </div>
               ))}
               <div style={{ borderTop: "1px solid #e8e5e0", marginTop: "0.5rem", paddingTop: "0.5rem", display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
                 <span style={{ fontFamily: fontOutfit, color: dark }}>Total</span>
-                <span style={{ fontFamily: fontBebas, fontSize: "1.2rem", color: dark }}>&#8377;{cartTotal}</span>
+                <span style={{ fontFamily: fontBebas, fontSize: "1.2rem", color: dark }}>{formatPriceINR(cartTotal)}</span>
               </div>
             </div>
 
@@ -431,7 +465,7 @@ export default function ShopPage() {
               </div>
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: dark, marginBottom: "0.3rem", fontFamily: fontOutfit }}>Mobile Number *</label>
-                <input value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} style={{ width: "100%", padding: "0.7rem 1rem", borderRadius: "10px", border: "1.5px solid #ddd", fontFamily: fontOutfit, fontSize: "0.9rem", outline: "none", color: dark, background: "#fff", boxSizing: "border-box" as const }} placeholder="10-digit mobile number" />
+                <input value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} style={{ width: "100%", padding: "0.7rem 1rem", borderRadius: "10px", border: "1.5px solid #ddd", fontFamily: fontOutfit, fontSize: "0.9rem", outline: "none", color: dark, background: "#fff", boxSizing: "border-box" as const }} inputMode="tel" placeholder="10-digit mobile number" />
               </div>
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: dark, marginBottom: "0.3rem", fontFamily: fontOutfit }}>Email (for order confirmation)</label>

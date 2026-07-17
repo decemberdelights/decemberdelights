@@ -11,6 +11,7 @@ import {
   Clock,
   ArrowRight,
   Check,
+  MessageSquare,
 } from "lucide-react";
 
 export {
@@ -24,6 +25,7 @@ export {
   Clock,
   ArrowRight,
   Check,
+  MessageSquare,
 };
 
 export function Instagram({ size = 18, ...props }: { size?: number } & React.SVGProps<SVGSVGElement>) {

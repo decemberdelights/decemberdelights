@@ -115,14 +115,14 @@ export default function AdminPage() {
         else if (tab === "products") { const r = await api("/api/admin/products"); if (r.ok) setProducts(await r.json()); }
         else if (tab === "jobs") { const r = await api("/api/admin/jobs"); if (r.ok) setJobs(await r.json()); }
         else if (tab === "orders") {
-          const [ordersR, statsR] = await Promise.all([api("/api/admin/orders"), api("/api/admin/orders/stats")]);
-          if (ordersR.ok) setOrders(await ordersR.json());
+          const [ordersR, statsR] = await Promise.all([api("/api/admin/orders?limit=200"), api("/api/admin/orders/stats")]);
+          if (ordersR.ok) { const d = await ordersR.json(); setOrders(d.orders || d || []); }
           if (statsR.ok) setOrderStats(await statsR.json());
         }
         else if (tab === "charts") {
           await loadAll();
-          const [ordersR, statsR] = await Promise.all([api("/api/admin/orders"), api("/api/admin/orders/stats")]);
-          if (ordersR.ok) setOrders(await ordersR.json());
+          const [ordersR, statsR] = await Promise.all([api("/api/admin/orders?limit=200"), api("/api/admin/orders/stats")]);
+          if (ordersR.ok) { const d = await ordersR.json(); setOrders(d.orders || d || []); }
           if (statsR.ok) setOrderStats(await statsR.json());
         }
         else if (tab === "admins" && role === "super_admin") { const r = await api("/api/admin/users"); if (r.ok) setAdminUsers(await r.json()); }

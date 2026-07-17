@@ -1,6 +1,6 @@
 import secrets
 import hmac
-from fastapi import Request, HTTPException
+from fastapi import Request, Response, HTTPException
 
 CSRF_COOKIE_NAME = "csrf_token"
 CSRF_HEADER_NAME = "x-csrf-token"
@@ -19,6 +19,12 @@ def set_csrf_cookie(response, token: str):
         max_age=86400,
         path="/",
     )
+
+
+def rotate_csrf_token(response: Response) -> str:
+    new_token = generate_csrf_token()
+    set_csrf_cookie(response, new_token)
+    return new_token
 
 
 def validate_csrf(request: Request):

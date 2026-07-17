@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Instagram, Phone, Mail, ArrowRight } from "@/components/icons";
+import { MapPin, Instagram, Phone, Mail, ArrowRight, User, MessageSquare } from "@/components/icons";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
 import SuccessState from "@/components/SuccessState";
@@ -22,7 +22,7 @@ export default function ContactPage() {
         body: JSON.stringify(form),
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error || "Failed to send message");
+      if (!r.ok) throw new Error(d.detail || "Failed to send message");
       setStatus("success");
     } catch (err: unknown) {
       setStatus("error");
@@ -134,7 +134,7 @@ export default function ContactPage() {
           <form onSubmit={handleSubmit} style={{ background: "#fdf9f4", borderRadius: "24px", padding: "2.5rem", boxShadow: "0 2px 24px rgba(27,60,51,0.04)" }}>
             <div className="contact-form-grid">
               <div>
-                <label style={labelStyle}><Mail size={16} /> Your Name *</label>
+                <label style={labelStyle}><User size={16} /> Your Name *</label>
                 <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={inputStyle} placeholder="Your full name" />
               </div>
               <div>
@@ -146,7 +146,7 @@ export default function ContactPage() {
                 <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={inputStyle} placeholder="+91 XXXXX XXXXX" />
               </div>
               <div>
-                <label style={labelStyle}><Mail size={16} /> Subject</label>
+                <label style={labelStyle}><MessageSquare size={16} /> Subject</label>
                 <input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} style={inputStyle} placeholder="What is this about?" />
               </div>
             </div>

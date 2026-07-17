@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import TermsModal from "@/components/terms-modal";
 import { API } from "@/lib/api";
@@ -31,7 +31,37 @@ export default function FranchisePage() {
   const [status, setStatus] = useState<"idle" | "terms" | "submitting" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [tcLanguage, setTcLanguage] = useState("en");
   const formRef = useRef<HTMLDivElement>(null);
+  const rzpRef = useRef<RazorpayCheckout | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || window.Razorpay) return;
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("franchise_form");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.step) setStep(parsed.step);
+        if (parsed.form) setForm(parsed.form);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (status === "idle") {
+      try {
+        sessionStorage.setItem("franchise_form", JSON.stringify({ step, form }));
+      } catch {}
+    }
+  }, [step, form, status]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -63,14 +93,17 @@ export default function FranchisePage() {
       const file = e.target.files[0];
       if (file.size > MAX_FILE_SIZE) {
         setErrorMsg(`File "${file.name}" is ${formatFileSize(file.size)}. Maximum allowed is 10MB.`);
+        e.target.value = "";
         return;
       }
       if (file.type && !ALLOWED_TYPES[file.type]) {
         setErrorMsg(`File type "${file.type}" is not allowed. Accepted: PDF, JPG, PNG, DOC, DOCX.`);
+        e.target.value = "";
         return;
       }
       setErrorMsg("");
       setFiles({ ...files, [e.target.name]: file });
+      e.target.value = "";
     }
   };
 
@@ -124,29 +157,93 @@ export default function FranchisePage() {
     setStatus("terms");
   };
 
+  const openRazorpayCheckout = useCallback((orderId: string, amount: number, language: string) => {
+    setTcLanguage(language);
+
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    if (!keyId) {
+      setStatus("error");
+      setErrorMsg("Payment gateway not configured. Please try again later.");
+      return;
+    }
+    if (typeof window === "undefined" || !window.Razorpay) {
+      setStatus("error");
+      setErrorMsg("Payment gateway is loading. Please wait a moment and try again.");
+      return;
+    }
+
+    const options: RazorpayOptions = {
+      key: keyId,
+      amount,
+      currency: "INR",
+      name: "December Delights",
+      description: "Franchise Application Fee",
+      order_id: orderId,
+      prefill: { name: form.full_name, email: form.email, contact: form.phone },
+      theme: { color: "#1b3c33" },
+      modal: {
+        ondismiss: () => {
+          setStatus("idle");
+          setErrorMsg("Payment was cancelled. Your application has not been submitted.");
+        },
+      },
+      method: {
+        netbanking: true,
+        card: true,
+        upi: true,
+        wallet: false,
+      },
+      handler: async (response: RazorpayResponse) => {
+        setStatus("submitting");
+        try {
+          const formData = new FormData();
+          formData.append("full_name", form.full_name);
+          formData.append("email", form.email);
+          formData.append("phone", form.phone);
+          Object.entries(files).forEach(([key, file]) => { if (file) formData.append(key, file); });
+          formData.append("business_experience", form.business_experience);
+          formData.append("preferred_location", form.preferred_location);
+          formData.append("investment_capability", form.investment_capability);
+          formData.append("message", form.message);
+          formData.append("tc_accepted", "true");
+          formData.append("tc_language", language);
+          formData.append("razorpay_order_id", response.razorpay_order_id);
+          formData.append("razorpay_payment_id", response.razorpay_payment_id);
+
+          const res = await fetch(`${API}/api/franchise`, { method: "POST", body: formData });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Submission failed");
+          setStatus("success");
+          try { sessionStorage.removeItem("franchise_form"); } catch {}
+        } catch (err: unknown) {
+          setStatus("error");
+          setErrorMsg(err instanceof Error ? err.message : "Payment verified but submission failed. Please contact support.");
+        }
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzpRef.current = rzp;
+    rzp.open();
+  }, [form, files]);
+
   const handleTcAccept = async (language: string) => {
     setStatus("submitting");
-
-    const formData = new FormData();
-    formData.append("full_name", form.full_name);
-    formData.append("email", form.email);
-    formData.append("phone", form.phone);
-    Object.entries(files).forEach(([key, file]) => { if (file) formData.append(key, file); });
-    formData.append("business_experience", form.business_experience);
-    formData.append("preferred_location", form.preferred_location);
-    formData.append("investment_capability", form.investment_capability);
-    formData.append("message", form.message);
-    formData.append("tc_accepted", "true");
-    formData.append("tc_language", language);
+    setErrorMsg("");
 
     try {
-      const res = await fetch(`${API}/api/franchise`, { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Submission failed");
-      setStatus("success");
+      const orderRes = await fetch(`${API}/api/franchise/create-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, phone: form.phone }),
+      });
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) throw new Error(orderData.detail || "Failed to create payment order");
+
+      openRazorpayCheckout(orderData.order_id, orderData.amount, language);
     } catch (err: unknown) {
       setStatus("error");
-      setErrorMsg(err instanceof Error ? err.message : "Submission failed");
+      setErrorMsg(err instanceof Error ? err.message : "Failed to initiate payment. Please try again.");
     }
   };
 
@@ -450,7 +547,7 @@ export default function FranchisePage() {
 
                     <div style={{ background: "rgba(200,169,126,0.08)", border: "1px solid rgba(200,169,126,0.2)", borderRadius: "12px", padding: "1.25rem" }}>
                       <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", lineHeight: 1.6 }}>
-                        Click <strong>"Accept & Submit"</strong> to review our Terms & Conditions before submitting your application.
+                        Application fee: <strong>₹10,000</strong> (non-refundable). Click <strong>"Accept & Pay"</strong> to review Terms &amp; Conditions and complete payment.
                       </p>
                     </div>
                   </div>
@@ -479,7 +576,7 @@ export default function FranchisePage() {
                 </button>
               ) : (
                 <button type="button" onClick={handleSubmitClick} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
-                  Accept & Submit<ArrowRight size={16} />
+                  Accept & Pay ₹10,000<ArrowRight size={16} />
                 </button>
               )}
             </div>

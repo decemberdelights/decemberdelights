@@ -45,7 +45,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
 
 
@@ -62,8 +62,8 @@ async def limit_upload_size(request: Request, call_next):
         path = request.url.path
         csrf_exempt = {
             "/api/auth/login", "/api/auth/logout", "/api/auth/check",
-            "/api/orders", "/api/contact", "/api/franchise",
-            "/api/franchise/login", "/api/franchise/logout",
+            "/api/orders", "/api/contact",
+            "/api/franchise", "/api/franchise/login", "/api/franchise/logout",
             "/api/careers/track", "/api/health",
         }
         is_admin_action = path.startswith("/api/admin/") or path.startswith("/api/menu/") or path.startswith("/api/products/") or path.startswith("/api/jobs/")
@@ -94,9 +94,11 @@ async def log_requests(request: Request, call_next):
     if process_time > 5.0:
         logger.warning(f"Slow request: {request.method} {request.url.path} took {process_time:.2f}s")
     if request.url.path.startswith("/api/"):
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
+        existing_cc = response.headers.get("cache-control", "")
+        if "public" not in existing_cc:
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
     return response
 
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import ScrollRevealProvider from "@/components/scroll-reveal-provider";
 import { API } from "@/lib/api";
+import { formatPriceINR } from "@/lib/utils";
 import { MenuCardSkeleton } from "@/components/Skeleton";
 
 interface MenuItem {
@@ -15,18 +16,19 @@ interface MenuItem {
 export default function MenuPage() {
   const [menuData, setMenuData] = useState<Record<string, MenuItem[]>>({});
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const categories = Object.keys(menuData);
   const [active, setActive] = useState("");
 
   useEffect(() => {
     fetch(`${API}/api/menu`, { cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((data) => {
         setMenuData(data);
         const cats = Object.keys(data);
         if (cats.length > 0) setActive(cats[0]);
       })
-      .catch(() => {})
+      .catch(() => { setFetchError(true); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -132,6 +134,11 @@ export default function MenuPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(300px, 100%), 1fr))", gap: "1.5rem", maxWidth: "1400px", margin: "0 auto", padding: "4rem 2rem" }}>
             {[1, 2, 3, 4, 5, 6].map((i) => <MenuCardSkeleton key={i} />)}
           </div>
+        </div>
+      ) : fetchError ? (
+        <div style={{ textAlign: "center", padding: "6rem 2rem" }}>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#e74c3c", fontSize: "1rem", marginBottom: "1rem" }}>Failed to load menu. Please try again.</p>
+          <button onClick={() => window.location.reload()} style={{ padding: "0.7rem 2rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Retry</button>
         </div>
       ) : categories.length === 0 ? (
         <div style={{ textAlign: "center", padding: "6rem 2rem" }}>
@@ -252,7 +259,7 @@ export default function MenuPage() {
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              &#8377;{item.price}
+                              {formatPriceINR(Number(item.price))}
                             </span>
                           )}
                         </div>

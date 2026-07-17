@@ -171,6 +171,11 @@ def send_franchise_acknowledgment(full_name: str, email: str, phone: str, passwo
                     <li>We may reach out to you for additional information.</li>
                 </ul>
 
+                <div style="background:#fff3cd;border-left:4px solid #ffc107;border-radius:6px;padding:16px;margin:20px 0;">
+                    <p style="margin:0 0 6px 0;color:#856404;font-size:14px;"><strong>Security Notice:</strong></p>
+                    <p style="margin:0;color:#856404;font-size:14px;">The password above was auto-generated. For your security, please change your password immediately after your first login.</p>
+                </div>
+
                 <div style="text-align:center;margin-top:24px;">
                     <a href="https://decemberdelights.vercel.app/franchise/status" style="background:#4a2c2a;color:#fff;padding:12px 28px;text-decoration:none;border-radius:6px;font-size:14px;display:inline-block;">Check Status</a>
                 </div>

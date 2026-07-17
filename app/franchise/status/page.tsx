@@ -48,7 +48,7 @@ export default function FranchiseStatusPage() {
         body: JSON.stringify({ phone, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.detail);
       setApplication(data.application);
     } catch (err: unknown) {
       setLoginError(err instanceof Error ? err.message : "Login failed");
@@ -168,7 +168,7 @@ export default function FranchiseStatusPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <div>
                 <label style={labelStyle}>Phone Number *</label>
-                <input required value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} placeholder="+91 XXXXX XXXXX" />
+                <input required value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} placeholder="+91 XXXXX XXXXX" inputMode="numeric" />
               </div>
               <div>
                 <label style={labelStyle}>Password *</label>
