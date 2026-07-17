@@ -309,6 +309,9 @@ export default function FranchisePage() {
         .field-group { position: relative; }
         .field-group label { transition: color 0.2s; }
         .field-group input:focus, .field-group textarea:focus, .field-group select:focus { border-color: #1b3c33; box-shadow: 0 0 0 3px rgba(27,60,51,0.06); }
+        .franchise-benefits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; }
+        .franchise-review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .franchise-step-labels { display: flex; justify-content: space-between; margin-top: 1rem; }
         @media (max-width: 768px) {
           .franchise-form-grid { grid-template-columns: 1fr !important; }
           .franchise-docs-grid { grid-template-columns: 1fr !important; }
@@ -316,12 +319,21 @@ export default function FranchisePage() {
           .step-dot { width: 34px; height: 34px; font-size: 0.75rem; }
           .step-line { max-width: 48px; }
           .franchise-hero-image { display: none !important; }
+          .franchise-hero { min-height: 45vh !important; }
+          .franchise-hero-inner { padding: 7rem 5% 3rem !important; }
+          .franchise-benefits-grid { grid-template-columns: 1fr 1fr !important; }
+          .franchise-review-grid { grid-template-columns: 1fr !important; }
+          .franchise-step-labels span { font-size: 0.7rem !important; letter-spacing: 0 !important; }
+        }
+        @media (max-width: 420px) {
+          .franchise-benefits-grid { grid-template-columns: 1fr !important; }
+          .franchise-hero-inner { padding: 6.5rem 4% 2.5rem !important; }
         }
       `}</style>
 
       {/* Hero */}
       <section className="franchise-hero" data-bg="dark">
-        <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "8rem 5% 4rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "2rem" }}>
+        <div className="franchise-hero-inner" style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "8rem 5% 4rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "2rem" }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
               <span style={{ width: "32px", height: "1px", background: "#eab96a" }} />
@@ -352,7 +364,7 @@ export default function FranchisePage() {
       {/* Benefits Strip */}
       <section data-bg="light" style={{ padding: "0 5%", background: "#fdf9f4", position: "relative", zIndex: 3, marginTop: "-2rem" }}>
         <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1px", background: "#e8e5e0", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 24px rgba(27,60,51,0.06)" }}>
+          <div className="franchise-benefits-grid" style={{ background: "#e8e5e0", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 24px rgba(27,60,51,0.06)" }}>
             {[
               { num: "01", label: "Complete Setup", desc: "Interior to equipment" },
               { num: "02", label: "Brand Protection", desc: "Exclusive territory" },
@@ -386,7 +398,7 @@ export default function FranchisePage() {
                 <div key={i} style={{ position: "absolute", top: "50%", left: `${(i / (STEPS.length - 1)) * 100}%`, transform: "translate(-50%, -50%)", width: i <= step ? "14px" : "10px", height: i <= step ? "14px" : "10px", borderRadius: "50%", background: i < step ? "#1b3c33" : i === step ? "#eab96a" : "#e8e5e0", border: i <= step ? "none" : "2px solid #d4d0ca", transition: "all 0.3s", zIndex: 1 }} />
               ))}
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}>
+            <div className="franchise-step-labels">
               {STEPS.map((s, i) => (
                 <span key={s} style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.8rem", fontWeight: i <= step ? 700 : 400, color: i <= step ? "#1b3c33" : "#bbb", transition: "color 0.3s", letterSpacing: "0.02em" }}>{s}</span>
               ))}
@@ -517,7 +529,7 @@ export default function FranchisePage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                     <div style={{ background: "#f7f3ee", borderRadius: "12px", padding: "1.25rem" }}>
                       <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Personal Details</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                      <div className="franchise-review-grid">
                         <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Name</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.full_name}</p></div>
                         <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Email</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.email}</p></div>
                         <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Phone</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.phone}</p></div>
@@ -527,7 +539,7 @@ export default function FranchisePage() {
 
                     <div style={{ background: "#f7f3ee", borderRadius: "12px", padding: "1.25rem" }}>
                       <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Business Details</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                      <div className="franchise-review-grid">
                         <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Preferred City</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.preferred_location}</p></div>
                         {form.investment_capability && <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Investment</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.investment_capability}</p></div>}
                       </div>
@@ -575,7 +587,7 @@ export default function FranchisePage() {
                   Continue <ArrowRight size={16} />
                 </button>
               ) : (
-                <button type="button" onClick={handleSubmitClick} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
+                <button type="button" onClick={handleSubmitClick} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "clamp(0.8rem, 3vw, 0.95rem)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s", whiteSpace: "nowrap", minWidth: 0 }} onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
                   Accept & Pay ₹10,000<ArrowRight size={16} />
                 </button>
               )}

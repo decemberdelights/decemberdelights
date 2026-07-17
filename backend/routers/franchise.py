@@ -263,10 +263,8 @@ async def create_franchise(
     # === END PAYMENT SECURITY CHECKS ===
 
     existing = await asyncio.to_thread(
-        lambda: supabase.table("franchise_applications").select("id").eq("phone", phone).execute()
+        lambda: supabase.table("franchise_applications").select("id, login_id, email").eq("phone", phone).execute()
     )
-    if existing.data:
-        raise HTTPException(status_code=400, detail="Application already exists with this phone number")
 
     password = _generate_secure_password()
     password_hash = await asyncio.to_thread(hash_password, password)
@@ -300,16 +298,28 @@ async def create_franchise(
         "razorpay_order_id": razorpay_order_id,
         "razorpay_payment_id": razorpay_payment_id,
     }
-    result = await asyncio.to_thread(
-        lambda: supabase.table("franchise_applications").insert(data).execute()
-    )
-    app_id = result.data[0]["id"]
+
+    if existing.data and existing.data[0].get("login_id"):
+        raise HTTPException(status_code=400, detail="Application already exists with this phone number")
+
+    if existing.data and not existing.data[0].get("login_id"):
+        app_id = existing.data[0]["id"]
+        logger.info(f"Updating incomplete franchise app {app_id} for phone={phone} with new payment")
+        await asyncio.to_thread(
+            lambda: supabase.table("franchise_applications").update(data).eq("id", app_id).execute()
+        )
+    else:
+        result = await asyncio.to_thread(
+            lambda: supabase.table("franchise_applications").insert(data).execute()
+        )
+        app_id = result.data[0]["id"]
+
     login_id = f"DD-{uuid.uuid4().hex[:12].upper()}"
     await asyncio.to_thread(
         lambda: supabase.table("franchise_applications").update({"login_id": login_id}).eq("id", app_id).execute()
     )
 
-    logger.info(f"Franchise app {app_id} created for {email} | payment={razorpay_payment_id}")
+    logger.info(f"Franchise app {app_id} created/updated for {email} | payment={razorpay_payment_id}")
 
     try:
         from email_service import send_franchise_acknowledgment

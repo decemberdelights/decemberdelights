@@ -174,7 +174,7 @@ export default function Navbar() {
         .dd-hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(4.5px, -4.5px); }
 
         .dd-mobile-menu {
-          position: fixed; inset: 0; z-index: 105;
+          position: fixed; inset: 0; z-index: 1001;
           background: rgba(26,15,10,0.97);
           display: flex; flex-direction: column;
           justify-content: center; align-items: center;

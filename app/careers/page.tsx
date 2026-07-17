@@ -134,6 +134,7 @@ export default function CareersPage() {
               .careers-section-pad { padding: 4rem 4% !important; }
               .careers-apply-btn { padding: 0.85rem 1.8rem !important; }
               .careers-track-btn { padding: 1rem 2rem !important; }
+              .careers-track-card { padding: 1.5rem !important; }
             }
           `}</style>
           <div className="careers-hero-grid">
@@ -335,7 +336,7 @@ export default function CareersPage() {
             <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.95rem", marginTop: "0.75rem" }}>Enter your name and phone number to check your application status.</p>
           </div>
 
-          <div style={{ background: "#fdf9f4", borderRadius: "24px", padding: "2.5rem", boxShadow: "0 2px 24px rgba(27,60,51,0.04)" }}>
+          <div className="careers-track-card" style={{ background: "#fdf9f4", borderRadius: "24px", padding: "2.5rem", boxShadow: "0 2px 24px rgba(27,60,51,0.04)" }}>
             <div className="careers-track-grid">
               <div>
                 <label style={labelStyle}><User size={16} /> Your Name</label>

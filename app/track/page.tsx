@@ -83,7 +83,7 @@ function TrackContent() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#faf8f5" }}>
-      <style>{`@keyframes fadeSlideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 currentColor; } 50% { box-shadow: 0 0 0 8px transparent; } } .track-hero { background: linear-gradient(135deg, #094b3d 0%, #063a2f 50%, #1b3c33 100%); padding: 8rem 2rem 5rem; text-align: center; position: relative; overflow: hidden; } .track-search-wrap { max-width: 560px; margin: -2.5rem auto 0; padding: 0 1.5rem; position: relative; z-index: 2; } .track-step-label { font-family: 'Montserrat', sans-serif; font-size: 0.55rem; color: inherit; text-align: center; line-height: 1.2; } .track-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; } @media (max-width: 768px) { .track-hero { padding: 6rem 1.5rem 4rem; } .track-step-label { font-size: 0 !important; height: 0; overflow: hidden; opacity: 0; } .track-detail-grid { grid-template-columns: 1fr; } } @media (max-width: 480px) { .track-hero { padding: 5rem 1rem 3rem; } .track-search-wrap { padding: 0 1rem; } }`}</style>
+      <style>{`@keyframes fadeSlideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 currentColor; } 50% { box-shadow: 0 0 0 8px transparent; } } .track-hero { background: linear-gradient(135deg, #094b3d 0%, #063a2f 50%, #1b3c33 100%); padding: 8rem 2rem 5rem; text-align: center; position: relative; overflow: hidden; } .track-search-wrap { max-width: 560px; margin: -2.5rem auto 0; padding: 0 1.5rem; position: relative; z-index: 2; } .track-step-label { font-family: 'Montserrat', sans-serif; font-size: 0.55rem; color: inherit; text-align: center; line-height: 1.2; } .track-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; } .track-search-row { display: flex; gap: 0.75rem; } @media (max-width: 768px) { .track-hero { padding: 6rem 1.5rem 4rem; } .track-step-label { font-size: 0 !important; height: 0; overflow: hidden; opacity: 0; } .track-detail-grid { grid-template-columns: 1fr; } } @media (max-width: 480px) { .track-hero { padding: 5rem 1rem 3rem; } .track-search-wrap { padding: 0 1rem; } .track-search-row { flex-direction: column; } }`}</style>
 
       {/* Hero */}
       <section style={{ background: "linear-gradient(135deg, #094b3d 0%, #063a2f 50%, #1b3c33 100%)", padding: "8rem 2rem 5rem", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -103,7 +103,7 @@ function TrackContent() {
       <section style={{ maxWidth: "560px", margin: "-2.5rem auto 0", padding: "0 1.5rem", position: "relative", zIndex: 2 }}>
         <div style={{ background: "#fff", borderRadius: "20px", padding: "1.75rem 2rem", boxShadow: "0 12px 48px rgba(27,60,51,0.12)", border: "1px solid rgba(27,60,51,0.04)" }}>
           <label style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, color: "#1b3c33", fontSize: "0.9rem", display: "block", marginBottom: "0.6rem", letterSpacing: "0.05em" }}>Phone Number</label>
-          <div style={{ display: "flex", gap: "0.75rem" }}>
+          <div className="track-search-row">
             <input
               type="tel"
               value={phone}

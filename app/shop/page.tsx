@@ -194,7 +194,7 @@ export default function ShopPage() {
   if (orderSuccess) {
     return (
       <>
-        <main data-bg="light" style={{ minHeight: "100vh", background: "#fff", padding: "8rem 0 4rem" }}>
+      <main data-bg="light" style={{ minHeight: "100vh", background: "#fff", padding: "8rem 0 4rem" }}>
           <section data-bg="dark" style={{ background: dark, color: "#fdf9f4", padding: "5rem 5%", textAlign: "center" }}>
             <p style={{ fontFamily: fontOutfit, color: accent, fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Shop</p>
             <h1 style={{ fontFamily: fontBebas, fontSize: "clamp(1.8rem, 6vw, 4.5rem)", color: "#fdf9f4" }}>Premium Coffee & Products</h1>
@@ -205,7 +205,7 @@ export default function ShopPage() {
         </main>
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); setOrderSuccess(false); }} />
-          <div style={{ background: "#fff", borderRadius: "24px", padding: "3rem 2rem", width: "440px", maxWidth: "92vw", position: "relative", boxShadow: "0 25px 60px rgba(0,0,0,0.35)", textAlign: "center" }}>
+          <div style={{ background: "#fff", borderRadius: "24px", padding: "clamp(1.5rem, 5vw, 3rem) clamp(1.5rem, 5vw, 2rem)", width: "440px", maxWidth: "92vw", position: "relative", boxShadow: "0 25px 60px rgba(0,0,0,0.35)", textAlign: "center" }}>
             <div style={{ width: "72px", height: "72px", borderRadius: "50%", background: dark, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem", animation: "successPop 0.5s ease forwards, successPulse 2s ease infinite 0.5s" }}>
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "checkDraw 0.6s ease 0.3s both" }}>
                 <polyline points="20 6 9 17 4 12" strokeDasharray="30" strokeDashoffset="30" style={{ animation: "checkDraw 0.4s ease 0.5s forwards" }} />
@@ -337,7 +337,7 @@ export default function ShopPage() {
           onClick={() => setShowCart(true)}
           style={{
             position: "fixed",
-            bottom: "24px",
+            bottom: "max(24px, env(safe-area-inset-bottom, 24px))",
             right: "24px",
             zIndex: 900,
             display: "flex",

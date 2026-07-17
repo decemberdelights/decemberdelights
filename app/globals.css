@@ -645,3 +645,12 @@ a { color: inherit; text-decoration: none; }
 .ov-app-item.declined .num { color: #a32d2d; }
 .ov-action-box { background: #f9f8f4; border-radius: 10px; border: 1px solid #e4e1d6; padding: 24px; text-align: center; color: #6b6f6a; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 @media(max-width:768px) { .ov-grid { grid-template-columns: 1fr; } .ov-app-row { grid-template-columns: 1fr; } }
+
+@media (max-width: 768px) {
+  main[data-bg="light"] { padding-top: 6.5rem !important; padding-bottom: 3rem !important; }
+  .careers-section-pad { padding: 4rem 4% !important; }
+}
+@media (max-width: 480px) {
+  main[data-bg="light"] { padding-top: 6rem !important; padding-bottom: 2rem !important; }
+}
+.footer-brand img { transition: height 0.3s; }

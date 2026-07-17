@@ -68,17 +68,32 @@ export default function ContactPage() {
           gap: 1.25rem;
           margin-bottom: 1.25rem;
         }
+        .contact-form-card {
+          background: #fdf9f4;
+          border-radius: 24px;
+          padding: 2.5rem;
+          box-shadow: 0 2px 24px rgba(27,60,51,0.04);
+        }
         @media (max-width: 900px) {
           .contact-card-grid { grid-template-columns: 1fr; gap: 1rem; }
+          .contact-card { padding: 2rem 1.25rem; }
         }
         @media (max-width: 640px) {
           .contact-form-grid { grid-template-columns: 1fr; }
+          .contact-form-card { padding: 1.5rem !important; }
+        }
+        .contact-hero-content { padding: 10rem 5% 6rem; }
+        @media (max-width: 768px) {
+          .contact-hero-content { padding: 8rem 5% 4rem !important; }
+        }
+        @media (max-width: 480px) {
+          .contact-hero-content { padding: 7rem 5% 3rem !important; }
         }
       `}</style>
       {/* Hero */}
-      <section data-bg="dark" style={{ minHeight: "60vh", background: "#0c1a14", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
+      <section data-bg="dark" style={{ background: "#0c1a14", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 30% 50%, rgba(234,185,106,0.08) 0%, transparent 60%)" }} />
-        <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "900px", margin: "0 auto", padding: "10rem 5% 6rem", textAlign: "center" }}>
+        <div className="contact-hero-content" style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "900px", margin: "0 auto", padding: "10rem 5% 6rem", textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
             <span style={{ width: "40px", height: "1px", background: "#eab96a" }} />
             <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Get in Touch</span>
@@ -131,7 +146,7 @@ export default function ContactPage() {
             <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2rem, 4vw, 3rem)", letterSpacing: "0.03em", marginTop: "0.5rem" }}>We&apos;d Love to Hear From You</h2>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ background: "#fdf9f4", borderRadius: "24px", padding: "2.5rem", boxShadow: "0 2px 24px rgba(27,60,51,0.04)" }}>
+          <form onSubmit={handleSubmit} className="contact-form-card">
             <div className="contact-form-grid">
               <div>
                 <label style={labelStyle}><User size={16} /> Your Name *</label>
