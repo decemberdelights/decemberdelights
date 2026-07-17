@@ -559,7 +559,7 @@ export default function FranchisePage() {
 
                     <div style={{ background: "rgba(200,169,126,0.08)", border: "1px solid rgba(200,169,126,0.2)", borderRadius: "12px", padding: "1.25rem" }}>
                       <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", lineHeight: 1.6 }}>
-                        Application fee: <strong>₹10,000</strong> (non-refundable). Click <strong>"Accept & Pay"</strong> to review Terms &amp; Conditions and complete payment.
+                        Application fee: <strong>₹1</strong> (non-refundable). Click <strong>"Accept & Pay"</strong> to review Terms &amp; Conditions and complete payment.
                       </p>
                     </div>
                   </div>
@@ -588,7 +588,7 @@ export default function FranchisePage() {
                 </button>
               ) : (
                 <button type="button" onClick={handleSubmitClick} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "clamp(0.8rem, 3vw, 0.95rem)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s", whiteSpace: "nowrap", minWidth: 0 }} onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
-                  Accept & Pay ₹10,000<ArrowRight size={16} />
+                  Accept & Pay ₹1<ArrowRight size={16} />
                 </button>
               )}
             </div>
