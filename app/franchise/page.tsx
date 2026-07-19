@@ -11,6 +11,23 @@ import { generateFranchiseReceipt, FranchiseReceiptData } from "@/lib/receipt";
 
 const STEPS = ["Personal", "Business", "Documents", "Review"];
 
+async function fetchWithRetry(url: string, opts: RequestInit, retries = 2): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    try {
+      const res = await fetch(url, { ...opts, signal: controller.signal });
+      clearTimeout(timeout);
+      return res;
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+      if (i === retries) throw err;
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  throw new Error("Failed to connect");
+}
+
 const DOC_FIELDS = [
   { key: "aadhaar", label: "Aadhaar Card", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>, required: true },
   { key: "pan", label: "PAN Card", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>, required: true },
@@ -214,7 +231,7 @@ export default function FranchisePage() {
           formData.append("razorpay_signature", response.razorpay_signature || "");
 
           const submitUrl = backendBase ? `${backendBase}/api/franchise` : `${API}/api/franchise`;
-          const res = await fetch(submitUrl, { method: "POST", body: formData });
+          const res = await fetchWithRetry(submitUrl, { method: "POST", body: formData });
           const data = await res.json();
           if (!res.ok) throw new Error(data.detail || "Submission failed");
           setReceiptData({
@@ -242,13 +259,17 @@ export default function FranchisePage() {
 
   const backendBase = process.env.NEXT_PUBLIC_API_URL || "";
 
+  useEffect(() => {
+    if (backendBase) fetch(`${backendBase}/api/health`).catch(() => {});
+  }, [backendBase]);
+
   const handleTcAccept = async (language: string) => {
     setStatus("submitting");
     setErrorMsg("");
 
     try {
       const orderUrl = backendBase ? `${backendBase}/api/franchise/create-order` : `${API}/api/franchise/create-order`;
-      const orderRes = await fetch(orderUrl, {
+      const orderRes = await fetchWithRetry(orderUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email, phone: form.phone }),
@@ -259,7 +280,9 @@ export default function FranchisePage() {
       openRazorpayCheckout(orderData.order_id, orderData.amount, language);
     } catch (err: unknown) {
       setStatus("error");
-      setErrorMsg(err instanceof Error ? err.message : "Failed to initiate payment. Please try again.");
+      setErrorMsg(err instanceof Error && err.name === "AbortError"
+        ? "Server is waking up, please try again in 30 seconds."
+        : err instanceof Error ? err.message : "Failed to initiate payment. Please try again.");
     }
   };
 
