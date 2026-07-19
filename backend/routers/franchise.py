@@ -54,7 +54,7 @@ ALLOWED_MIMETYPES = {
     "application/pdf", "image/jpeg", "image/png",
     "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
-MAX_FILE_SIZE = 10 * 1024 * 1024
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 MAGIC_BYTES = {
     b"\x89PNG": "image/png",

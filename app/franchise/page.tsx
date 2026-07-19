@@ -92,7 +92,7 @@ export default function FranchisePage() {
     setForm({ ...form, [name]: value });
   };
 
-  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
   const ALLOWED_TYPES: Record<string, string> = {
     "application/pdf": ".pdf",
     "image/jpeg": ".jpg",
@@ -107,11 +107,49 @@ export default function FranchisePage() {
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File, maxSizeKB = 800): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let { width, height } = img;
+        const maxDim = 1600;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        const tryCompress = (quality: number) => {
+          canvas.toBlob((blob) => {
+            if (!blob) { resolve(file); return; }
+            if (blob.size > maxSizeKB * 1024 && quality > 0.3) {
+              tryCompress(quality - 0.1);
+            } else {
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+            }
+          }, "image/jpeg", quality);
+        };
+        tryCompress(0.8);
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+      let file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE && file.type.startsWith("image/")) {
+        file = await compressImage(file, 500);
+      }
       if (file.size > MAX_FILE_SIZE) {
-        setErrorMsg(`File "${file.name}" is ${formatFileSize(file.size)}. Maximum allowed is 10MB.`);
+        setErrorMsg(`File "${file.name}" is ${formatFileSize(file.size)}. Maximum allowed is 5MB.`);
         e.target.value = "";
         return;
       }

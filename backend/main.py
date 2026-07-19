@@ -55,7 +55,7 @@ async def limit_upload_size(request: Request, call_next):
         content_length = request.headers.get("content-length")
         try:
             path = request.url.path
-            max_bytes = 65 * 1024 * 1024 if path == "/api/franchise" else 15 * 1024 * 1024
+            max_bytes = 35 * 1024 * 1024 if path == "/api/franchise" else 15 * 1024 * 1024
             if content_length and int(content_length) > max_bytes:
                 return JSONResponse(status_code=413, content={"detail": "Request too large"})
         except (ValueError, TypeError):
