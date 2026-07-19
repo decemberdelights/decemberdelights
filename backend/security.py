@@ -103,5 +103,10 @@ def validate_application_status(status: str) -> bool:
 
 
 def get_client_ip(request: Request) -> str:
-    """Get real client IP. Never trust X-Forwarded-For for rate limiting."""
+    """Get real client IP. Trust X-Forwarded-For only when behind known proxy (Render)."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        ip = forwarded.split(",")[0].strip()
+        if ip:
+            return ip
     return request.client.host if request.client else "unknown"

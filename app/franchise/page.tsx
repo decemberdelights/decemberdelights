@@ -211,6 +211,7 @@ export default function FranchisePage() {
           formData.append("tc_language", language);
           formData.append("razorpay_order_id", response.razorpay_order_id);
           formData.append("razorpay_payment_id", response.razorpay_payment_id);
+          formData.append("razorpay_signature", response.razorpay_signature || "");
 
           const submitUrl = backendBase ? `${backendBase}/api/franchise` : `${API}/api/franchise`;
           const res = await fetch(submitUrl, { method: "POST", body: formData });

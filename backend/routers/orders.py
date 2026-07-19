@@ -20,6 +20,18 @@ class DeleteRequest(BaseModel):
     reason: str = ""
 
 
+class CreateOrderRequest(BaseModel):
+    customer_name: str
+    customer_email: str = ""
+    customer_phone: str
+    customer_address: str
+    items: str
+    notes: str = ""
+    payment_method: str = "cash"
+    razorpay_order_id: str = ""
+    razorpay_payment_id: str = ""
+
+
 def _normalize_phone(phone: str) -> str:
     return phone.replace(" ", "").replace("-", "").replace("+", "")
 
@@ -38,18 +50,19 @@ def log_activity(username: str, action: str, target_type: str, target_id: int, d
 
 
 @router.post("/api/orders")
-def create_public_order(data: dict, request: Request, background_tasks: BackgroundTasks):
+def create_public_order(body: CreateOrderRequest, request: Request, background_tasks: BackgroundTasks):
     from security import get_client_ip
     client_ip = get_client_ip(request)
     rate_key = f"order:{client_ip}"
     order_limiter.check(rate_key)
     order_limiter.record(rate_key)
 
-    data["customer_name"] = sanitize_input(data.get("customer_name", ""), 200)
-    data["customer_email"] = sanitize_input(data.get("customer_email", ""), 200)
-    data["customer_phone"] = sanitize_input(data.get("customer_phone", ""), 20)
-    data["customer_address"] = sanitize_input(data.get("customer_address", ""), 500)
-    data["notes"] = sanitize_input(data.get("notes", ""), 1000)
+    data = body.model_dump()
+    data["customer_name"] = sanitize_input(data["customer_name"], 200)
+    data["customer_email"] = sanitize_input(data["customer_email"], 200)
+    data["customer_phone"] = sanitize_input(data["customer_phone"], 20)
+    data["customer_address"] = sanitize_input(data["customer_address"], 500)
+    data["notes"] = sanitize_input(data["notes"], 1000)
 
     if not data.get("customer_name") or not data.get("customer_phone") or not data.get("customer_address"):
         raise HTTPException(status_code=400, detail="Name, phone, and address are required")

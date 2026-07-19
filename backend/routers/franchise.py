@@ -56,6 +56,22 @@ ALLOWED_MIMETYPES = {
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
+MAGIC_BYTES = {
+    b"\x89PNG": "image/png",
+    b"\xff\xd8\xff": "image/jpeg",
+    b"%PDF": "application/pdf",
+    b"\xd0\xcf\x11\xe0": "application/msword",
+    b"PK\x03\x04": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+
+def _detect_mime(content: bytes) -> str:
+    """Detect MIME type from file magic bytes, not Content-Type header."""
+    for magic, mime in MAGIC_BYTES.items():
+        if content[:len(magic)] == magic:
+            return mime
+    return ""
+
 
 def _sanitize_filename(name: str) -> str:
     name = re.sub(r'[^\w\s-]', '', name)
@@ -77,7 +93,11 @@ async def save_upload(file: Optional[UploadFile], applicant_name: str, field_nam
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail=f"File too large (max 10MB) for {field_name}")
-    if file.content_type and file.content_type not in ALLOWED_MIMETYPES:
+    detected_mime = _detect_mime(content)
+    if detected_mime and detected_mime not in ALLOWED_MIMETYPES:
+        logger.warning(f"MIME spoof detected for {field_name}: claimed={file.content_type}, actual={detected_mime}")
+        raise HTTPException(status_code=400, detail=f"File content does not match expected type for {field_name}")
+    if not detected_mime and file.content_type and file.content_type not in ALLOWED_MIMETYPES:
         raise HTTPException(status_code=400, detail=f"File content type {file.content_type} not allowed for {field_name}")
 
     safe_name = _sanitize_filename(applicant_name)
@@ -110,6 +130,24 @@ def _verify_payment_with_razorpay(order_id: str, payment_id: str) -> dict:
     except Exception as e:
         logger.error(f"Razorpay payment fetch failed: {e}")
         raise HTTPException(status_code=400, detail="Could not verify payment with Razorpay")
+
+
+def _verify_razorpay_signature(order_id: str, payment_id: str, signature: str) -> bool:
+    """Verify Razorpay HMAC signature to prevent payment tampering."""
+    if not signature:
+        return False
+    try:
+        client = _get_razorpay_client()
+        params_dict = {
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": signature,
+        }
+        client.utility.verify_payment_signature(params_dict)
+        return True
+    except Exception as e:
+        logger.error(f"Razorpay signature verification failed: {e}")
+        return False
 
 
 def _is_payment_already_used(payment_id: str) -> bool:
@@ -167,6 +205,7 @@ async def create_franchise(
     tc_language: str = Form("en"),
     razorpay_order_id: str = Form(""),
     razorpay_payment_id: str = Form(""),
+    razorpay_signature: str = Form(""),
     aadhaar: Optional[UploadFile] = File(None),
     pan: Optional[UploadFile] = File(None),
     bank_statement: Optional[UploadFile] = File(None),
@@ -213,6 +252,11 @@ async def create_franchise(
     if _is_order_already_used(razorpay_order_id):
         logger.warning(f"Duplicate order_id {razorpay_order_id} used from IP {client_ip}")
         raise HTTPException(status_code=400, detail="This order has already been used for another application")
+
+    # Check 3b: Verify Razorpay HMAC signature (prevents payment tampering)
+    if razorpay_signature and not _verify_razorpay_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature):
+        logger.warning(f"Razorpay signature mismatch for order={razorpay_order_id}, payment={razorpay_payment_id} from IP {client_ip}")
+        raise HTTPException(status_code=400, detail="Payment signature verification failed")
 
     # Check 4: Fetch payment from Razorpay API and verify EVERYTHING server-side
     payment = _verify_payment_with_razorpay(razorpay_order_id, razorpay_payment_id)
