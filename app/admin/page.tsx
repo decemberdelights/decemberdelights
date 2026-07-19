@@ -172,7 +172,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return;
     let timer: NodeJS.Timeout;
-    const reset = () => { clearTimeout(timer); timer = setTimeout(() => { setAuthed(false); }, 3 * 60 * 1000); };
+    const reset = () => { clearTimeout(timer); timer = setTimeout(() => { setAuthed(false); }, 30 * 60 * 1000); };
     const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
     events.forEach((e) => document.addEventListener(e, reset, { passive: true }));
     reset();

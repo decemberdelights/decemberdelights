@@ -30,7 +30,7 @@ def log_activity(username: str, action: str, target_type: str, target_id: int, d
         logger.error(f"Failed to log activity: {e}")
 
 
-def _safe_query(table, select="*", filters=None, order=None, limit=None, count_only=False):
+def _safe_query(table, select="*", filters=None, order=None, limit=None, offset=None, count_only=False):
     try:
         q = supabase.table(table).select(select)
         if filters:
@@ -43,6 +43,8 @@ def _safe_query(table, select="*", filters=None, order=None, limit=None, count_o
             q = q.order(order[0], desc=order[1] if len(order) > 1 else False)
         if limit:
             q = q.limit(limit)
+        if offset:
+            q = q.offset(offset)
         result = q.execute()
         if count_only:
             return result.count or 0
@@ -140,9 +142,9 @@ def _parse_date_safe(date_str):
 @router.get("/api/admin/applications")
 def get_applications(offset: int = 0, limit: int = 50, _=Depends(get_current_admin)):
     limit = min(limit, 200)
-    franchise = _safe_query("franchise_applications", order=("created_at", True), limit=limit)
-    careers = _safe_query("career_applications", order=("created_at", True), limit=limit)
-    contacts = _safe_query("contact_messages", order=("created_at", True), limit=limit)
+    franchise = _safe_query("franchise_applications", order=("created_at", True), limit=limit, offset=offset)
+    careers = _safe_query("career_applications", order=("created_at", True), limit=limit, offset=offset)
+    contacts = _safe_query("contact_messages", order=("created_at", True), limit=limit, offset=offset)
 
     franchise_total = _safe_query("franchise_applications", select="id", count_only=True)
     careers_total = _safe_query("career_applications", select="id", count_only=True)

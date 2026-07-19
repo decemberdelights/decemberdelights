@@ -26,7 +26,7 @@ interface Order {
   created_at: string;
 }
 
-const STATUS_FLOW = ["pending", "confirmed", "packed", "ready", "delivered"];
+const STATUS_FLOW = ["pending", "confirmed", "preparing", "packed", "ready", "delivered"];
 
 const STATUS_INFO: Record<string, { label: string; sub: string; color: string; icon: string }> = {
   pending: { label: "Order Placed", sub: "We received your order", color: "#e67e22", icon: "01" },

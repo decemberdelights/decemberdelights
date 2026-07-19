@@ -55,7 +55,7 @@ export default function HeroSection() {
             inset: 0,
             width: "100%",
             height: "100%",
-            backgroundImage: "url(/hero-poster.jpg)",
+            backgroundImage: "url(/hero-poster.jpg), linear-gradient(135deg, #1a0e0a 0%, #2d1810 50%, #1a0e0a 100%)",
             backgroundSize: "cover",
             backgroundPosition: "center",
             transition: "opacity 0.8s ease",
@@ -69,7 +69,7 @@ export default function HeroSection() {
           muted
           loop
           playsInline
-          preload="auto"
+          preload="metadata"
           style={{
             position: "absolute",
             inset: 0,

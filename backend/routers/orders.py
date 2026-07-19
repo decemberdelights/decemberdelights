@@ -108,6 +108,7 @@ def create_public_order(data: dict, request: Request, background_tasks: Backgrou
         calculated_total += price * qty
         sanitized_items.append({"id": int(pid), "name": product.get("name", ""), "price": price, "quantity": qty})
 
+    decremented = []
     for item in sanitized_items:
         try:
             current = supabase.table("products").select("stock").eq("id", item["id"]).execute()
@@ -119,7 +120,15 @@ def create_public_order(data: dict, request: Request, background_tasks: Backgrou
             new_stock = current_stock - item["quantity"]
             result = supabase.table("products").update({"stock": new_stock}).eq("id", item["id"]).gte("stock", item["quantity"]).execute()
             if not result.data:
+                for prev in decremented:
+                    try:
+                        prev_product = supabase.table("products").select("stock").eq("id", prev["id"]).execute()
+                        if prev_product.data:
+                            supabase.table("products").update({"stock": prev_product.data[0]["stock"] + prev["quantity"]}).eq("id", prev["id"]).execute()
+                    except Exception:
+                        pass
                 raise HTTPException(status_code=400, detail="Insufficient stock — item was just purchased by someone else")
+            decremented.append({"id": item["id"], "quantity": item["quantity"]})
         except HTTPException:
             raise
         except Exception as e:
@@ -219,7 +228,7 @@ def get_order_stats(_=Depends(get_current_admin)):
     week_start = today - timedelta(days=today.weekday())
 
     try:
-        result = supabase.table("orders").select("total,status,created_at").order("created_at", desc=True).limit(1000).execute()
+        result = supabase.table("orders").select("total,status,created_at").order("created_at", desc=True).execute()
     except Exception as e:
         logger.error(f"Failed to fetch orders for stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to load order stats")
