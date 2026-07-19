@@ -20,6 +20,20 @@ interface CartItem {
 
 const CART_KEY = "dd_cart";
 
+function loadRazorpayScript(): Promise<boolean> {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  if (window.Razorpay) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const existing = document.querySelector("script[src='https://checkout.razorpay.com/v1/checkout.js']");
+    if (existing) { resolve(true); return; }
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
+
 function loadCart(): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
@@ -52,6 +66,7 @@ export default function ShopPage() {
   const [orderId, setOrderId] = useState(0);
   const [orderPhone, setOrderPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "razorpay">("cash");
   const [form, setForm] = useState({ customer_name: "", customer_phone: "", customer_email: "", customer_address: "" });
   const [formError, setFormError] = useState("");
   const [addedId, setAddedId] = useState<number | null>(null);
@@ -127,61 +142,122 @@ export default function ShopPage() {
     setCart((prev) => prev.filter((c) => c.product.id !== productId));
   };
 
-  const handleOrder = async () => {
+  const validateForm = (): boolean => {
     if (!form.customer_name || !form.customer_phone || !form.customer_address) {
       setFormError("All fields are required");
-      return;
+      return false;
     }
     const cleanedPhone = form.customer_phone.replace(/[\s\-+]/g, "");
     if (!/^\d{7,15}$/.test(cleanedPhone)) {
       setFormError("Please enter a valid phone number (7-15 digits)");
-      return;
+      return false;
     }
     if (form.customer_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email)) {
       setFormError("Please enter a valid email address");
-      return;
+      return false;
     }
     if (cart.length === 0) {
       setFormError("Your cart is empty");
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const submitOrder = async (method: string, rpOrderId?: string, rpPaymentId?: string, rpSignature?: string) => {
+    const r = await fetch(`${API}/api/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer_name: form.customer_name,
+        customer_phone: form.customer_phone,
+        customer_email: form.customer_email,
+        customer_address: form.customer_address,
+        items: JSON.stringify(cart.map((c) => ({ id: c.product.id, name: c.product.name, price: c.product.price, quantity: c.quantity }))),
+        total: cartTotal,
+        payment_method: method,
+        razorpay_order_id: rpOrderId || "",
+        razorpay_payment_id: rpPaymentId || "",
+        razorpay_signature: rpSignature || "",
+      }),
+    });
+    const data = await r.json();
+    if (r.ok) {
+      const phone = form.customer_phone;
+      setOrderId(data.id);
+      setOrderPhone(phone);
+      setOrderSuccess(true);
+      setCart([]);
+      setShowCheckout(false);
+      setShowCart(false);
+      setForm({ customer_name: "", customer_phone: "", customer_email: "", customer_address: "" });
+      fetch(`${API}/api/products`, { cache: "no-store" })
+        .then((r2) => r2.json())
+        .then((fresh) => setProducts(fresh))
+        .catch(() => {});
+      redirectTimer.current = setTimeout(() => {
+        router.push(`/track?phone=${encodeURIComponent(phone)}`);
+      }, 4000);
+    } else {
+      throw new Error(data.detail || "Order failed. Please try again.");
+    }
+  };
+
+  const handleOrder = async () => {
+    if (!validateForm()) return;
     setSaving(true);
     setFormError("");
     try {
-      const r = await fetch(`${API}/api/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer_name: form.customer_name,
-          customer_phone: form.customer_phone,
-          customer_email: form.customer_email,
-          customer_address: form.customer_address,
-          items: JSON.stringify(cart.map((c) => ({ id: c.product.id, name: c.product.name, price: c.product.price, quantity: c.quantity }))),
-          total: cartTotal,
-        }),
-      });
-      const data = await r.json();
-      if (r.ok) {
-        const phone = form.customer_phone;
-        setOrderId(data.id);
-        setOrderPhone(phone);
-        setOrderSuccess(true);
-        setCart([]);
-        setShowCheckout(false);
-        setShowCart(false);
-        setForm({ customer_name: "", customer_phone: "", customer_email: "", customer_address: "" });
-        fetch(`${API}/api/products`, { cache: "no-store" })
-          .then((r2) => r2.json())
-          .then((fresh) => setProducts(fresh))
-          .catch(() => {});
-        redirectTimer.current = setTimeout(() => {
-          router.push(`/track?phone=${encodeURIComponent(phone)}`);
-        }, 4000);
+      if (paymentMethod === "cash") {
+        await submitOrder("cash");
       } else {
-        setFormError(data.detail || "Order failed. Please try again.");
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded || !window.Razorpay) {
+          setFormError("Payment gateway failed to load. Please try again.");
+          setSaving(false);
+          return;
+        }
+        const amountPaise = Math.round(cartTotal * 100);
+        const rpRes = await fetch(`${API}/api/orders/create-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: amountPaise, customer_phone: form.customer_phone }),
+        });
+        const rpData = await rpRes.json();
+        if (!rpRes.ok) {
+          setFormError(rpData.detail || "Failed to start payment. Please try again.");
+          setSaving(false);
+          return;
+        }
+        const rzp = new window.Razorpay!({
+          key: rpData.key_id,
+          amount: rpData.amount,
+          currency: rpData.currency,
+          name: "December Delights",
+          description: "Order Payment",
+          order_id: rpData.order_id,
+          prefill: { contact: form.customer_phone, email: form.customer_email, name: form.customer_name },
+          theme: { color: "#1b3c33" },
+          handler: async (response: RazorpayResponse) => {
+            try {
+              await submitOrder("razorpay", response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
+            } catch (err: unknown) {
+              setFormError(err instanceof Error ? err.message : "Order failed after payment. Contact support with payment ID: " + response.razorpay_payment_id);
+              setSaving(false);
+            }
+          },
+          modal: { ondismiss: () => { setSaving(false); setFormError("Payment was cancelled."); } },
+        });
+        rzp.on("payment.failed", (response: Record<string, unknown>) => {
+          const desc = (response.error as Record<string, unknown>)?.description || "Payment failed";
+          setFormError(String(desc));
+          setSaving(false);
+        });
+        rzp.open();
+        setSaving(false);
+        return;
       }
-    } catch {
-      setFormError("Network error. Please check your connection and try again.");
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "Network error. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -477,9 +553,21 @@ export default function ShopPage() {
               </div>
             </div>
 
+            <div style={{ marginTop: "1.25rem" }}>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: dark, marginBottom: "0.5rem", fontFamily: fontOutfit }}>Payment Method</label>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button type="button" onClick={() => setPaymentMethod("cash")} style={{ flex: 1, padding: "0.7rem", borderRadius: "10px", border: paymentMethod === "cash" ? `2px solid ${dark}` : "1.5px solid #ddd", background: paymentMethod === "cash" ? dark : "#fff", color: paymentMethod === "cash" ? "#fff" : muted, fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", transition: "all 0.2s" }}>
+                  Cash on Delivery
+                </button>
+                <button type="button" onClick={() => setPaymentMethod("razorpay")} style={{ flex: 1, padding: "0.7rem", borderRadius: "10px", border: paymentMethod === "razorpay" ? `2px solid ${dark}` : "1.5px solid #ddd", background: paymentMethod === "razorpay" ? dark : "#fff", color: paymentMethod === "razorpay" ? "#fff" : muted, fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", transition: "all 0.2s" }}>
+                  Pay Online
+                </button>
+              </div>
+            </div>
+
             {formError && <p style={{ fontFamily: fontOutfit, color: "#e74c3c", fontSize: "0.85rem", marginTop: "1rem" }}>{formError}</p>}
 
-            <button onClick={handleOrder} disabled={saving} style={{ width: "100%", padding: "1rem", borderRadius: "14px", border: "none", background: saving ? "#999" : dark, color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.95rem", cursor: saving ? "not-allowed" : "pointer", marginTop: "1.5rem", boxShadow: saving ? "none" : "0 4px 16px rgba(27,60,51,0.2)" }}>{saving ? "Placing Order..." : "Place Order"}</button>
+            <button onClick={handleOrder} disabled={saving} style={{ width: "100%", padding: "1rem", borderRadius: "14px", border: "none", background: saving ? "#999" : dark, color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.95rem", cursor: saving ? "not-allowed" : "pointer", marginTop: "1.5rem", boxShadow: saving ? "none" : "0 4px 16px rgba(27,60,51,0.2)" }}>{saving ? "Placing Order..." : paymentMethod === "razorpay" ? `Pay ${formatPriceINR(cartTotal)}` : "Place Order"}</button>
           </div>
         </div>
       )}

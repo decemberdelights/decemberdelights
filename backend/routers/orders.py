@@ -2,10 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
-from security import validate_order_status, sanitize_input, RateLimiter, validate_email
+from security import validate_order_status, sanitize_input, RateLimiter, validate_email, get_client_ip
 from datetime import datetime, timedelta
 from typing import Optional
+import os
 import json
+import uuid
+import razorpay
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,6 +17,20 @@ router = APIRouter()
 track_limiter = RateLimiter(max_attempts=10, window_seconds=60)
 order_limiter = RateLimiter(max_attempts=5, window_seconds=60)
 contact_limiter = RateLimiter(max_attempts=3, window_seconds=60)
+
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+
+
+def _get_razorpay_client():
+    if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+        return None
+    return razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+
+
+class RazorpayOrderRequest(BaseModel):
+    amount: int  # in paise
+    customer_phone: str
 
 
 class DeleteRequest(BaseModel):
@@ -30,10 +47,60 @@ class CreateOrderRequest(BaseModel):
     payment_method: str = "cash"
     razorpay_order_id: str = ""
     razorpay_payment_id: str = ""
+    razorpay_signature: str = ""
 
 
 def _normalize_phone(phone: str) -> str:
     return phone.replace(" ", "").replace("-", "").replace("+", "")
+
+
+def _verify_razorpay_signature(order_id: str, payment_id: str, signature: str) -> bool:
+    client = _get_razorpay_client()
+    if not client:
+        return False
+    try:
+        params_dict = {"razorpay_order_id": order_id, "razorpay_payment_id": payment_id, "razorpay_signature": signature}
+        client.utility.verify_payment_signature(params_dict)
+        return True
+    except Exception as e:
+        logger.error(f"Razorpay signature verification failed: {e}")
+        return False
+
+
+@router.post("/api/orders/create-order")
+async def create_shop_razorpay_order(body: RazorpayOrderRequest, request: Request):
+    client_ip = get_client_ip(request)
+    rate_key = f"shop_order:{client_ip}"
+    order_limiter.check(rate_key)
+    order_limiter.record(rate_key)
+
+    client = _get_razorpay_client()
+    if not client:
+        raise HTTPException(status_code=500, detail="Payment gateway not configured")
+
+    phone = sanitize_input(body.customer_phone, 20)
+    cleaned = _normalize_phone(phone)
+    if not cleaned.isdigit() or len(cleaned) < 7 or len(cleaned) > 15:
+        raise HTTPException(status_code=400, detail="Invalid phone number")
+
+    if body.amount < 100:
+        raise HTTPException(status_code=400, detail="Minimum order amount is ₹10")
+
+    try:
+        import asyncio as _asyncio
+        order = await _asyncio.to_thread(
+            lambda: client.order.create({
+                "amount": body.amount,
+                "currency": "INR",
+                "receipt": f"shop_{cleaned}_{uuid.uuid4().hex[:8]}",
+                "notes": {"phone": cleaned, "purpose": "shop_order"},
+            })
+        )
+        logger.info(f"Shop Razorpay order created: {order['id']} for phone={cleaned}")
+        return {"order_id": order["id"], "amount": body.amount, "currency": "INR", "key_id": RAZORPAY_KEY_ID}
+    except Exception as e:
+        logger.error(f"Shop Razorpay order creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create payment order. Please try again.")
 
 
 def log_activity(username: str, action: str, target_type: str, target_id: int, details: str = ""):
@@ -51,7 +118,6 @@ def log_activity(username: str, action: str, target_type: str, target_id: int, d
 
 @router.post("/api/orders")
 def create_public_order(body: CreateOrderRequest, request: Request, background_tasks: BackgroundTasks):
-    from security import get_client_ip
     client_ip = get_client_ip(request)
     rate_key = f"order:{client_ip}"
     order_limiter.check(rate_key)
@@ -121,6 +187,32 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
         calculated_total += price * qty
         sanitized_items.append({"id": int(pid), "name": product.get("name", ""), "price": price, "quantity": qty})
 
+    payment_method = data.get("payment_method", "cash")
+    payment_status = "unpaid"
+
+    if payment_method == "razorpay":
+        rp_order_id = data.get("razorpay_order_id", "")
+        rp_payment_id = data.get("razorpay_payment_id", "")
+        rp_signature = data.get("razorpay_signature", "")
+        if not rp_order_id or not rp_payment_id or not rp_signature:
+            raise HTTPException(status_code=400, detail="Missing payment details for online payment")
+        if not _verify_razorpay_signature(rp_order_id, rp_payment_id, rp_signature):
+            raise HTTPException(status_code=400, detail="Payment verification failed")
+        client = _get_razorpay_client()
+        if client:
+            try:
+                payment = client.payment.fetch(rp_payment_id)
+                if payment.get("status") != "captured":
+                    raise HTTPException(status_code=400, detail=f"Payment not captured (status: {payment.get('status')})")
+                paid_paise = int(payment.get("amount", 0))
+                if paid_paise != int(calculated_total * 100):
+                    raise HTTPException(status_code=400, detail="Payment amount mismatch")
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.warning(f"Could not verify Razorpay payment details: {e}")
+        payment_status = "paid"
+
     decremented = []
     for item in sanitized_items:
         try:
@@ -156,8 +248,8 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
         "items": json.dumps(sanitized_items),
         "total": calculated_total,
         "status": "pending",
-        "payment_method": data.get("payment_method", "cash"),
-        "payment_status": "unpaid",
+        "payment_method": payment_method,
+        "payment_status": payment_status,
         "notes": data.get("notes", ""),
         "razorpay_order_id": sanitize_input(data.get("razorpay_order_id", ""), 100),
         "razorpay_payment_id": sanitize_input(data.get("razorpay_payment_id", ""), 100),

@@ -21,6 +21,7 @@ interface RazorpayResponse {
 interface RazorpayCheckout {
   open: () => void;
   close: () => void;
+  on: (event: string, handler: (response: Record<string, unknown>) => void) => void;
 }
 
 interface Window {
