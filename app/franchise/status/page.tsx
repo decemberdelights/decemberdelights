@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
+import { generateFranchiseReceipt, FranchiseReceiptData } from "@/lib/receipt";
 
 interface Application {
   id: number;
@@ -18,6 +19,8 @@ interface Application {
   login_id: string;
   tc_accepted: boolean;
   payment_status: string;
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -143,8 +146,26 @@ export default function FranchiseStatusPage() {
               </div>
             )}
 
-            <div style={{ marginTop: "2rem" }}>
-              <Link href="/" style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontWeight: 700, fontSize: "0.9rem", textDecoration: "none" }}>&larr; Back to Home</Link>
+            <div style={{ marginTop: "2rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+              <button
+                onClick={() => generateFranchiseReceipt({
+                  fullName: application.full_name,
+                  phone: application.phone,
+                  email: application.email,
+                  preferredLocation: application.preferred_location || "",
+                  paymentId: application.razorpay_payment_id || "N/A",
+                  orderId: application.razorpay_order_id || "N/A",
+                  applicationDate: application.created_at ? new Date(application.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "N/A",
+                  loginId: application.login_id,
+                })}
+                style={{ padding: "0.75rem 1.5rem", borderRadius: "100px", border: "1.5px solid #1b3c33", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.5rem", transition: "background 0.2s" }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                Download Receipt
+              </button>
+              <Link href="/" style={{ padding: "0.75rem 1.5rem", borderRadius: "100px", border: "1.5px solid #e0ddd8", background: "transparent", color: "#586159", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
+                &larr; Back to Home
+              </Link>
             </div>
           </div>
         </main>

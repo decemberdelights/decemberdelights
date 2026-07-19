@@ -7,6 +7,7 @@ import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
 import { User, Mail, Phone, Briefcase, MapPin, FileText, ArrowRight, Check } from "@/components/icons";
 import SuccessState from "@/components/SuccessState";
+import { generateFranchiseReceipt, FranchiseReceiptData } from "@/lib/receipt";
 
 const STEPS = ["Personal", "Business", "Documents", "Review"];
 
@@ -32,6 +33,7 @@ export default function FranchisePage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [tcLanguage, setTcLanguage] = useState("en");
+  const [receiptData, setReceiptData] = useState<FranchiseReceiptData | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const rzpRef = useRef<RazorpayCheckout | null>(null);
 
@@ -214,6 +216,15 @@ export default function FranchisePage() {
           const res = await fetch(submitUrl, { method: "POST", body: formData });
           const data = await res.json();
           if (!res.ok) throw new Error(data.detail || "Submission failed");
+          setReceiptData({
+            fullName: form.full_name,
+            phone: form.phone,
+            email: form.email,
+            preferredLocation: form.preferred_location,
+            paymentId: response.razorpay_payment_id,
+            orderId: response.razorpay_order_id,
+            applicationDate: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
+          });
           setStatus("success");
           try { sessionStorage.removeItem("franchise_form"); } catch {}
         } catch (err: unknown) {
@@ -278,6 +289,7 @@ export default function FranchisePage() {
         title="Application Received"
         description="Your franchise application has been submitted successfully. Your login credentials have been sent to your email address."
         actions={[
+          { label: "Download Receipt", onClick: () => receiptData && generateFranchiseReceipt({ ...receiptData, loginId: "Pending" }) },
           { label: "Check Status", onClick: () => window.location.href = "/franchise/status", primary: true },
           { label: "Back to Home", onClick: () => window.location.href = "/" },
         ]}

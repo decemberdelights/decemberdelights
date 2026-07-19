@@ -20,6 +20,8 @@ class FranchiseOut(BaseModel):
     admin_notes: str = ""
     login_id: str = ""
     payment_status: str = "unpaid"
+    razorpay_payment_id: str = ""
+    razorpay_order_id: str = ""
     tc_accepted: bool = False
     aadhaar: str = ""
     pan: str = ""
