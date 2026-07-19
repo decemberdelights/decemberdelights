@@ -80,8 +80,18 @@ def _sanitize_filename(name: str) -> str:
 
 
 def _sync_upload(filename: str, content: bytes, content_type: str) -> str:
-    supabase.storage.from_("franchise-docs").upload(filename, content, {"content-type": content_type})
-    return supabase.storage.from_("franchise-docs").get_public_url(filename)
+    import time
+    for attempt in range(3):
+        try:
+            supabase.storage.from_("franchise-docs").upload(filename, content, {"content-type": content_type})
+            return supabase.storage.from_("franchise-docs").get_public_url(filename)
+        except Exception as e:
+            if attempt < 2:
+                logger.warning(f"Upload attempt {attempt+1} failed for {filename}: {e}")
+                time.sleep(2 * (attempt + 1))
+            else:
+                logger.error(f"Upload failed after 3 attempts for {filename}: {e}")
+                raise
 
 
 async def save_upload(file: Optional[UploadFile], applicant_name: str, field_name: str = "file") -> str:
@@ -313,14 +323,13 @@ async def create_franchise(
     password = _generate_secure_password()
     password_hash = await asyncio.to_thread(hash_password, password)
 
-    uploaded_urls = await asyncio.gather(
-        save_upload(aadhaar, full_name, "Aadhaar"),
-        save_upload(pan, full_name, "PAN"),
-        save_upload(bank_statement, full_name, "Bank Statement"),
-        save_upload(id_proof, full_name, "ID Proof"),
-        save_upload(address_proof, full_name, "Address Proof"),
-        save_upload(other_docs, full_name, "Other Documents"),
-    )
+    uploaded_urls = []
+    for field_name, file_obj in [
+        ("Aadhaar", aadhaar), ("PAN", pan), ("Bank Statement", bank_statement),
+        ("ID Proof", id_proof), ("Address Proof", address_proof), ("Other Documents", other_docs),
+    ]:
+        url = await save_upload(file_obj, full_name, field_name)
+        uploaded_urls.append(url)
 
     data = {
         "full_name": full_name[:200],
