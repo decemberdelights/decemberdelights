@@ -46,7 +46,7 @@ export function RejectModal({ open, onReject, onCancel }: RejectModalProps) {
 }
 
 interface ViewOrderModalProps {
-  order: { id: number; customer_name: string; customer_email: string; customer_phone: string; customer_address: string; parsedItems: unknown[]; total: number; notes: string } | null;
+  order: { id: number; customer_name: string; customer_email: string; customer_phone: string; customer_address: string; parsedItems: unknown[]; total: number; notes: string; payment_method?: string; payment_status?: string; razorpay_order_id?: string; razorpay_payment_id?: string } | null;
   onClose: () => void;
 }
 
@@ -81,6 +81,13 @@ export function ViewOrderModal({ order, onClose }: ViewOrderModalProps) {
           <span style={{ color: "#c8a97a", fontWeight: 700, fontSize: 14 }}>₹{order.total?.toLocaleString()}</span>
         </div>
         {order.notes && <div style={{ marginTop: 8, padding: "8px 12px", background: "#FAEEDA", borderRadius: 6, fontSize: 12, color: "#854f0b" }}>Note: {order.notes}</div>}
+        {(order.razorpay_order_id || order.razorpay_payment_id) && (
+          <div style={{ marginTop: 8, padding: "10px 12px", background: "#f0f7f4", borderRadius: 8, border: "1px solid #d4e8de" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#094b3d", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Razorpay Details</div>
+            {order.razorpay_order_id && <div style={{ fontSize: 12, color: "#586159", marginBottom: 2 }}><span style={{ color: "#999" }}>Order ID:</span> <span style={{ fontFamily: "monospace", fontSize: 11 }}>{order.razorpay_order_id}</span></div>}
+            {order.razorpay_payment_id && <div style={{ fontSize: 12, color: "#586159" }}><span style={{ color: "#999" }}>Payment ID:</span> <span style={{ fontFamily: "monospace", fontSize: 11 }}>{order.razorpay_payment_id}</span></div>}
+          </div>
+        )}
         <div className="modal-actions" style={{ marginTop: 16 }}>
           <button className="btn" onClick={onClose}>Close</button>
         </div>
@@ -231,10 +238,16 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
     <div className="overlay show" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ width: 700, maxHeight: "90vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
         <h4>Documents — {docs.full_name}</h4>
-        <p style={{ fontSize: 12, color: "#6b6f6a", marginBottom: 16 }}>
+        <p style={{ fontSize: 12, color: "#6b6f6a", marginBottom: 8 }}>
           {docs.email} · {docs.phone}
           {docs.investment_capability && <span style={{ marginLeft: 8, padding: "2px 10px", borderRadius: 20, background: "#FAEEDA", color: "#854f0b", fontWeight: 600, fontSize: 12 }}>{docs.investment_capability}</span>}
         </p>
+        {(docs.razorpay_order_id || docs.razorpay_payment_id) && (
+          <div style={{ marginBottom: 16, padding: "8px 12px", background: "#f0f7f4", borderRadius: 8, border: "1px solid #d4e8de", fontSize: 12, display: "flex", flexWrap: "wrap", gap: "4px 16px" }}>
+            {docs.razorpay_payment_id && <span style={{ color: "#586159" }}><span style={{ color: "#999" }}>Payment ID:</span> <span style={{ fontFamily: "monospace", fontSize: 11 }}>{docs.razorpay_payment_id}</span></span>}
+            {docs.razorpay_order_id && <span style={{ color: "#586159" }}><span style={{ color: "#999" }}>Order ID:</span> <span style={{ fontFamily: "monospace", fontSize: 11 }}>{docs.razorpay_order_id}</span></span>}
+          </div>
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {docFields.map(([key, label]) => {
             const url = (docs as unknown as Record<string, unknown>)[key] as string;

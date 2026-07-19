@@ -215,6 +215,12 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
                 {item.investment_capability && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#854f0b", fontWeight: 600, background: "#FAEEDA", padding: "2px 10px", borderRadius: 20, fontSize: 13 }}>{item.investment_capability}</span>}
               </div>
               {item.admin_notes && <div style={{ fontSize: 13, color: "#6b6f6a", marginTop: 6, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
+              {(item.razorpay_order_id || item.razorpay_payment_id) && (
+                <div style={{ marginTop: 8, padding: "8px 12px", background: "#f0f7f4", borderRadius: 8, border: "1px solid #d4e8de", fontSize: 12, display: "flex", flexWrap: "wrap", gap: "4px 16px" }}>
+                  {item.razorpay_payment_id && <span style={{ color: "#586159" }}><span style={{ color: "#999" }}>Payment:</span> <span style={{ fontFamily: "monospace", fontSize: 11 }}>{item.razorpay_payment_id}</span></span>}
+                  {item.razorpay_order_id && <span style={{ color: "#586159" }}><span style={{ color: "#999" }}>Order:</span> <span style={{ fontFamily: "monospace", fontSize: 11 }}>{item.razorpay_order_id}</span></span>}
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
               {renderStatusBadge(item.status)}

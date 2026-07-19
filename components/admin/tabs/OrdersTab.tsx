@@ -79,7 +79,7 @@ export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOr
         <div className="panel-head"><h3>Recent Orders</h3><div className="sub">{orders.length} total orders</div></div>
         <div className="table-wrap">
         <table>
-          <thead><tr><th>ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Payment</th><th>Date</th><th>Actions</th></tr></thead>
+          <thead><tr><th>ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Payment</th><th>Razorpay</th><th>Date</th><th>Actions</th></tr></thead>
           <tbody>
             {parsedOrders.map(o => {
               return (
@@ -92,6 +92,9 @@ export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOr
                   <td>₹{o.total.toLocaleString()}</td>
                   <td><span className={`status ${o.status}`}>{o.status === "pending" ? "Pending" : o.status === "preparing" ? "Packing" : o.status === "delivered" ? "Delivered" : o.status === "cancelled" ? "Cancelled" : o.status}</span></td>
                   <td><span className={`status ${o.payment_status === "paid" ? "approved" : "pending"}`}>{o.payment_status}</span></td>
+                  <td style={{ fontSize: 11, color: "#888", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={o.razorpay_payment_id || "—"}>
+                    {o.razorpay_payment_id ? o.razorpay_payment_id.slice(0, 16) + "..." : "—"}
+                  </td>
                   <td>{o.created_at ? new Date(o.created_at).toLocaleDateString("en-IN") : "—"}</td>
                   <td>
                     <div className="row-actions">

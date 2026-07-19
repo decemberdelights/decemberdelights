@@ -146,6 +146,8 @@ def create_public_order(data: dict, request: Request, background_tasks: Backgrou
         "payment_method": data.get("payment_method", "cash"),
         "payment_status": "unpaid",
         "notes": data.get("notes", ""),
+        "razorpay_order_id": sanitize_input(data.get("razorpay_order_id", ""), 100),
+        "razorpay_payment_id": sanitize_input(data.get("razorpay_payment_id", ""), 100),
     }
     result = supabase.table("orders").insert(order_data).execute()
 

@@ -42,6 +42,8 @@ export interface App {
   subject?: string;
   message?: string;
   resume_url?: string;
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
   aadhaar?: string;
   pan?: string;
   bank_statement?: string;
@@ -106,6 +108,8 @@ export interface Order {
   status: string;
   payment_method: string;
   payment_status: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
   notes: string;
   created_at: string;
   updated_at: string;
