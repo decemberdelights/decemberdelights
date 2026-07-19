@@ -210,7 +210,8 @@ export default function FranchisePage() {
           formData.append("razorpay_order_id", response.razorpay_order_id);
           formData.append("razorpay_payment_id", response.razorpay_payment_id);
 
-          const res = await fetch(`${API}/api/franchise`, { method: "POST", body: formData });
+          const submitUrl = backendBase ? `${backendBase}/api/franchise` : `${API}/api/franchise`;
+          const res = await fetch(submitUrl, { method: "POST", body: formData });
           const data = await res.json();
           if (!res.ok) throw new Error(data.detail || "Submission failed");
           setStatus("success");
@@ -227,12 +228,15 @@ export default function FranchisePage() {
     rzp.open();
   }, [form, files]);
 
+  const backendBase = process.env.NEXT_PUBLIC_API_URL || "";
+
   const handleTcAccept = async (language: string) => {
     setStatus("submitting");
     setErrorMsg("");
 
     try {
-      const orderRes = await fetch(`${API}/api/franchise/create-order`, {
+      const orderUrl = backendBase ? `${backendBase}/api/franchise/create-order` : `${API}/api/franchise/create-order`;
+      const orderRes = await fetch(orderUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email, phone: form.phone }),
