@@ -211,7 +211,7 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
 
   useEffect(() => {
     if (!docs) return;
-    const docFields = ["aadhaar", "pan", "bank_statement", "id_proof", "address_proof", "other_docs"] as const;
+    const docFields = ["aadhaar", "pan", "bank_statement", "address_proof", "other_docs"] as const;
     for (const key of docFields) {
       const url = (docs as unknown as Record<string, string>)[key];
       if (url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) {
@@ -229,7 +229,6 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
     ["aadhaar", "Aadhaar Card"],
     ["pan", "PAN Card"],
     ["bank_statement", "Bank Statement"],
-    ["id_proof", "ID Proof"],
     ["address_proof", "Address Proof"],
     ["other_docs", "Other Documents"],
   ];
@@ -257,7 +256,7 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
           {docs.resume_url && (
             <DocPreview url={docs.resume_url} label="Resume" blobUrl={blobs["resume"]} onOpen={openFile} />
           )}
-          {![docs.aadhaar, docs.pan, docs.bank_statement, docs.id_proof, docs.address_proof, docs.other_docs, docs.resume_url].some(Boolean) && (
+          {![docs.aadhaar, docs.pan, docs.bank_statement, docs.address_proof, docs.other_docs, docs.resume_url].some(Boolean) && (
             <div className="empty">No documents uploaded.</div>
           )}
         </div>

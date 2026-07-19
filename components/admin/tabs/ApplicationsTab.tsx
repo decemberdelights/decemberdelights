@@ -111,7 +111,7 @@ export default function ApplicationsTab({ type, items, onApprove, onUnderProcess
 
   const docFields: [string, string][] = [
     ["aadhaar", "Aadhaar Card"], ["pan", "PAN Card"], ["bank_statement", "Bank Statement"],
-    ["id_proof", "ID Proof"], ["address_proof", "Address Proof"], ["other_docs", "Other Documents"],
+    ["address_proof", "Address Proof"], ["other_docs", "Other Documents"],
   ];
 
   const renderDocs = (item: App, isFranchise: boolean) => {

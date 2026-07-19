@@ -32,8 +32,7 @@ const DOC_FIELDS = [
   { key: "aadhaar", label: "Aadhaar Card", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>, required: true },
   { key: "pan", label: "PAN Card", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>, required: true },
   { key: "bank_statement", label: "Bank Statement", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18" /><path d="M3 10h18" /><path d="M5 6l7-3 7 3" /><path d="M4 10v11" /><path d="M20 10v11" /><path d="M8 14v3" /><path d="M12 14v3" /><path d="M16 14v3" /></svg>, required: true },
-  { key: "id_proof", label: "Identity Proof", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="11" r="2" /><path d="M15 8h2" /><path d="M15 12h2" /><path d="M7 16c1-2 3-3 5-3s4 1 5 3" /></svg>, required: true },
-  { key: "address_proof", label: "Address Proof", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>, required: true },
+  { key: "address_proof", label: "Address Proof", hint: "Electricity bill, Gas connection bill, or Home tax receipt", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>, required: true },
   { key: "other_docs", label: "Other Documents", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>, required: false },
 ];
 
@@ -44,7 +43,7 @@ export default function FranchisePage() {
     business_experience: "", preferred_location: "", investment_capability: "", message: "",
   });
   const [files, setFiles] = useState<Record<string, File | null>>({
-    aadhaar: null, pan: null, bank_statement: null, id_proof: null, address_proof: null, other_docs: null,
+    aadhaar: null, pan: null, bank_statement: null, address_proof: null, other_docs: null,
   });
   const [status, setStatus] = useState<"idle" | "terms" | "submitting" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -184,10 +183,10 @@ export default function FranchisePage() {
       return true;
     }
     if (s === 2) {
-      const required = ["aadhaar", "pan", "bank_statement", "id_proof", "address_proof"];
+      const required = ["aadhaar", "pan", "bank_statement", "address_proof"];
       const missing = required.filter((k) => !files[k]);
       if (missing.length > 0) {
-        const labels: Record<string, string> = { aadhaar: "Aadhaar Card", pan: "PAN Card", bank_statement: "Bank Statement", id_proof: "Identity Proof", address_proof: "Address Proof" };
+        const labels: Record<string, string> = { aadhaar: "Aadhaar Card", pan: "PAN Card", bank_statement: "Bank Statement", address_proof: "Address Proof" };
         setErrorMsg(`Please upload: ${missing.map((k) => labels[k]).join(", ")}`);
         return false;
       }
@@ -571,21 +570,22 @@ export default function FranchisePage() {
                       <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 3 of 4</p>
                     </div>
                   </div>
-                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #f0ede8" }}>Upload your documents for verification. PDF, JPG, PNG accepted. Max 10MB per file.</p>
-                  <div className="franchise-docs-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                    {DOC_FIELDS.map(({ key, label, icon, required }) => (
-                      <label key={key} className={`doc-card ${files[key] ? "has-file" : ""}`}>
-                        <input type="file" name={key} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFileChange} style={{ display: "none" }} />
-                        <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: files[key] ? "#1b3c33" : "#f0ede8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: files[key] ? "#fff" : "#586159", transition: "all 0.2s" }}>
-                          {files[key] ? <Check size={18} /> : icon}
-                        </div>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.82rem", color: "#1b3c33", marginBottom: "0.1rem" }}>{label}{required && " *"}</p>
-                          <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", color: files[key] ? "#586159" : "#bbb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{files[key] ? `${files[key]!.name} (${formatFileSize(files[key]!.size)})` : "Tap to upload"}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
+                   <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #f0ede8" }}>Upload your documents for verification. PDF, JPG, PNG accepted. Max 5MB per file.</p>
+                   <div className="franchise-docs-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                     {DOC_FIELDS.map(({ key, label, icon, required, hint }) => (
+                       <label key={key} className={`doc-card ${files[key] ? "has-file" : ""}`}>
+                         <input type="file" name={key} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFileChange} style={{ display: "none" }} />
+                         <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: files[key] ? "#1b3c33" : "#f0ede8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: files[key] ? "#fff" : "#586159", transition: "all 0.2s" }}>
+                           {files[key] ? <Check size={18} /> : icon}
+                         </div>
+                         <div style={{ minWidth: 0, flex: 1 }}>
+                           <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.82rem", color: "#1b3c33", marginBottom: "0.1rem" }}>{label}{required && " *"}</p>
+                           {hint && <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.7rem", color: "#888", marginBottom: "0.15rem" }}>{hint}</p>}
+                           <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", color: files[key] ? "#586159" : "#bbb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{files[key] ? `${files[key]!.name} (${formatFileSize(files[key]!.size)})` : "Tap to upload"}</p>
+                         </div>
+                       </label>
+                     ))}
+                   </div>
                 </div>
               </div>
             )}

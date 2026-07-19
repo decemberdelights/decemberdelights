@@ -47,7 +47,6 @@ export interface App {
   aadhaar?: string;
   pan?: string;
   bank_statement?: string;
-  id_proof?: string;
   address_proof?: string;
   other_docs?: string;
 }

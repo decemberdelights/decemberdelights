@@ -117,7 +117,7 @@ async def save_upload(file: Optional[UploadFile], applicant_name: str, field_nam
 
 
 def delete_app_files(app: dict):
-    for field in ["aadhaar", "pan", "bank_statement", "id_proof", "address_proof", "other_docs"]:
+    for field in ["aadhaar", "pan", "bank_statement", "address_proof", "other_docs"]:
         url = app.get(field, "")
         if url and "/franchise-docs/" in url:
             filename = url.split("/")[-1]
@@ -219,7 +219,6 @@ async def create_franchise(
     aadhaar: Optional[UploadFile] = File(None),
     pan: Optional[UploadFile] = File(None),
     bank_statement: Optional[UploadFile] = File(None),
-    id_proof: Optional[UploadFile] = File(None),
     address_proof: Optional[UploadFile] = File(None),
     other_docs: Optional[UploadFile] = File(None),
 ):
@@ -326,7 +325,7 @@ async def create_franchise(
     uploaded_urls = []
     for field_name, file_obj in [
         ("Aadhaar", aadhaar), ("PAN", pan), ("Bank Statement", bank_statement),
-        ("ID Proof", id_proof), ("Address Proof", address_proof), ("Other Documents", other_docs),
+        ("Address Proof", address_proof), ("Other Documents", other_docs),
     ]:
         url = await save_upload(file_obj, full_name, field_name)
         uploaded_urls.append(url)
@@ -345,9 +344,8 @@ async def create_franchise(
         "aadhaar": uploaded_urls[0],
         "pan": uploaded_urls[1],
         "bank_statement": uploaded_urls[2],
-        "id_proof": uploaded_urls[3],
-        "address_proof": uploaded_urls[4],
-        "other_docs": uploaded_urls[5],
+        "address_proof": uploaded_urls[3],
+        "other_docs": uploaded_urls[4],
         "razorpay_order_id": razorpay_order_id,
         "razorpay_payment_id": razorpay_payment_id,
     }
