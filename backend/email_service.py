@@ -14,6 +14,7 @@ SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@decemberdelights.com")
 SENDER_NAME = os.environ.get("SENDER_NAME", "December Delights")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://www.decemberdelights.in")
 
 
 def _send_email(to_email: str, subject: str, html_body: str) -> bool:
@@ -106,7 +107,7 @@ def send_order_confirmation(customer_name: str, customer_email: str, order_id: i
                 </div>
 
                 <div style="text-align:center;margin-top:24px;">
-                    <a href="https://decemberdelights.vercel.app/track" style="background:#4a2c2a;color:#fff;padding:12px 28px;text-decoration:none;border-radius:6px;font-size:14px;display:inline-block;">Track Order</a>
+                    <a href="{FRONTEND_URL}/track" style="background:#4a2c2a;color:#fff;padding:12px 28px;text-decoration:none;border-radius:6px;font-size:14px;display:inline-block;">Track Order</a>
                 </div>
             </div>
             <div style="background:#f4f4f4;padding:16px;text-align:center;">
@@ -177,7 +178,7 @@ def send_franchise_acknowledgment(full_name: str, email: str, phone: str, passwo
                 </div>
 
                 <div style="text-align:center;margin-top:24px;">
-                    <a href="https://decemberdelights.vercel.app/franchise/status" style="background:#4a2c2a;color:#fff;padding:12px 28px;text-decoration:none;border-radius:6px;font-size:14px;display:inline-block;">Check Status</a>
+                    <a href="{FRONTEND_URL}/franchise/status" style="background:#4a2c2a;color:#fff;padding:12px 28px;text-decoration:none;border-radius:6px;font-size:14px;display:inline-block;">Check Status</a>
                 </div>
             </div>
             <div style="background:#f4f4f4;padding:16px;text-align:center;">
