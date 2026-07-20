@@ -86,25 +86,6 @@ export function OrderCardSkeleton() {
   );
 }
 
-export function StatCardSkeleton() {
-  return (
-    <div style={{ background: "#fff", borderRadius: "12px", padding: "18px 20px", borderLeft: "4px solid #e4e1d6" }}>
-      <SkeletonBox style={{ height: "12px", width: "50%", marginBottom: "8px" }} />
-      <SkeletonBox style={{ height: "28px", width: "30%" }} />
-    </div>
-  );
-}
-
-export function SidebarSkeleton() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px" }}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <SkeletonBox key={i} style={{ height: "40px", borderRadius: "7px" }} />
-      ))}
-    </div>
-  );
-}
-
 export function AdminStatCardsSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className="card-grid" style={{ marginBottom: 18 }}>

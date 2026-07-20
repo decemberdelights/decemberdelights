@@ -11,7 +11,7 @@ export default function Footer() {
     }}>
       <div className="footer-grid">
         <div className="footer-brand">
-          <Image src="/logo.png" alt="December Delights" width={300} height={140} sizes="300px" style={{ height: "140px", width: "auto", marginBottom: "12px" }} />
+          <Image src="/logo.png" alt="December Delights" width={300} height={140} sizes="300px" loading="lazy" style={{ height: "140px", width: "auto", marginBottom: "12px" }} />
         </div>
 
         {[
