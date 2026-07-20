@@ -34,6 +34,7 @@ const STATUS_FLOW = ["pending", "confirmed", "preparing", "packed", "ready", "de
 const STATUS_INFO: Record<string, { label: string; sub: string; color: string; icon: string }> = {
   pending: { label: "Order Placed", sub: "We received your order", color: "#e67e22", icon: "01" },
   confirmed: { label: "Confirmed", sub: "Your order is confirmed", color: "#3498db", icon: "02" },
+  preparing: { label: "Being Prepared", sub: "Your order is being made", color: "#8e44ad", icon: "03" },
   packed: { label: "Being Prepared", sub: "Your order is being made", color: "#8e44ad", icon: "03" },
   ready: { label: "Ready for Pickup", sub: "Come collect your order!", color: "#27ae60", icon: "04" },
   delivered: { label: "Delivered", sub: "Order complete", color: "#1b3c33", icon: "05" },
