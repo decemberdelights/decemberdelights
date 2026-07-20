@@ -242,7 +242,7 @@ export default function Navbar() {
               width={30}
               height={30}
               priority
-              style={{ height: "30px", width: "30px" }}
+              style={{ width: "auto", height: "30px" }}
             />
           </Link>
           <div className="dd-nav-center">
@@ -263,7 +263,7 @@ export default function Navbar() {
             height={28}
             priority
             style={{
-              height: "28px", width: "28px",
+              width: "auto", height: "28px",
               display: "none",
             }}
           />
