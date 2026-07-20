@@ -4,6 +4,7 @@ import ScrollFloat from "@/components/ScrollFloat";
 import Image from "next/image";
 import Link from "next/link";
 import LazyVideo from "@/components/LazyVideo";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const mustTryItems = [
   { name: "Classic Espresso", description: "Rich, bold, and perfectly extracted single-origin espresso", image: "/items/espresso.jpg" },
@@ -15,11 +16,12 @@ const mustTryItems = [
 ];
 
 export default function MenuPreviewSection() {
+  const revealRef = useScrollReveal();
   return (
     <>
       <div data-bg="light" className="menu-section">
         <LazyVideo src="/DDespresso.mp4" className="menu-video-bg" />
-        <div className="menu-content">
+        <div ref={revealRef} className="menu-content section-reveal">
           <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>
             <ScrollFloat containerClassName="!my-0">What We Serve</ScrollFloat>
           </span>

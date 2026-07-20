@@ -2,12 +2,14 @@
 
 import ScrollFloat from "@/components/ScrollFloat";
 import Image from "next/image";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function AboutSection() {
+  const revealRef = useScrollReveal();
   return (
     <>
       <div id="our-story" data-bg="light" className="about-section">
-        <div className="about-content">
+        <div ref={revealRef} className="about-content section-reveal">
           <div className="about-text">
             <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>
               <ScrollFloat containerClassName="!my-0">Our Story</ScrollFloat>
@@ -34,7 +36,7 @@ export default function AboutSection() {
             </p>
           </div>
           <div className="about-image">
-            <Image src="/images/owners/owner.jpeg" alt="December Delights Owner" fill loading="lazy" style={{ objectFit: "cover", objectPosition: "center top" }} />
+            <Image src="/images/owners/owner.jpeg" alt="December Delights Owner" fill loading="lazy" sizes="(max-width: 768px) 100vw, 45vw" style={{ objectFit: "cover", objectPosition: "center top" }} />
             <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(180deg, transparent 60%, rgba(9,75,61,0.15) 100%)" }} />
           </div>
         </div>

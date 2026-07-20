@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from supabase_client import supabase
-from auth import require_super_admin, hash_password
+from auth import require_super_admin, hash_password, _user_cache
 from security import sanitize_input
 from pydantic import BaseModel
 from typing import Optional
@@ -102,6 +102,8 @@ def update_admin_user(user_id: int, data: AdminUserUpdate, _=Depends(require_sup
         if data.password:
             if len(data.password) < 8:
                 raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+            if len(data.password) > 72:
+                raise HTTPException(status_code=400, detail="Password must not exceed 72 characters")
             update_data["password_hash"] = hash_password(data.password)
 
         if data.role and data.role in ("admin", "super_admin"):
@@ -119,6 +121,7 @@ def update_admin_user(user_id: int, data: AdminUserUpdate, _=Depends(require_sup
 
         if update_data:
             supabase.table("admin_users").update(update_data).eq("id", user_id).execute()
+            _user_cache.invalidate(user_id)
         return {"ok": True}
     except HTTPException:
         raise
@@ -139,6 +142,7 @@ def delete_admin_user(user_id: int, _=Depends(require_super_admin)):
             if count <= 1:
                 raise HTTPException(status_code=400, detail="Cannot delete the last super admin")
         supabase.table("admin_users").delete().eq("id", user_id).execute()
+        _user_cache.invalidate(user_id)
         return {"ok": True}
     except HTTPException:
         raise

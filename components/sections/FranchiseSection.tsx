@@ -2,12 +2,14 @@
 
 import ScrollFloat from "@/components/ScrollFloat";
 import Image from "next/image";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function FranchiseSection() {
+  const revealRef = useScrollReveal();
   return (
     <>
       <div data-bg="dark" className="franchise-section">
-        <div className="franchise-inner">
+        <div ref={revealRef} className="franchise-inner section-reveal">
           <div className="franchise-video">
             <Image
               src="/working.svg"

@@ -95,11 +95,26 @@ def validate_application_status(status: str) -> bool:
     return status in ("pending", "submitted", "under_process", "approved", "rejected")
 
 
+_PRIVATE_IP_RANGES = (
+    ("10.", 8), ("127.", 8), ("169.254.", 16),
+    ("172.16.", 12), ("192.168.", 16),
+)
+
+
 def get_client_ip(request: Request) -> str:
-    """Get real client IP. Trust X-Forwarded-For only when behind known proxy."""
+    """Get client IP. X-Forwarded-For only used when client is on a private/proxy IP."""
+    client = request.client
+    if not client or not client.host:
+        return "unknown"
+
+    client_is_private = any(client.host.startswith(prefix) for prefix, _ in _PRIVATE_IP_RANGES)
+    if not client_is_private:
+        return client.host
+
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         ip = forwarded.split(",")[0].strip()
         if ip:
             return ip
-    return request.client.host if request.client else "unknown"
+
+    return client.host

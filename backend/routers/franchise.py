@@ -406,7 +406,13 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response)
     franchise_limiter.check(rate_key)
 
     result = supabase.table("franchise_applications").select("*").eq("phone", creds.phone).execute()
-    if not result.data or not verify_password(creds.password, result.data[0]["password_hash"]):
+    if not result.data:
+        franchise_limiter.record(rate_key)
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if len(creds.password) > 72:
+        franchise_limiter.record(rate_key)
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not verify_password(creds.password, result.data[0]["password_hash"]):
         franchise_limiter.record(rate_key)
         raise HTTPException(status_code=401, detail="Invalid credentials")
     app = result.data[0]

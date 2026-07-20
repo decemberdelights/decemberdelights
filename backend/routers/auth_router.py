@@ -42,6 +42,9 @@ def auth_login(request: Request, creds: dict, response: Response):
     username = creds.get("username", "")
     password = creds.get("password", "")
 
+    if len(password) > 72:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
     result = supabase.table("admin_users").select("*").eq("username", username).execute()
     if not result.data:
         login_limiter.record(rate_key)

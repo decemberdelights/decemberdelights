@@ -10,6 +10,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [darkBg, setDarkBg] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [navVisible, setNavVisible] = useState(false);
   const bgElsRef = useRef<Element[]>([]);
   const navRef = useRef<HTMLElement>(null);
 
@@ -42,10 +43,12 @@ export default function Navbar() {
     };
     window.addEventListener("scroll", check, { passive: true });
     check();
-    return () => { window.removeEventListener("scroll", check); cancelAnimationFrame(rafId); };
+
+    const timer = setTimeout(() => setNavVisible(true), 100);
+
+    return () => { window.removeEventListener("scroll", check); cancelAnimationFrame(rafId); clearTimeout(timer); };
   }, []);
 
-  // Lock body scroll when mobile menu is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -76,15 +79,24 @@ export default function Navbar() {
           border-radius: 999px;
           transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
           will-change: transform;
-          transform: translateZ(0);
+          transform: translateZ(0) translateY(-80px) scale(0.95);
+          opacity: 0;
           -webkit-backdrop-filter: blur(12px) saturate(150%);
           backdrop-filter: blur(12px) saturate(150%);
           background: rgba(255, 255, 255, 0.15);
           border: 1px solid rgba(255, 255, 255, 0.25);
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
         }
+        .dd-nav.nav-visible {
+          transform: translateZ(0) translateY(0) scale(1);
+          opacity: 1;
+          transition: transform 0.8s cubic-bezier(0.16,1,0.3,1), opacity 0.8s cubic-bezier(0.16,1,0.3,1), background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+        }
         .dd-nav.scrolled {
-          transform: translateZ(0) scale(0.97) translateY(-2px);
+          transform: translateZ(0) translateY(-2px) scale(0.97);
+        }
+        .dd-nav.nav-visible.scrolled {
+          transform: translateZ(0) translateY(-2px) scale(0.97);
         }
         .dd-nav.dark-bg {
           background: rgba(0, 0, 0, 0.35);
@@ -231,7 +243,7 @@ export default function Navbar() {
 
       <nav
         ref={navRef}
-        className={`dd-nav ${scrolled ? "scrolled" : ""} ${darkBg ? "dark-bg" : ""}`}
+        className={`dd-nav ${navVisible ? "nav-visible" : ""} ${scrolled ? "scrolled" : ""} ${darkBg ? "dark-bg" : ""}`}
       >
         <div className="dd-nav-links">
           <Link href="/" style={{ display: "flex", alignItems: "center", marginRight: "10px" }}>
@@ -253,7 +265,6 @@ export default function Navbar() {
           <Link className="dd-cta" href="/franchise/">Franchise</Link>
         </div>
 
-        {/* Logo visible on mobile (left side) */}
         <Link href="/" style={{ display: "flex", alignItems: "center" }}>
           <Image
             className="dd-logo-icon"
@@ -279,7 +290,6 @@ export default function Navbar() {
         </button>
       </nav>
 
-      {/* Mobile menu */}
       <div className={`dd-mobile-menu ${menuOpen ? "open" : ""}`} role="dialog" aria-label="Navigation menu">
         <Image src="/logo-icon.png" alt="" width={48} height={48} style={{ height: "48px", width: "48px", marginBottom: "0.5rem", opacity: 0.9 }} />
         <div className="dd-mobile-divider" />
@@ -306,13 +316,6 @@ export default function Navbar() {
           Franchise →
         </Link>
       </div>
-
-      <style>{`
-        @media (max-width: 900px) {
-          .dd-logo-icon { display: inline-block !important; }
-          .dd-hamburger { display: flex !important; }
-        }
-      `}</style>
     </>
   );
 }

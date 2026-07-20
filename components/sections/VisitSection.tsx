@@ -2,12 +2,14 @@
 
 import ScrollFloat from "@/components/ScrollFloat";
 import LazyVideo from "@/components/LazyVideo";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function VisitSection() {
+  const revealRef = useScrollReveal();
   return (
     <>
       <div data-bg="dark" id="visit" className="visit-section">
-        <div className="visit-text">
+        <div ref={revealRef} className="visit-text section-reveal">
           <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Visit Us</span>
           <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
           <h2 className="visit-heading">

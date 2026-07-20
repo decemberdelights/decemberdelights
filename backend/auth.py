@@ -21,6 +21,9 @@ SECRET_KEY = os.environ.get("JWT_SECRET", "")
 if not SECRET_KEY:
     logger.critical("JWT_SECRET environment variable is NOT SET. Server cannot start securely.")
     raise RuntimeError("JWT_SECRET environment variable is required")
+if len(SECRET_KEY) < 32:
+    logger.critical("JWT_SECRET is too short. Must be at least 32 characters for HS256 security.")
+    raise RuntimeError("JWT_SECRET must be at least 32 characters")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 4
 
@@ -135,11 +138,11 @@ def require_super_admin(
 
 
 def get_current_franchise(
-    session: Optional[str] = Cookie(None),
+    franchise_session: Optional[str] = Cookie(None),
 ) -> dict:
-    if not session:
+    if not franchise_session:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    payload = decode_token(session)
+    payload = decode_token(franchise_session)
     if not payload or payload.get("type") != "franchise":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
     try:

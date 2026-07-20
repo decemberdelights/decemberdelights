@@ -2,12 +2,14 @@
 
 import ScrollFloat from "@/components/ScrollFloat";
 import LazyVideo from "@/components/LazyVideo";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function CareerSection() {
+  const revealRef = useScrollReveal();
   return (
     <>
       <div data-bg="dark" className="career-section">
-        <div className="career-text">
+        <div ref={revealRef} className="career-text section-reveal">
           <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Career</span>
           <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
           <h2 className="career-heading">
