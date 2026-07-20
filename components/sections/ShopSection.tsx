@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import ScrollFloat from "@/components/ScrollFloat";
 import Image from "next/image";
@@ -22,6 +22,8 @@ interface Product {
 export default function ShopSection() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [revealed, setRevealed] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -31,6 +33,22 @@ export default function ShopSection() {
       .catch((err) => { if (err.name !== "AbortError") {} })
       .finally(() => setLoading(false));
     return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setRevealed(true);
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -50px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -46,7 +64,7 @@ export default function ShopSection() {
           align-items: center;
           justify-content: flex-start;
           overflow: hidden;
-          padding: 100px 60px;
+          padding: 120px 60px;
         }
         .shop-section-v2::before {
           content: '';
@@ -61,50 +79,113 @@ export default function ShopSection() {
         .shop-inner-v2 {
           position: relative;
           z-index: 2;
-          max-width: 1400px;
+          max-width: 1300px;
           width: 100%;
           margin: 0 auto;
         }
+
+        /* Section label */
+        .shop-label-v2 {
+          font-family: 'Montserrat', sans-serif;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 4px;
+          text-transform: uppercase;
+          color: #c8a97a;
+          margin-bottom: 16px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          opacity: 0;
+          transform: translateY(20px);
+          transition: opacity 0.8s cubic-bezier(0.22,1,0.36,1), transform 0.8s cubic-bezier(0.22,1,0.36,1);
+        }
+        .shop-label-v2::before {
+          content: '';
+          width: 24px;
+          height: 1px;
+          background: #c8a97a;
+        }
+        .shop-section-v2.revealed .shop-label-v2 {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Heading */
         .shop-heading-v2 {
           font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(28px, 6vw, 90px);
+          font-size: clamp(36px, 6vw, 72px);
           font-weight: 700;
           color: #094b3d;
           margin-bottom: 20px;
-          line-height: 1.15;
+          line-height: 1;
+          opacity: 0;
+          transform: translateY(20px);
+          transition: opacity 0.8s 0.1s cubic-bezier(0.22,1,0.36,1), transform 0.8s 0.1s cubic-bezier(0.22,1,0.36,1);
         }
+        .shop-section-v2.revealed .shop-heading-v2 {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Description */
         .shop-desc-v2 {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 20px;
-          font-weight: 700;
+          font-size: clamp(16px, 2vw, 20px);
+          font-weight: 400;
           font-style: italic;
           line-height: 1.7;
           color: #3d4a3e;
           margin-bottom: 48px;
           max-width: 700px;
+          opacity: 0;
+          transform: translateY(20px);
+          transition: opacity 0.8s 0.2s cubic-bezier(0.22,1,0.36,1), transform 0.8s 0.2s cubic-bezier(0.22,1,0.36,1);
         }
+        .shop-section-v2.revealed .shop-desc-v2 {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Grid */
         .shop-grid-v2 {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 20px;
           margin-bottom: 48px;
         }
+
+        /* Card */
         .shop-card-v2 {
           background: #fff;
-          border-radius: 18px;
+          border-radius: 16px;
           overflow: hidden;
-          border: 1px solid rgba(0,0,0,0.04);
+          border: 1px solid rgba(0,0,0,0.06);
           transition: transform 0.4s cubic-bezier(0.22,1,0.36,1), box-shadow 0.4s ease;
           cursor: pointer;
+          opacity: 0;
+          transform: translateY(30px);
         }
+        .shop-section-v2.revealed .shop-card-v2 {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .shop-section-v2.revealed .shop-card-v2:nth-child(1) { transition-delay: 0.15s; }
+        .shop-section-v2.revealed .shop-card-v2:nth-child(2) { transition-delay: 0.25s; }
+        .shop-section-v2.revealed .shop-card-v2:nth-child(3) { transition-delay: 0.35s; }
+        .shop-section-v2.revealed .shop-card-v2:nth-child(4) { transition-delay: 0.15s; }
+        .shop-section-v2.revealed .shop-card-v2:nth-child(5) { transition-delay: 0.25s; }
+        .shop-section-v2.revealed .shop-card-v2:nth-child(6) { transition-delay: 0.35s; }
         .shop-card-v2:hover {
           transform: translateY(-8px);
           box-shadow: 0 20px 50px rgba(0,0,0,0.1);
         }
+
+        /* Card image */
         .shop-card-v2-img {
           position: relative;
           width: 100%;
-          height: 280px;
+          height: 260px;
           overflow: hidden;
         }
         .shop-card-v2-img img,
@@ -118,10 +199,13 @@ export default function ShopSection() {
         .shop-card-v2:hover .shop-card-v2-img div {
           transform: scale(1.05);
         }
+
+        /* Card body */
         .shop-card-v2-body {
-          padding: 22px 24px;
+          padding: 20px 24px;
           display: flex;
           flex-direction: column;
+          gap: 8px;
         }
         .shop-card-v2-cat {
           font-family: 'Montserrat', sans-serif;
@@ -130,21 +214,19 @@ export default function ShopSection() {
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 2px;
-          margin-bottom: 8px;
         }
         .shop-card-v2-name {
           font-family: 'Cormorant Garamond', serif;
           color: #094b3d;
           font-size: 22px;
           font-weight: 700;
-          margin-bottom: 16px;
         }
         .shop-card-v2-footer {
           display: flex;
           align-items: center;
           justify-content: space-between;
           margin-top: auto;
-          padding-top: 14px;
+          padding-top: 12px;
           border-top: 1px solid rgba(0,0,0,0.06);
         }
         .shop-card-v2-price {
@@ -161,27 +243,37 @@ export default function ShopSection() {
           text-transform: uppercase;
           color: #fff;
           background: #094b3d;
-          padding: 10px 20px;
+          padding: 8px 18px;
           border-radius: 999px;
           border: none;
           cursor: pointer;
-          transition: background 0.3s ease;
+          transition: background 0.3s ease, transform 0.3s ease;
           text-decoration: none;
           display: inline-block;
         }
         .shop-card-v2-btn:hover {
           background: #073a2e;
+          transform: translateY(-1px);
         }
+
+        /* CTA */
         .shop-cta-v2 {
           text-align: center;
+          opacity: 0;
+          transform: translateY(20px);
+          transition: opacity 0.8s 0.5s cubic-bezier(0.22,1,0.36,1), transform 0.8s 0.5s cubic-bezier(0.22,1,0.36,1);
+        }
+        .shop-section-v2.revealed .shop-cta-v2 {
+          opacity: 1;
+          transform: translateY(0);
         }
         .shop-cta-v2 a {
           display: inline-flex;
           align-items: center;
           gap: 10px;
-          padding: 16px 48px;
+          padding: 14px 36px;
           font-family: 'Montserrat', sans-serif;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
           letter-spacing: 2px;
           text-transform: uppercase;
@@ -192,13 +284,31 @@ export default function ShopSection() {
           cursor: pointer;
           text-decoration: none;
           transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+          position: relative;
+          overflow: hidden;
+        }
+        .shop-cta-v2 a::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: #094b3d;
+          transform: translateY(101%);
+          transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+          opacity: 0.1;
+        }
+        .shop-cta-v2 a:hover::before {
+          transform: translateY(0);
         }
         .shop-cta-v2 a:hover {
-          background: #094b3d;
-          color: #fff;
           transform: translateY(-2px);
           box-shadow: 0 8px 24px rgba(9,75,61,0.25);
         }
+        .shop-cta-v2 a span,
+        .shop-cta-v2 a svg {
+          position: relative;
+          z-index: 1;
+        }
+
         @media (max-width: 900px) {
           .shop-section-v2 { padding: 80px 40px; }
           .shop-grid-v2 { grid-template-columns: repeat(2, 1fr); gap: 16px; }
@@ -212,10 +322,13 @@ export default function ShopSection() {
         }
       `}</style>
 
-      <div data-bg="light" className="shop-section-v2">
+      <div
+        ref={sectionRef}
+        data-bg="light"
+        className={`shop-section-v2 ${revealed ? "revealed" : ""}`}
+      >
         <div className="shop-inner-v2">
-          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Our Shop</span>
-          <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
+          <div className="shop-label-v2">Our Shop</div>
           <h2 className="shop-heading-v2">
             <ScrollFloat containerClassName="!my-0" textClassName="pb-1">Premium Products</ScrollFloat>
           </h2>
@@ -272,7 +385,7 @@ export default function ShopSection() {
 
           <div className="shop-cta-v2">
             <Link href="/shop">
-              Explore All Products
+              <span>Explore All Products</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
               </svg>
