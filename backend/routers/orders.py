@@ -313,6 +313,9 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
         "payment_status": payment_status,
         "notes": data.get("notes", ""),
     }
+    if payment_method == "razorpay" and data.get("razorpay_order_id"):
+        order_data["razorpay_order_id"] = sanitize_input(data.get("razorpay_order_id", ""), 100)
+        order_data["razorpay_payment_id"] = sanitize_input(data.get("razorpay_payment_id", ""), 100)
 
     try:
         result = supabase.table("orders").insert(order_data).execute()

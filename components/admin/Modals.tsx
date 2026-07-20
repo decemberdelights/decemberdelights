@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { App } from "./types";
 import { API } from "@/lib/api";
+import { generateOrderReceipt } from "@/lib/receipt";
 
 function useEscapeKey(handler: () => void, enabled: boolean) {
   useEffect(() => {
@@ -46,7 +47,7 @@ export function RejectModal({ open, onReject, onCancel }: RejectModalProps) {
 }
 
 interface ViewOrderModalProps {
-  order: { id: number; customer_name: string; customer_email: string; customer_phone: string; customer_address: string; parsedItems: unknown[]; total: number; notes: string; payment_method?: string; payment_status?: string; razorpay_order_id?: string; razorpay_payment_id?: string } | null;
+  order: { id: number; customer_name: string; customer_email: string; customer_phone: string; customer_address: string; parsedItems: unknown[]; total: number; notes: string; payment_method?: string; payment_status?: string; razorpay_order_id?: string; razorpay_payment_id?: string; created_at?: string } | null;
   onClose: () => void;
 }
 
@@ -55,13 +56,43 @@ export function ViewOrderModal({ order, onClose }: ViewOrderModalProps) {
 
   if (!order) return null;
 
+  const isOnline = order.payment_method === "razorpay";
+  const orderDate = order.created_at ? new Date(order.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+
+  const handleDownloadReceipt = () => {
+    generateOrderReceipt({
+      orderId: order.id,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
+      customerEmail: order.customer_email,
+      customerAddress: order.customer_address,
+      items: (order.parsedItems || []).map((item: any) => ({ name: String(item.name), quantity: Number(item.quantity || item.qty || 0), price: Number(item.price || 0) })),
+      total: order.total,
+      paymentMethod: order.payment_method || "cash",
+      paymentStatus: order.payment_status || "unpaid",
+      razorpayOrderId: order.razorpay_order_id || "",
+      razorpayPaymentId: order.razorpay_payment_id || "",
+      orderDate,
+    });
+  };
+
   return (
     <div className="overlay show" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ width: 480, maxHeight: "90vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
         <h4>Order #{order.id} — {order.customer_name}</h4>
-        <p style={{ fontSize: 12, color: "#6b6f6a", margin: "0 0 12px" }}>
-          {order.customer_email} · {order.customer_phone} · {order.customer_address}
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 12px", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, color: "#6b6f6a" }}>
+            {order.customer_email} · {order.customer_phone} · {order.customer_address}
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: isOnline ? "#f0faf4" : "#fff8f0", color: isOnline ? "#1a7a4a" : "#c05621", border: `1px solid ${isOnline ? "#c3e8d4" : "#f0d9b5"}` }}>
+            {isOnline ? "Online Payment" : "Cash on Delivery"}
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: order.payment_status === "paid" ? "#f0faf4" : "#fef3f2", color: order.payment_status === "paid" ? "#1a7a4a" : "#a32d2d", border: `1px solid ${order.payment_status === "paid" ? "#c3e8d4" : "#f5c6c6"}` }}>
+            {order.payment_status === "paid" ? "Paid" : "Unpaid"}
+          </span>
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {(order.parsedItems || []).map((val, idx) => {
             const item = val as Record<string, unknown>;
@@ -90,6 +121,10 @@ export function ViewOrderModal({ order, onClose }: ViewOrderModalProps) {
         )}
         <div className="modal-actions" style={{ marginTop: 16 }}>
           <button className="btn" onClick={onClose}>Close</button>
+          <button className="btn approve" onClick={handleDownloadReceipt} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Receipt
+          </button>
         </div>
       </div>
     </div>
