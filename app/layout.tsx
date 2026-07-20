@@ -4,7 +4,6 @@ import "./globals.css";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import ScrollRevealProvider from "@/components/scroll-reveal-provider";
 import CustomScrollbar from "@/components/CustomScrollbar";
 import { cn } from "@/lib/utils";
 
@@ -67,9 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <LoadingScreen />
         <CustomScrollbar />
         <Navbar />
-        <ScrollRevealProvider>
-          {children}
-        </ScrollRevealProvider>
+        {children}
         <Footer />
       </body>
     </html>
