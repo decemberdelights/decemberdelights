@@ -357,17 +357,17 @@ def track_order(phone: str, request: Request):
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
     # Try normalized phone first (how it was stored)
-    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").eq("customer_phone", cleaned).order("created_at", desc=True).limit(5).execute()
+    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,payment_method,razorpay_order_id,razorpay_payment_id,created_at").eq("customer_phone", cleaned).order("created_at", desc=True).limit(5).execute()
     matching = result.data or []
 
     if not matching:
         # Fallback: try with the raw phone parameter
-        result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").eq("customer_phone", phone).order("created_at", desc=True).limit(5).execute()
+        result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,payment_method,razorpay_order_id,razorpay_payment_id,created_at").eq("customer_phone", phone).order("created_at", desc=True).limit(5).execute()
         matching = result.data or []
 
     if not matching:
         # Last resort: scan recent orders and normalize
-        result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,created_at").order("created_at", desc=True).limit(20).execute()
+        result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,payment_method,razorpay_order_id,razorpay_payment_id,created_at").order("created_at", desc=True).limit(20).execute()
         orders = result.data or []
         matching = [o for o in orders if _normalize_phone(o.get("customer_phone", "")) == cleaned][:5]
 

@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { API } from "@/lib/api";
 import { formatPriceINR } from "@/lib/utils";
+import { generateOrderReceipt } from "@/lib/receipt";
 import { OrderCardSkeleton } from "@/components/Skeleton";
 
 interface OrderItem {
@@ -23,6 +24,9 @@ interface Order {
   items: string;
   total: number;
   status: string;
+  payment_method?: string;
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
   created_at: string;
 }
 
@@ -49,17 +53,25 @@ function TrackContent() {
   const [searched, setSearched] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
+  const [error, setError] = useState("");
+
   const trackAuto = async (phoneNumber: string) => {
     setLoading(true);
+    setError("");
     try {
       const r = await fetch(`${API}/api/orders/track/${encodeURIComponent(phoneNumber)}`);
+      if (!r.ok) {
+        const errData = await r.json().catch(() => ({}));
+        throw new Error(errData.detail || "Failed to fetch orders");
+      }
       const data: Order[] = await r.json();
       setOrders(data);
       setSearched(true);
       if (data.length > 0) setExpandedId(data[0].id);
-    } catch {
+    } catch (err: unknown) {
       setOrders([]);
       setSearched(true);
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     }
     setLoading(false);
   };
@@ -139,7 +151,7 @@ function TrackContent() {
           </div>
         )}
 
-        {!loading && searched && orders.length === 0 && (
+        {!loading && searched && orders.length === 0 && !error && (
           <div style={{ textAlign: "center", padding: "4rem 2rem", background: "#fff", borderRadius: "20px", boxShadow: "0 4px 24px rgba(27,60,51,0.06)", animation: "fadeSlideUp 0.4s ease" }}>
             <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#f5f3ef", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -151,6 +163,19 @@ function TrackContent() {
             <Link href="/shop" style={{ display: "inline-block", padding: "0.75rem 2rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.85rem", textDecoration: "none" }}>
               Browse Shop
             </Link>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div style={{ textAlign: "center", padding: "4rem 2rem", background: "#fff", borderRadius: "20px", boxShadow: "0 4px 24px rgba(27,60,51,0.06)", animation: "fadeSlideUp 0.4s ease" }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#fdf0ef", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+            </div>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.6rem", fontWeight: 300, marginBottom: "0.5rem" }}>Something went wrong</h3>
+            <p style={{ fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.85rem", marginBottom: "1.5rem" }}>{error}</p>
+            <button onClick={() => track()} style={{ display: "inline-block", padding: "0.75rem 2rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.85rem", border: "none", cursor: "pointer" }}>
+              Try Again
+            </button>
           </div>
         )}
 
@@ -276,6 +301,41 @@ function TrackContent() {
                           </div>
                         </div>
                       )}
+
+                      {/* Payment Info & Download Receipt */}
+                      <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.4rem 0.85rem", borderRadius: "8px", background: order.payment_method === "razorpay" ? "#f0faf4" : "#fff8f0", border: `1px solid ${order.payment_method === "razorpay" ? "#c3e8d4" : "#f0d9b5"}` }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={order.payment_method === "razorpay" ? "#27ae60" : "#e67e22"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            {order.payment_method === "razorpay" ? <><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></> : <><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></>}
+                          </svg>
+                          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "0.75rem", fontWeight: 700, color: order.payment_method === "razorpay" ? "#1a7a4a" : "#c05621" }}>
+                            {order.payment_method === "razorpay" ? "Online Payment" : "Cash on Delivery"}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            generateOrderReceipt({
+                              orderId: order.id,
+                              customerName: order.customer_name,
+                              customerPhone: order.customer_phone,
+                              customerAddress: order.customer_address,
+                              items: items.map(item => ({ name: item.name, quantity: item.quantity, price: item.price })),
+                              total: order.total,
+                              paymentMethod: order.payment_method || "cash",
+                              paymentStatus: "paid",
+                              razorpayOrderId: order.razorpay_order_id || "",
+                              razorpayPaymentId: order.razorpay_payment_id || "",
+                              orderDate: new Date(order.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+                            });
+                          }}
+                          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "10px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "'Montserrat', sans-serif", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "#063a2f"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          Download Receipt
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

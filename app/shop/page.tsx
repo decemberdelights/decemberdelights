@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { API } from "@/lib/api";
 import { formatPriceINR } from "@/lib/utils";
+import { generateOrderReceipt } from "@/lib/receipt";
 import { ProductCardSkeleton } from "@/components/Skeleton";
 
 interface Product {
@@ -65,6 +66,11 @@ export default function ShopPage() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState(0);
   const [orderPhone, setOrderPhone] = useState("");
+  const [orderName, setOrderName] = useState("");
+  const [orderAddress, setOrderAddress] = useState("");
+  const [orderItems, setOrderItems] = useState<{ name: string; quantity: number; price: number }[]>([]);
+  const [orderTotal, setOrderTotal] = useState(0);
+  const [orderPaymentMethod, setOrderPaymentMethod] = useState("cash");
   const [saving, setSaving] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "razorpay">("cash");
   const [form, setForm] = useState({ customer_name: "", customer_phone: "", customer_email: "", customer_address: "" });
@@ -183,8 +189,14 @@ export default function ShopPage() {
     const data = await r.json();
     if (r.ok) {
       const phone = form.customer_phone;
+      const receiptItems = cart.map((c) => ({ name: c.product.name, price: c.product.price, quantity: c.quantity }));
       setOrderId(data.id);
       setOrderPhone(phone);
+      setOrderName(form.customer_name);
+      setOrderAddress(form.customer_address);
+      setOrderItems(receiptItems);
+      setOrderTotal(cartTotal);
+      setOrderPaymentMethod(method);
       setOrderSuccess(true);
       setCart([]);
       setShowCheckout(false);
@@ -296,6 +308,25 @@ export default function ShopPage() {
             </p>
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap", animation: "fadeSlideUp 0.5s ease 0.5s both" }}>
               <button onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); router.push(`/track?phone=${encodeURIComponent(orderPhone)}`); }} style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "none", background: dark, color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", transition: "background 0.2s" }}>Track Now</button>
+              <button
+                onClick={() => {
+                  generateOrderReceipt({
+                    orderId,
+                    customerName: orderName,
+                    customerPhone: orderPhone,
+                    customerAddress: orderAddress,
+                    items: orderItems,
+                    total: orderTotal,
+                    paymentMethod: orderPaymentMethod,
+                    paymentStatus: orderPaymentMethod === "razorpay" ? "paid" : "unpaid",
+                    orderDate: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+                  });
+                }}
+                style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "none", background: "#27ae60", color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.5rem", transition: "background 0.2s" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Receipt
+              </button>
               <button onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); setOrderSuccess(false); }} style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "1.5px solid #ddd", background: "#fff", color: muted, fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Continue Shopping</button>
             </div>
           </div>
