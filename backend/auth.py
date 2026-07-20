@@ -137,6 +137,9 @@ def require_super_admin(
     return user
 
 
+_franchise_cache = UserCache(ttl_seconds=120)
+
+
 def get_current_franchise(
     franchise_session: Optional[str] = Cookie(None),
 ) -> dict:
@@ -149,7 +152,14 @@ def get_current_franchise(
         app_id = int(payload.get("sub"))
     except (ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    cached = _franchise_cache.get(app_id)
+    if cached:
+        return cached
+
     result = supabase.table("franchise_applications").select("*").eq("id", app_id).execute()
     if not result.data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Application not found")
-    return result.data[0]
+    app = result.data[0]
+    _franchise_cache.set(app_id, app)
+    return app

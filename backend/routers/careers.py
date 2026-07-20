@@ -5,12 +5,14 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from supabase_client import supabase
 from auth import require_super_admin
-from security import validate_email, validate_phone, sanitize_input, careers_track_limiter
+from security import validate_email, validate_phone, sanitize_input, careers_track_limiter, RateLimiter
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+careers_submit_limiter = RateLimiter(max_attempts=5, window_seconds=60)
 
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
 MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -23,8 +25,18 @@ def _sanitize_filename(name: str) -> str:
 
 
 def _sync_upload(filename: str, content: bytes, content_type: str) -> str:
-    supabase.storage.from_("career-docs").upload(filename, content, {"content-type": content_type})
-    return supabase.storage.from_("career-docs").get_public_url(filename)
+    import time as _time
+    for attempt in range(3):
+        try:
+            supabase.storage.from_("career-docs").upload(filename, content, {"content-type": content_type})
+            return supabase.storage.from_("career-docs").get_public_url(filename)
+        except Exception as e:
+            if attempt < 2:
+                logger.warning(f"Upload attempt {attempt+1} failed for {filename}: {e}")
+                _time.sleep(2 * (attempt + 1))
+            else:
+                logger.error(f"Upload failed after 3 attempts for {filename}: {e}")
+                raise
 
 
 def delete_career_files(app: dict):
@@ -70,6 +82,7 @@ def track_career_application(name: str = "", phone: str = "", request: Request =
 
 @router.post("/api/careers")
 async def create_career(
+    request: Request,
     full_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
@@ -77,6 +90,10 @@ async def create_career(
     message: str = Form(""),
     resume: UploadFile = File(None),
 ):
+    from security import get_client_ip
+    client_ip = get_client_ip(request)
+    rate_key = f"career:{client_ip}"
+    careers_submit_limiter.check(rate_key)
     full_name = sanitize_input(full_name, 200)
     email = sanitize_input(email, 200)
     phone = sanitize_input(phone, 20)
@@ -114,6 +131,7 @@ async def create_career(
     await asyncio.to_thread(
         lambda: supabase.table("career_applications").insert(data).execute()
     )
+    careers_submit_limiter.record(rate_key)
     return {"ok": True}
 
 

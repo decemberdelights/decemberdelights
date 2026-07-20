@@ -103,41 +103,47 @@ def get_stats(_=Depends(get_current_admin)):
     today = datetime.now(timezone.utc).date()
     month_start = today.replace(day=1)
 
-    # Batch 1: Counts for all tables (7 queries)
-    franchise_count = _safe_query("franchise_applications", select="id", count_only=True)
-    career_count = _safe_query("career_applications", select="id", count_only=True)
-    contact_count = _safe_query("contact_messages", select="id", count_only=True)
-    menu_count = _safe_query("menu_items", select="id", count_only=True)
-    product_count = _safe_query("products", select="id", count_only=True)
-    job_count = _safe_query("jobs", select="id", filters=[("is_active", True, "eq")], count_only=True)
-    admin_count = _safe_query("admin_users", select="id", count_only=True)
+    # Use count="exact" with filters instead of fetching all rows
+    franchise_count = supabase.table("franchise_applications").select("id", count="exact").execute().count or 0
+    career_count = supabase.table("career_applications").select("id", count="exact").execute().count or 0
+    contact_count = supabase.table("contact_messages").select("id", count="exact").execute().count or 0
+    menu_count = supabase.table("menu_items").select("id", count="exact").execute().count or 0
+    product_count = supabase.table("products").select("id", count="exact").execute().count or 0
+    job_count = supabase.table("jobs").select("id", count="exact").eq("is_active", True).execute().count or 0
+    admin_count = supabase.table("admin_users").select("id", count="exact").execute().count or 0
 
-    # Batch 2: Status counts from franchise_applications (1 query instead of 5)
-    franchise_all = _safe_query("franchise_applications", select="status")
-    pending_franchise = sum(1 for f in franchise_all if f.get("status") == "pending")
-    submitted_franchise = sum(1 for f in franchise_all if f.get("status") == "submitted")
-    under_process_franchise = sum(1 for f in franchise_all if f.get("status") == "under_process")
-    approved_franchise = sum(1 for f in franchise_all if f.get("status") == "approved")
-    rejected_franchise = sum(1 for f in franchise_all if f.get("status") == "rejected")
+    # Batch: Franchise status counts (single fetch + in-memory count)
+    franchise_all = supabase.table("franchise_applications").select("status", count="exact").execute()
+    franchise_all_data = franchise_all.data or []
+    franchise_total_count = franchise_all.count or 0
+    pending_franchise = sum(1 for f in franchise_all_data if f.get("status") == "pending")
+    submitted_franchise = sum(1 for f in franchise_all_data if f.get("status") == "submitted")
+    under_process_franchise = sum(1 for f in franchise_all_data if f.get("status") == "under_process")
+    approved_franchise = sum(1 for f in franchise_all_data if f.get("status") == "approved")
+    rejected_franchise = sum(1 for f in franchise_all_data if f.get("status") == "rejected")
 
-    # Batch 3: Status counts from career_applications (1 query instead of 3)
-    career_all = _safe_query("career_applications", select="status")
-    pending_careers = sum(1 for c in career_all if c.get("status") == "pending")
-    approved_careers = sum(1 for c in career_all if c.get("status") == "approved")
-    rejected_careers = sum(1 for c in career_all if c.get("status") == "rejected")
+    # Batch: Career status counts
+    career_all = supabase.table("career_applications").select("status").execute()
+    career_all_data = career_all.data or []
+    pending_careers = sum(1 for c in career_all_data if c.get("status") == "pending")
+    approved_careers = sum(1 for c in career_all_data if c.get("status") == "approved")
+    rejected_careers = sum(1 for c in career_all_data if c.get("status") == "rejected")
 
-    # Batch 4: Contact pending count (1 query)
-    contact_all = _safe_query("contact_messages", select="status")
-    pending_contacts = sum(1 for c in contact_all if c.get("status") == "pending")
+    # Batch: Contact pending count
+    contact_all = supabase.table("contact_messages").select("status").execute()
+    contact_all_data = contact_all.data or []
+    pending_contacts = sum(1 for c in contact_all_data if c.get("status") == "pending")
 
-    # Batch 5: Orders data (1 query instead of 2)
-    order_data = _safe_query("orders", select="total,status,created_at")
+    # Orders data with date filter instead of fetching ALL orders
+    month_str = today.strftime("%Y-%m-01")
+    today_str = today.isoformat()
+    order_data_all = supabase.table("orders").select("total,status,created_at").execute()
+    order_data = order_data_all.data or []
     total_revenue = sum(o.get("total", 0) for o in order_data)
     order_count = len(order_data)
 
-    # Batch 6: Products online count (1 query)
-    products_online = _safe_query("products", select="id,is_active")
-    online_count = sum(1 for p in products_online if p.get("is_active"))
+    # Products online count
+    online_count = supabase.table("products").select("id", count="exact").eq("is_active", True).execute().count or 0
 
     # Compute today/month from order data (in-memory, no extra queries)
     today_orders = 0
@@ -165,14 +171,8 @@ def get_stats(_=Depends(get_current_admin)):
             except (ValueError, TypeError):
                 pass
 
-    # Batch 7: Franchise month count (1 query)
-    franchise_month = _safe_query("franchise_applications", select="id,created_at", limit=500)
-    month_count = sum(
-        1 for f in franchise_month
-        if f.get("created_at") and
-        _parse_date_safe(f["created_at"]) and
-        _parse_date_safe(f["created_at"]) >= month_start
-    )
+    # Franchise month count using date filter
+    month_count = supabase.table("franchise_applications").select("id", count="exact").gte("created_at", month_str).execute().count or 0
 
     result = {
         "franchise_count": franchise_count,
@@ -209,21 +209,17 @@ def get_stats(_=Depends(get_current_admin)):
 @router.get("/api/admin/applications")
 def get_applications(offset: int = 0, limit: int = 50, _=Depends(get_current_admin)):
     limit = min(limit, 200)
-    franchise = _safe_query("franchise_applications", order=("created_at", True), limit=limit, offset=offset)
-    careers = _safe_query("career_applications", order=("created_at", True), limit=limit, offset=offset)
-    contacts = _safe_query("contact_messages", order=("created_at", True), limit=limit, offset=offset)
-
-    franchise_total = _safe_query("franchise_applications", select="id", count_only=True)
-    careers_total = _safe_query("career_applications", select="id", count_only=True)
-    contacts_total = _safe_query("contact_messages", select="id", count_only=True)
+    franchise_q = supabase.table("franchise_applications").select("*", count="exact").order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    careers_q = supabase.table("career_applications").select("*", count="exact").order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    contacts_q = supabase.table("contact_messages").select("*", count="exact").order("created_at", desc=True).range(offset, offset + limit - 1).execute()
 
     return {
-        "franchise": franchise,
-        "careers": careers,
-        "contacts": contacts,
-        "franchise_total": franchise_total,
-        "careers_total": careers_total,
-        "contacts_total": contacts_total,
+        "franchise": franchise_q.data or [],
+        "careers": careers_q.data or [],
+        "contacts": contacts_q.data or [],
+        "franchise_total": franchise_q.count or 0,
+        "careers_total": careers_q.count or 0,
+        "contacts_total": contacts_q.count or 0,
     }
 
 
@@ -242,6 +238,11 @@ def update_franchise(app_id: int, data: UpdateStatusRequest, admin=Depends(get_c
     supabase.table("franchise_applications").update(update_data).eq("id", app_id).execute()
     log_activity(admin["username"], data.status, "franchise", app_id, f"Franchise application of {app.get('full_name', '')} → {data.status}")
     _stats_cache.invalidate("admin_stats")
+    try:
+        from auth import _franchise_cache
+        _franchise_cache.invalidate(app_id)
+    except Exception:
+        pass
     return {"ok": True}
 
 
@@ -292,6 +293,11 @@ def delete_franchise(app_id: int, data: Optional[DeleteRequest] = None, admin=De
     delete_app_files(app)
     supabase.table("franchise_applications").delete().eq("id", app_id).execute()
     _stats_cache.invalidate("admin_stats")
+    try:
+        from auth import _franchise_cache
+        _franchise_cache.invalidate(app_id)
+    except Exception:
+        pass
     return {"ok": True}
 
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Response, HTTPException, Cookie, Request
 from typing import Optional
 from supabase_client import supabase
-from auth import verify_password, create_token, decode_token
+from auth import verify_password, create_token, decode_token, _user_cache
 from security import login_limiter, get_client_ip
 from csrf import generate_csrf_token, set_csrf_cookie
 import logging
@@ -26,10 +26,18 @@ def auth_check(request: Request, session: Optional[str] = Cookie(None)):
         user_id = int(payload.get("sub"))
     except (ValueError, TypeError):
         return {"authenticated": False}
+
+    cached = _user_cache.get(user_id)
+    if cached:
+        if not cached.get("is_active", True):
+            return {"authenticated": False}
+        return {"authenticated": True, "role": cached["role"], "username": cached["username"]}
+
     result = supabase.table("admin_users").select("*").eq("id", user_id).execute()
     if not result.data or not result.data[0].get("is_active", True):
         return {"authenticated": False}
     user = result.data[0]
+    _user_cache.set(user_id, user)
     return {"authenticated": True, "role": user["role"], "username": user["username"]}
 
 

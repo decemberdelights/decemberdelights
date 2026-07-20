@@ -263,7 +263,10 @@ async def create_franchise(
         raise HTTPException(status_code=400, detail="This order has already been used for another application")
 
     # Check 3b: Verify Razorpay HMAC signature (prevents payment tampering)
-    if razorpay_signature and not _verify_razorpay_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature):
+    if not razorpay_signature:
+        logger.warning(f"Missing Razorpay signature from IP {client_ip}")
+        raise HTTPException(status_code=400, detail="Payment signature is required")
+    if not _verify_razorpay_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature):
         logger.warning(f"Razorpay signature mismatch for order={razorpay_order_id}, payment={razorpay_payment_id} from IP {client_ip}")
         raise HTTPException(status_code=400, detail="Payment signature verification failed")
 
@@ -353,17 +356,21 @@ async def create_franchise(
     if razorpay_payment_id:
         data["razorpay_payment_id"] = razorpay_payment_id
 
+    login_id = f"DD-{uuid.uuid4().hex[:12].upper()}"
+
     if existing.data and existing.data[0].get("login_id"):
         raise HTTPException(status_code=400, detail="Application already exists with this phone number")
 
     try:
         if existing.data and not existing.data[0].get("login_id"):
             app_id = existing.data[0]["id"]
+            data["login_id"] = login_id
             logger.info(f"Updating incomplete franchise app {app_id} for phone={phone} with new payment")
             await asyncio.to_thread(
                 lambda: supabase.table("franchise_applications").update(data).eq("id", app_id).execute()
             )
         else:
+            data["login_id"] = login_id
             result = await asyncio.to_thread(
                 lambda: supabase.table("franchise_applications").insert(data).execute()
             )
@@ -371,11 +378,6 @@ async def create_franchise(
     except Exception as db_err:
         logger.error(f"Franchise insert/update failed for phone={phone}: {db_err}")
         raise HTTPException(status_code=500, detail="Failed to save application. Please try again.")
-
-    login_id = f"DD-{uuid.uuid4().hex[:12].upper()}"
-    await asyncio.to_thread(
-        lambda: supabase.table("franchise_applications").update({"login_id": login_id}).eq("id", app_id).execute()
-    )
 
     logger.info(f"Franchise app {app_id} created/updated for {email} | payment={razorpay_payment_id}")
 
@@ -391,6 +393,7 @@ async def create_franchise(
 
 @router.get("/api/franchise/status")
 def franchise_status(franchise_session: Optional[str] = Cookie(None)):
+    from auth import _franchise_cache
     if not franchise_session:
         raise HTTPException(status_code=401, detail="Not authenticated")
     payload = decode_token(franchise_session)
@@ -400,10 +403,17 @@ def franchise_status(franchise_session: Optional[str] = Cookie(None)):
         app_id = int(payload.get("sub"))
     except (ValueError, TypeError):
         raise HTTPException(status_code=401, detail="Invalid token")
+
+    cached = _franchise_cache.get(app_id)
+    if cached:
+        return {"application": FranchiseOut(**cached).model_dump()}
+
     result = supabase.table("franchise_applications").select("*").eq("id", app_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Application not found")
-    return {"application": FranchiseOut(**result.data[0]).model_dump()}
+    app = result.data[0]
+    _franchise_cache.set(app_id, app)
+    return {"application": FranchiseOut(**app).model_dump()}
 
 
 @router.post("/api/franchise/login")
@@ -428,6 +438,10 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response)
     response.set_cookie("franchise_session", token, httponly=True, samesite="none", max_age=86400, secure=True, path="/")
     csrf_token = generate_csrf_token()
     set_csrf_cookie(response, csrf_token)
+
+    from auth import _franchise_cache
+    _franchise_cache.set(app["id"], app)
+
     return {"application": FranchiseOut(**app).model_dump()}
 
 

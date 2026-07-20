@@ -273,25 +273,27 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
                 logger.warning(f"Could not verify Razorpay payment details: {e}")
         payment_status = "paid"
 
+    # Batch-read current stock for all products in one query
+    product_ids = [item["id"] for item in sanitized_items]
+    try:
+        stock_result = supabase.table("products").select("id,stock").in_("id", product_ids).execute()
+        stock_map = {p["id"]: p["stock"] for p in (stock_result.data or [])}
+    except Exception as e:
+        logger.error(f"Failed to read product stocks: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify stock")
+
     # Atomic stock decrement using conditional UPDATE with gte guard
     decremented = []
     for item in sanitized_items:
         try:
+            current_stock = stock_map.get(item["id"], 0)
+            if current_stock < item["quantity"]:
+                raise HTTPException(status_code=400, detail=f"Insufficient stock for {item.get('name', 'item')}")
             result = supabase.table("products").update(
-                {"stock": supabase.table("products").select("stock").eq("id", item["id"]).execute().data[0]["stock"] - item["quantity"]}
+                {"stock": current_stock - item["quantity"]}
             ).eq("id", item["id"]).gte("stock", item["quantity"]).execute()
 
             if not result.data:
-                # Rollback previously decremented items
-                for prev in decremented:
-                    try:
-                        prev_product = supabase.table("products").select("stock").eq("id", prev["id"]).execute()
-                        if prev_product.data:
-                            supabase.table("products").update(
-                                {"stock": prev_product.data[0]["stock"] + prev["quantity"]}
-                            ).eq("id", prev["id"]).execute()
-                    except Exception as rollback_err:
-                        logger.error(f"Stock rollback failed for product {prev['id']}: {rollback_err}")
                 raise HTTPException(status_code=400, detail="Insufficient stock — item was just purchased by someone else")
             decremented.append({"id": item["id"], "quantity": item["quantity"]})
         except HTTPException:
@@ -320,15 +322,11 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
     try:
         result = supabase.table("orders").insert(order_data).execute()
     except Exception as order_err:
-        # Rollback stock if order insert fails
         logger.error(f"Order insert failed, rolling back stock: {order_err}")
         for prev in decremented:
             try:
-                prev_product = supabase.table("products").select("stock").eq("id", prev["id"]).execute()
-                if prev_product.data:
-                    supabase.table("products").update(
-                        {"stock": prev_product.data[0]["stock"] + prev["quantity"]}
-                    ).eq("id", prev["id"]).execute()
+                new_stock = stock_map.get(prev["id"], 0) + prev["quantity"]
+                supabase.table("products").update({"stock": new_stock}).eq("id", prev["id"]).execute()
             except Exception as rollback_err:
                 logger.error(f"Stock rollback failed for product {prev['id']}: {rollback_err}")
         raise HTTPException(status_code=500, detail="Failed to create order")
@@ -356,40 +354,20 @@ def track_order(phone: str, request: Request):
     if not cleaned.isdigit() or len(cleaned) < 7:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    # Try with all columns first, fall back to basic columns if razorpay columns don't exist
     full_cols = "id,customer_name,customer_phone,customer_address,items,total,status,payment_method,razorpay_order_id,razorpay_payment_id,created_at"
     basic_cols = "id,customer_name,customer_phone,customer_address,items,total,status,payment_method,created_at"
 
-    def _track_with_cols(cols):
-        result = supabase.table("orders").select(cols).eq("customer_phone", cleaned).order("created_at", desc=True).limit(5).execute()
-        return result.data or []
-
-    def _track_fallback(cols):
-        result = supabase.table("orders").select(cols).eq("customer_phone", phone).order("created_at", desc=True).limit(5).execute()
-        return result.data or []
-
-    def _track_last_resort(cols):
-        result = supabase.table("orders").select(cols).order("created_at", desc=True).limit(20).execute()
-        orders = result.data or []
-        return [o for o in orders if _normalize_phone(o.get("customer_phone", "")) == cleaned][:5]
-
-    matching = []
     for cols in [full_cols, basic_cols]:
         try:
-            matching = _track_with_cols(cols)
-            if matching:
-                break
-            matching = _track_fallback(cols)
-            if matching:
-                break
-            matching = _track_last_resort(cols)
-            if matching:
-                break
+            result = supabase.table("orders").select(cols).eq("customer_phone", cleaned).order("created_at", desc=True).limit(5).execute()
+            data = result.data or []
+            if data:
+                return data
         except Exception as e:
-            logger.warning(f"Track query failed with cols={cols[:30]}: {e}")
+            logger.warning(f"Track query failed: {e}")
             continue
 
-    return matching
+    return []
 
 
 @router.post("/api/contact")
@@ -461,11 +439,12 @@ def get_order_stats(_=Depends(get_current_admin)):
     week_start = today - timedelta(days=today.weekday())
 
     try:
-        result = supabase.table("orders").select("total,status,created_at").order("created_at", desc=True).execute()
+        result = supabase.table("orders").select("total,status,created_at", count="exact").order("created_at", desc=True).execute()
     except Exception as e:
         logger.error(f"Failed to fetch orders for stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to load order stats")
     orders = result.data or []
+    total_count = result.count or 0
 
     daily = {}
     for i in range(6, -1, -1):
@@ -518,7 +497,7 @@ def get_order_stats(_=Depends(get_current_admin)):
         "week_revenue": sum(o.get("total", 0) for o in week_orders),
         "month_orders": len(month_orders_filtered),
         "month_revenue": sum(o.get("total", 0) for o in month_orders_filtered),
-        "total_orders": len(orders),
+        "total_orders": total_count,
         "total_revenue": sum(o.get("total", 0) for o in orders),
         "pending": pending,
         "preparing": preparing,
@@ -588,9 +567,8 @@ def update_order(order_id: int, data: UpdateOrderRequest, _=Depends(get_current_
         if not update_data:
             raise HTTPException(status_code=400, detail="No fields to update")
         supabase.table("orders").update(update_data).eq("id", order_id).execute()
-        updated = supabase.table("orders").select("*").eq("id", order_id).execute()
         _order_cache.invalidate()
-        return updated.data[0]
+        return {**existing.data[0], **update_data}
     except HTTPException:
         raise
     except Exception as e:
@@ -616,22 +594,23 @@ def update_order_status(order_id: int, data: UpdateStatusRequest, admin=Depends(
     if status_val == "cancelled" and old_status != "cancelled":
         try:
             items_list = json.loads(order.get("items", "[]")) if isinstance(order.get("items", ""), str) else order.get("items", [])
-            for item in items_list:
-                pid = item.get("id")
-                qty = item.get("quantity", 0)
-                if pid and qty > 0:
-                    current = supabase.table("products").select("stock").eq("id", pid).execute()
-                    if current.data:
-                        new_stock = current.data[0]["stock"] + qty
+            restore_ids = [item.get("id") for item in items_list if item.get("id") and item.get("quantity", 0) > 0]
+            if restore_ids:
+                stock_result = supabase.table("products").select("id,stock").in_("id", restore_ids).execute()
+                stock_map = {p["id"]: p["stock"] for p in (stock_result.data or [])}
+                for item in items_list:
+                    pid = item.get("id")
+                    qty = item.get("quantity", 0)
+                    if pid and qty > 0:
+                        new_stock = stock_map.get(pid, 0) + qty
                         supabase.table("products").update({"stock": new_stock}).eq("id", pid).execute()
         except Exception as e:
             logger.error(f"Failed to restore stock for order {order_id}: {e}")
 
     supabase.table("orders").update(update_data).eq("id", order_id).execute()
-    updated = supabase.table("orders").select("*").eq("id", order_id).execute()
     log_activity(admin["username"], f"status:{status_val}", "order", order_id, f"Order #{order_id} ({order.get('customer_name', '')}) → {status_val}")
     _order_cache.invalidate()
-    return updated.data[0]
+    return {**order, **update_data}
 
 
 @router.delete("/api/admin/orders/{order_id}")

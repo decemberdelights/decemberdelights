@@ -44,7 +44,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
 
@@ -53,19 +53,13 @@ app.add_middleware(
 async def limit_upload_size(request: Request, call_next):
     if request.method in ("POST", "PUT", "DELETE"):
         content_length = request.headers.get("content-length")
-        try:
-            path = request.url.path
-            max_bytes = 35 * 1024 * 1024 if path == "/api/franchise" else 15 * 1024 * 1024
-            if content_length and int(content_length) > max_bytes:
-                return JSONResponse(status_code=413, content={"detail": "Request too large"})
-        except (ValueError, TypeError):
-            return JSONResponse(status_code=400, content={"detail": "Invalid content-length header"})
-
-        path = request.url.path
-        is_admin_action = path.startswith("/api/admin/") or path.startswith("/api/menu/") or path.startswith("/api/products/") or path.startswith("/api/jobs/")
-        # CSRF double-submit cookie is broken through Next.js proxy (cookies not forwarded).
-        # Security is enforced by: HttpOnly JWT + SameSite=None + Secure + CORS origin checks.
-        # Admin auth already requires valid JWT session cookie for all /api/admin/* endpoints.
+        if content_length:
+            try:
+                max_bytes = 35 * 1024 * 1024 if request.url.path == "/api/franchise" else 15 * 1024 * 1024
+                if int(content_length) > max_bytes:
+                    return JSONResponse(status_code=413, content={"detail": "Request too large"})
+            except (ValueError, TypeError):
+                return JSONResponse(status_code=400, content={"detail": "Invalid content-length header"})
 
     return await call_next(request)
 
@@ -118,7 +112,13 @@ def root():
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "healthy"}
+    try:
+        from supabase_client import supabase
+        supabase.table("admin_users").select("id").limit(1).execute()
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "disconnected"})
 
 
 if __name__ == "__main__":
