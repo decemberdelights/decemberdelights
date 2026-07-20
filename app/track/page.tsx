@@ -64,10 +64,11 @@ function TrackContent() {
         const errData = await r.json().catch(() => ({}));
         throw new Error(errData.detail || "Failed to fetch orders");
       }
-      const data: Order[] = await r.json();
-      setOrders(data);
+      const data = await r.json();
+      const ordersList = Array.isArray(data) ? data : [];
+      setOrders(ordersList);
       setSearched(true);
-      if (data.length > 0) setExpandedId(data[0].id);
+      if (ordersList.length > 0) setExpandedId(ordersList[0].id);
     } catch (err: unknown) {
       setOrders([]);
       setSearched(true);

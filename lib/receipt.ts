@@ -21,6 +21,7 @@ export function generateFranchiseReceipt(data: FranchiseReceiptData) {
   body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 20px; }
   .receipt { background: #fff; max-width: 600px; width: 100%; border: 1px solid #e0e0e0; overflow: hidden; }
   .header { background: #1b3c33; color: #fff; padding: 24px 32px; text-align: center; }
+  .header img { height: 60px; margin-bottom: 12px; filter: brightness(0) invert(1); }
   .header h1 { font-size: 22px; letter-spacing: 2px; margin-bottom: 4px; }
   .header p { font-size: 11px; opacity: 0.7; letter-spacing: 1px; text-transform: uppercase; }
   .badge { display: inline-block; background: #c8a97e; color: #1b3c33; padding: 4px 16px; border-radius: 100px; font-size: 11px; font-weight: 700; letter-spacing: 1px; margin-top: 10px; text-transform: uppercase; }
@@ -49,6 +50,7 @@ export function generateFranchiseReceipt(data: FranchiseReceiptData) {
 <body>
 <div class="receipt">
   <div class="header">
+    <img src="https://www.decemberdelights.in/logo.png" alt="December Delights" />
     <h1>DECEMBER DELIGHTS</h1>
     <p>Franchise Application Receipt</p>
     <div class="badge">Application Confirmed</div>
@@ -167,6 +169,7 @@ export function generateOrderReceipt(data: OrderReceiptData) {
   body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 20px; }
   .receipt { background: #fff; max-width: 600px; width: 100%; border: 1px solid #e0e0e0; overflow: hidden; }
   .header { background: #1b3c33; color: #fff; padding: 24px 32px; text-align: center; }
+  .header img { height: 60px; margin-bottom: 12px; filter: brightness(0) invert(1); }
   .header h1 { font-size: 22px; letter-spacing: 2px; margin-bottom: 4px; }
   .header p { font-size: 11px; opacity: 0.7; letter-spacing: 1px; text-transform: uppercase; }
   .badge { display: inline-block; background: ${isOnline ? "#27ae60" : "#e67e22"}; color: #fff; padding: 4px 16px; border-radius: 100px; font-size: 11px; font-weight: 700; letter-spacing: 1px; margin-top: 10px; text-transform: uppercase; }
@@ -190,6 +193,7 @@ export function generateOrderReceipt(data: OrderReceiptData) {
 <body>
 <div class="receipt">
   <div class="header">
+    <img src="https://www.decemberdelights.in/logo.png" alt="December Delights" />
     <h1>DECEMBER DELIGHTS</h1>
     <p>Order Receipt</p>
     <div class="badge">Order #${data.orderId}</div>

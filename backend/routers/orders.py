@@ -356,20 +356,38 @@ def track_order(phone: str, request: Request):
     if not cleaned.isdigit() or len(cleaned) < 7:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    # Try normalized phone first (how it was stored)
-    result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,payment_method,razorpay_order_id,razorpay_payment_id,created_at").eq("customer_phone", cleaned).order("created_at", desc=True).limit(5).execute()
-    matching = result.data or []
+    # Try with all columns first, fall back to basic columns if razorpay columns don't exist
+    full_cols = "id,customer_name,customer_phone,customer_address,items,total,status,payment_method,razorpay_order_id,razorpay_payment_id,created_at"
+    basic_cols = "id,customer_name,customer_phone,customer_address,items,total,status,payment_method,created_at"
 
-    if not matching:
-        # Fallback: try with the raw phone parameter
-        result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,payment_method,razorpay_order_id,razorpay_payment_id,created_at").eq("customer_phone", phone).order("created_at", desc=True).limit(5).execute()
-        matching = result.data or []
+    def _track_with_cols(cols):
+        result = supabase.table("orders").select(cols).eq("customer_phone", cleaned).order("created_at", desc=True).limit(5).execute()
+        return result.data or []
 
-    if not matching:
-        # Last resort: scan recent orders and normalize
-        result = supabase.table("orders").select("id,customer_name,customer_phone,customer_address,items,total,status,payment_method,razorpay_order_id,razorpay_payment_id,created_at").order("created_at", desc=True).limit(20).execute()
+    def _track_fallback(cols):
+        result = supabase.table("orders").select(cols).eq("customer_phone", phone).order("created_at", desc=True).limit(5).execute()
+        return result.data or []
+
+    def _track_last_resort(cols):
+        result = supabase.table("orders").select(cols).order("created_at", desc=True).limit(20).execute()
         orders = result.data or []
-        matching = [o for o in orders if _normalize_phone(o.get("customer_phone", "")) == cleaned][:5]
+        return [o for o in orders if _normalize_phone(o.get("customer_phone", "")) == cleaned][:5]
+
+    matching = []
+    for cols in [full_cols, basic_cols]:
+        try:
+            matching = _track_with_cols(cols)
+            if matching:
+                break
+            matching = _track_fallback(cols)
+            if matching:
+                break
+            matching = _track_last_resort(cols)
+            if matching:
+                break
+        except Exception as e:
+            logger.warning(f"Track query failed with cols={cols[:30]}: {e}")
+            continue
 
     return matching
 
