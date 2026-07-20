@@ -15,7 +15,7 @@ export default function Error({
         </div>
         <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.5rem", marginBottom: "0.75rem" }}>Something went wrong</h2>
         <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.9rem", lineHeight: 1.7, marginBottom: "2rem" }}>
-          An unexpected error occurred. Please try again.
+          {error?.message || "An unexpected error occurred. Please try again."}
         </p>
         <button onClick={() => reset()} style={{ padding: "0.7rem 2rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fdf9f4", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
           Try Again

@@ -6,7 +6,6 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { API } from "@/lib/api";
 import { formatPriceINR } from "@/lib/utils";
-import { generateOrderReceipt } from "@/lib/receipt";
 import { OrderCardSkeleton } from "@/components/Skeleton";
 
 interface OrderItem {
@@ -314,7 +313,8 @@ function TrackContent() {
                           </span>
                         </div>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
+                            const { generateOrderReceipt } = await import("@/lib/receipt");
                             generateOrderReceipt({
                               orderId: order.id,
                               customerName: order.customer_name,
