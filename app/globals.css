@@ -83,7 +83,9 @@ html {
   scroll-padding-top: 80px;
   height: -webkit-fill-available;
   overflow-x: hidden;
+  scrollbar-width: none;
 }
+html::-webkit-scrollbar { width: 0; height: 0; }
 
 a { color: inherit; text-decoration: none; }
 
