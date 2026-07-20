@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import LoadingScreen from "@/components/LoadingScreen";
+import ScrollRevealProvider from "@/components/scroll-reveal-provider";
 import { cn } from "@/lib/utils";
 
 const cormorant = Cormorant_Garamond({
@@ -64,7 +65,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={cn(cormorant.variable, montserrat.variable, outfit.variable, bebasNeue.variable, "font-sans")} style={{ margin: 0, padding: 0 }}>
         <LoadingScreen />
         <Navbar />
-        {children}
+        <ScrollRevealProvider>
+          {children}
+        </ScrollRevealProvider>
         <Footer />
       </body>
     </html>

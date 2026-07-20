@@ -47,22 +47,22 @@ export default function MenuPreviewSection() {
           className="menu-video-bg"
         />
         <div className="menu-content">
-          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>
+          <span data-reveal="fade-up" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>
             <ScrollFloat containerClassName="!my-0">What We Serve</ScrollFloat>
           </span>
-          <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
-          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(36px, 6vw, 90px)", fontWeight: 700, color: "#094b3d", marginBottom: "20px", lineHeight: 1.15 }}>
+          <div data-reveal="fade-up" className="delay-1" style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
+          <h2 data-reveal="fade-up" className="delay-2" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(36px, 6vw, 90px)", fontWeight: 700, color: "#094b3d", marginBottom: "20px", lineHeight: 1.15 }}>
             <ScrollFloat containerClassName="!my-0" textClassName="whitespace-nowrap">Must-Try Delights</ScrollFloat>
           </h2>
-          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: 400, fontStyle: "italic", lineHeight: 1.6, color: "#3d4a3e", maxWidth: "700px", marginBottom: "40px", position: "relative", paddingLeft: "24px", borderLeft: "3px solid rgba(200,169,122,0.4)" }}>
+          <p data-reveal="fade-up" className="delay-3" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: 400, fontStyle: "italic", lineHeight: 1.6, color: "#3d4a3e", maxWidth: "700px", marginBottom: "40px", position: "relative", paddingLeft: "24px", borderLeft: "3px solid rgba(200,169,122,0.4)" }}>
             Carefully crafted with the finest ingredients, every dish and drink is designed to delight your senses and create unforgettable moments.
           </p>
           <div style={{ marginBottom: "40px" }}>
             <div className="menu-grid-equal">
               {mustTryItems.map((item, i) => (
-                <div key={i} className="menu-card-vert">
-                  <div style={{ width: "100%", height: "160px", position: "relative" }}>
-                    <Image src={item.image} alt={item.name} fill loading="lazy" sizes="(max-width: 768px) 50vw, 33vw" style={{ objectFit: "cover" }} />
+                <div key={i} data-reveal="scale-up" className={`menu-card-vert delay-${Math.min(i + 2, 8)}`}>
+                  <div style={{ width: "100%", height: "160px", position: "relative", overflow: "hidden" }}>
+                    <Image src={item.image} alt={item.name} fill loading="lazy" sizes="(max-width: 768px) 50vw, 33vw" style={{ objectFit: "cover", transition: "transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)" }} />
                   </div>
                   <div style={{ padding: "14px 16px" }}>
                     <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18px", fontWeight: 700, color: "#c8a97a", marginBottom: "4px" }}>
@@ -74,9 +74,11 @@ export default function MenuPreviewSection() {
               ))}
             </div>
           </div>
-          <Link href="/menu" style={{ padding: "14px 40px", fontFamily: "'Montserrat', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#fff", background: "#094b3d", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", display: "inline-block" }}>
-            View Full Menu
-          </Link>
+          <div data-reveal="fade-up" className="delay-5">
+            <Link href="/menu" className="hover-lift" style={{ padding: "14px 40px", fontFamily: "'Montserrat', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#fff", background: "#094b3d", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", display: "inline-block" }}>
+              View Full Menu
+            </Link>
+          </div>
         </div>
       </div>
     </>

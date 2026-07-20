@@ -13,31 +13,31 @@ export default function ScrollRevealProvider({ children }: { children: React.Rea
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add("revealed");
+            observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
+      { threshold: 0.06, rootMargin: "0px 0px -60px 0px" }
     );
 
     const scanAndObserve = () => {
-      containerRef.current?.querySelectorAll("[data-reveal]").forEach((el) => {
-        if (!el.classList.contains("revealed")) {
-          observer.observe(el);
-        }
-      });
-
-      containerRef.current?.querySelectorAll("[data-stagger]").forEach((group) => {
-        const children = Array.from(group.children);
-        children.forEach((child, i) => {
-          (child as HTMLElement).style.transitionDelay = `${i * 0.08}s`;
-          observer.observe(child);
-        });
+      containerRef.current?.querySelectorAll("[data-reveal]:not(.revealed)").forEach((el) => {
+        observer.observe(el);
       });
     };
 
     scanAndObserve();
 
-    const mutationObserver = new MutationObserver(scanAndObserve);
+    const mutationObserver = new MutationObserver((mutations) => {
+      let hasNewNodes = false;
+      for (const mutation of mutations) {
+        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+          hasNewNodes = true;
+          break;
+        }
+      }
+      if (hasNewNodes) scanAndObserve();
+    });
     mutationObserver.observe(containerRef.current, { childList: true, subtree: true });
 
     return () => {

@@ -1,9 +1,7 @@
 import time
 import re
 import html
-import secrets
 from collections import defaultdict
-from typing import Optional
 from fastapi import HTTPException, Request
 
 
@@ -75,11 +73,6 @@ def sanitize_log(value: str) -> str:
     return value.replace("\n", " ").replace("\r", " ").replace("\t", " ")[:200]
 
 
-def generate_csrf_token() -> str:
-    """Generate a cryptographically secure CSRF token."""
-    return secrets.token_hex(32)
-
-
 def validate_email(email: str) -> bool:
     """Basic email validation."""
     pattern = r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$'
@@ -103,7 +96,7 @@ def validate_application_status(status: str) -> bool:
 
 
 def get_client_ip(request: Request) -> str:
-    """Get real client IP. Trust X-Forwarded-For only when behind known proxy (Render)."""
+    """Get real client IP. Trust X-Forwarded-For only when behind known proxy."""
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         ip = forwarded.split(",")[0].strip()
