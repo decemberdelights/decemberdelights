@@ -312,8 +312,6 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
         "payment_method": payment_method,
         "payment_status": payment_status,
         "notes": data.get("notes", ""),
-        "razorpay_order_id": sanitize_input(data.get("razorpay_order_id", ""), 100),
-        "razorpay_payment_id": sanitize_input(data.get("razorpay_payment_id", ""), 100),
     }
 
     try:

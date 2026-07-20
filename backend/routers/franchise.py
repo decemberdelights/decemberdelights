@@ -346,24 +346,31 @@ async def create_franchise(
         "bank_statement": uploaded_urls[2],
         "address_proof": uploaded_urls[3],
         "other_docs": uploaded_urls[4],
-        "razorpay_order_id": razorpay_order_id,
-        "razorpay_payment_id": razorpay_payment_id,
     }
+
+    if razorpay_order_id:
+        data["razorpay_order_id"] = razorpay_order_id
+    if razorpay_payment_id:
+        data["razorpay_payment_id"] = razorpay_payment_id
 
     if existing.data and existing.data[0].get("login_id"):
         raise HTTPException(status_code=400, detail="Application already exists with this phone number")
 
-    if existing.data and not existing.data[0].get("login_id"):
-        app_id = existing.data[0]["id"]
-        logger.info(f"Updating incomplete franchise app {app_id} for phone={phone} with new payment")
-        await asyncio.to_thread(
-            lambda: supabase.table("franchise_applications").update(data).eq("id", app_id).execute()
-        )
-    else:
-        result = await asyncio.to_thread(
-            lambda: supabase.table("franchise_applications").insert(data).execute()
-        )
-        app_id = result.data[0]["id"]
+    try:
+        if existing.data and not existing.data[0].get("login_id"):
+            app_id = existing.data[0]["id"]
+            logger.info(f"Updating incomplete franchise app {app_id} for phone={phone} with new payment")
+            await asyncio.to_thread(
+                lambda: supabase.table("franchise_applications").update(data).eq("id", app_id).execute()
+            )
+        else:
+            result = await asyncio.to_thread(
+                lambda: supabase.table("franchise_applications").insert(data).execute()
+            )
+            app_id = result.data[0]["id"]
+    except Exception as db_err:
+        logger.error(f"Franchise insert/update failed for phone={phone}: {db_err}")
+        raise HTTPException(status_code=500, detail="Failed to save application. Please try again.")
 
     login_id = f"DD-{uuid.uuid4().hex[:12].upper()}"
     await asyncio.to_thread(
