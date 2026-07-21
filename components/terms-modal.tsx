@@ -5,36 +5,36 @@ import { useState, useRef, useCallback } from "react";
 const TERMS = {
   en: [
     "The application fee is strictly non-refundable under any circumstances.",
-    "This fee is for filtration only — not a franchise fee.",
-    "Approval depends on profile, background check, and credit report. No guarantees are made.",
-    "Non-approval does not entitle any refund, explanation, or legal recourse.",
-    "Defamation: Any defamatory, disparaging, or false statement made against December Delights — online or offline — in connection with any application decision constitutes criminal defamation under Section 356 of the Bharatiya Nyaya Sanhita (BNS), 2023. Punishment includes imprisonment up to 2 years, fine, or both.",
-    "All communication is via official domain email only. We never call or WhatsApp applicants for approvals.",
-    "We are not liable for any loss from unauthorized impersonation of our brand.",
-    "The review timeline is at the discretion of December Delights.",
-    "By submitting, you confirm you have read and agree to all terms above.",
+    "This fee is for preliminary application screening only. It is not a franchise fee.",
+    "Application approval is entirely based on the applicant's details, background verification, and credit history report. No guarantee of approval is provided.",
+    "If the application is not approved, the applicant has no right to a refund, no right to demand an explanation, and no right to take legal action.",
+    "Defamation: Any false, defamatory, or disparaging remarks made about December Delights — online or offline — in connection with the application process or decision constitutes criminal defamation under Section 356 of the Bharatiya Nyaya Sanhita (BNS), 2023. This may result in imprisonment up to two years, a fine, or both.",
+    "All official communication will be sent only through the official December Delights email. We will not contact applicants by phone or WhatsApp regarding application approval or rejection.",
+    "December Delights shall not be held liable for any loss caused by anyone falsely impersonating our brand.",
+    "The timeline for application review and decision is entirely at the discretion of December Delights.",
+    "By submitting the application, you confirm that you have read, understood, and agree to all the above terms and conditions.",
   ],
   te: [
-    "అప్లికేషన్ ఫీజు ఎట్టి పరిస్థితుల్లోనూ తిరిగి ఇవ్వబడదు.",
-    "ఈ ఫీజు కేవలం వడపోత (Filtration) కోసం మాత్రమే — ఇది ఫ్రాంచైజీ ఫీజు కాదు.",
-    "ఆమోదం అనేది మీ ప్రొఫైల్, బ్యాక్‌గ్రౌండ్ వెరిఫికేషన్ మరియు క్రెడిట్ రిపోర్ట్‌పై ఆధారపడి ఉంటుంది.",
-    "తిరస్కరణకు గురైన అప్లికేషన్లకు ఎటువంటి రీఫండ్ లేదా వివరణ ఇవ్వబడదు.",
-    "పరువు నష్టం: అప్లికేషన్ నిర్ణయానికి సంబంధించి ఆన్‌లైన్ లేదా ఆఫ్‌లైన్లో డిసెంబర్ డిలైట్స్పై ఎటువంటి తప్పుడు లేదా అపవాదు స్టేట్‌మెంట్స్ చేసినా భారతీయ న్యాయ సంహిత (BNS) 2023 లోని సెక్షన్ 356 ప్రకారం నేరపూరిత పరువు నష్టం అవుతుంది. దీనికి 2 ఏళ్ల వరకు జైలు శిక్ష లేదా జరిమానా ఉండవచ్చు.",
-    "కమ్యూనికేషన్ కేవలం అధికారిక ఈమెయిల్ ద్వారా మాత్రమే జరుగుతుంది. మేము ఫోన్ లేదా వాట్సాప్ ద్వారా ఆమోదాలను పంపము.",
-    "మా బ్రాండ్ పేరుతో జరిగే మోసాలకు మేము బాధ్యత వహించము.",
-    "రివ్యూ సమయం డిసెంబర్ డిలైట్స్ నిర్ణయంపై ఆధారపడి ఉంటుంది.",
-    "సబ్మిట్ చేయడం ద్వారా, మీరు పైన పేర్కొన్న అన్ని నిబంధనలను అంగీకరిస్తున్నారని ధృవీకరిస్తున్నారు.",
+    "దరఖాస్తు రుసుము ఏ పరిస్థితుల్లోనూ తిరిగి చెల్లించబడదు.",
+    "ఈ రుసుము కేవలం దరఖాస్తు ప్రాథమిక పరిశీలన కోసం మాత్రమే. ఇది ఫ్రాంచైజీ రుసుము కాదు.",
+    "దరఖాస్తు ఆమోదం పూర్తిగా అభ్యర్థి యొక్క వివరాలు, నేపథ్య ధృవీకరణ మరియు రుణ చరిత్ర నివేదిక ఆధారంగా నిర్ణయించబడుతుంది. ఆమోదానికి ఎలాంటి హామీ ఇవ్వబడదు.",
+    "దరఖాస్తు ఆమోదం పొందకపోతే, అభ్యర్థికి రుసుము తిరిగి పొందే హక్కు, కారణం కోరే హక్కు లేదా చట్టపరమైన చర్య తీసుకునే హక్కు ఉండదు.",
+    "పరువు నష్టం: దరఖాస్తు ప్రక్రియ లేదా నిర్ణయానికి సంబంధించి December Delights గురించి ఆన్‌లైన్ లేదా ఆఫ్‌లైన్‌లో తప్పుడు, అవమానకరమైన లేదా పరువు నష్టం కలిగించే వ్యాఖ్యలు చేయడం భారతీయ న్యాయ సంహిత (BNS), 2023 లోని సెక్షన్ 356 ప్రకారం నేరంగా పరిగణించబడుతుంది. దీనికి గరిష్టంగా రెండు సంవత్సరాల జైలు శిక్ష, జరిమానా లేదా రెండూ విధించబడవచ్చు.",
+    "అన్ని అధికారిక సమాచారాన్ని December Delights అధికారిక ఈమెయిల్ ద్వారా మాత్రమే పంపిస్తాము. దరఖాస్తు ఆమోదం లేదా తిరస్కరణ విషయాల్లో మేము ఫోన్ లేదా వాట్సాప్ ద్వారా సంప్రదించము.",
+    "మా సంస్థ పేరుతో ఎవరైనా నకిలీగా వ్యవహరించి మోసం చేసినట్లయితే, దాని వల్ల కలిగే ఏ నష్టానికైనా December Delights బాధ్యత వహించదు.",
+    "దరఖాస్తు పరిశీలన మరియు నిర్ణయం తీసుకునే కాలవ్యవధి పూర్తిగా December Delights స్వంత నిర్ణయం పై ఆధారపడి ఉంటుంది.",
+    "దరఖాస్తు సమర్పించడం ద్వారా, పై పేర్కొన్న అన్ని నిబంధనలు మరియు షరతులను చదివి, అర్థం చేసుకుని, వాటికి మీరు అంగీకరిస్తున్నట్లు నిర్ధారిస్తున్నారు.",
   ],
   hi: [
     "आवेदन शुल्क किसी भी परिस्थिति में वापस नहीं किया जाएगा।",
-    "यह शुल्क केवल फिल्ट्रेशन के लिए है — यह फ्रैंचाइज़ी शुल्क नहीं है।",
-    "अनुमोदन प्रोफ़ाइल, पृष्ठभूमि जांच और क्रेडिट रिपोर्ट पर निर्भर करता है। कोई गारंटी नहीं दी जाती है।",
-    "अनुमोदन न मिलने पर किसी भी प्रकार की धनवापसी (refund) या स्पष्टीकरण का अधिकार नहीं होगा।",
-    "मानहानि: आवेदन निर्णय के संबंध में दिसंबर डिलाइट्स के खिलाफ ऑनलाइन या ऑफलाइन कोई भी अपमानजनक या झूठा बयान देना भारतीय न्याय संहिता (BNS), 2023 की धारा 356 के तहत आपराधिक मानहानि माना जाएगा। सजा में 2 साल तक की जेल, जुर्माना या दोनों शामिल हैं।",
-    "सभी संचार केवल आधिकारिक ईमेल के माध्यम से होते हैं। हम कभी भी अनुमोदन के लिए कॉल या व्हाट्सएप नहीं करते।",
-    "हमारे ब्रांड के नाम पर होने वाले किसी भी धोखाधड़ी के लिए हम जिम्मेदार नहीं हैं।",
-    "समीक्षा की समयसीमा दिसंबर डिलाइट्स के विवेक पर निर्भर करती है।",
-    "सबमिट करके, आप पुष्टि करते हैं कि आपने उपरोक्त सभी शर्तों को पढ़ लिया है और उनसे सहमत हैं।",
+    "यह शुल्क केवल प्रारंभिक आवेदन स्क्रीनिंग के लिए है। यह फ्रैंचाइज़ी शुल्क नहीं है।",
+    "आवेदन की स्वीकृति पूरी तरह से आवेदक के विवरण, पृष्ठभूमि सत्यापन और क्रेडिट इतिहास रिपोर्ट पर निर्भर करती है। स्वीकृति की कोई गारंटी नहीं दी जाती है।",
+    "यदि आवेदन स्वीकृत नहीं होता है, तो आवेदक को शुल्क वापसी का अधिकार, कारण मांगने का अधिकार या कानूनी कार्रवाई करने का अधिकार नहीं होगा।",
+    "मानहानि: आवेदन प्रक्रिया या निर्णय के संबंध में December Delights के बारे में ऑनलाइन या ऑफलाइन कोई भी झूठी, मानहानिकारक या निरादरजनक टिप्पणी करना भारतीय न्याय संहिता (BNS), 2023 की धारा 356 के तहत आपराधिक मानहानि माना जाएगा। इसके लिए अधिकतम दो साल की जेल, जुर्माना या दोनों हो सकते हैं।",
+    "सभी आधिकारिक संचार केवल December Delights के आधिकारिक ईमेल के माध्यम से भेजे जाएंगे। हम आवेदन स्वीकृति या अस्वीकृति के संबंध में फोन या व्हाट्सएप पर आवेदकों से संपर्क नहीं करेंगे।",
+    "हमारे ब्रांड के नाम पर कोई भी अनधिकृत व्यक्ति धोखाधड़ी करता है, तो उसके कारण होने वाले किसी भी नुकसान के लिए December Delights जिम्मेदार नहीं होगा।",
+    "आवेदन की समीक्षा और निर्णय की समयसीमा पूरी तरह से December Delights के विवेक पर निर्भर करती है।",
+    "आवेदन जमा करके, आप पुष्टि करते हैं कि आपने ऊपर दी गई सभी शर्तों और नियमों को पढ़ा, समझा और उनसे सहमत हैं।",
   ],
 };
 
@@ -45,42 +45,26 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
   const [accepted, setAccepted] = useState(false);
   const [lang, setLang] = useState<"en" | "te" | "hi">("en");
   const [speaking, setSpeaking] = useState(false);
-  const [voiceWarning, setVoiceWarning] = useState("");
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  const checkVoiceSupport = useCallback((language: string): boolean => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return false;
-    const voices = window.speechSynthesis.getVoices();
-    const langPrefix = language === "te" ? "te" : language === "hi" ? "hi" : "en";
-    return voices.some(v => v.lang.startsWith(langPrefix));
-  }, []);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopSpeech = useCallback(() => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      setSpeaking(false);
-      utteranceRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
+    setSpeaking(false);
   }, []);
 
   const speak = useCallback(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (typeof window === "undefined") return;
     stopSpeech();
-    if (!checkVoiceSupport(lang)) {
-      setVoiceWarning(lang === "hi" ? "Hindi voice not available on this device. Please read the terms manually." : lang === "te" ? "Telugu voice not available on this device. Please read the terms manually." : "Voice not available on this device.");
-      return;
-    }
-    setVoiceWarning("");
-    const text = TERMS[lang].join(". ");
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang === "te" ? "te-IN" : lang === "hi" ? "hi-IN" : "en-US";
-    u.rate = 0.85; u.pitch = 1;
-    u.onend = () => { setSpeaking(false); utteranceRef.current = null; };
-    u.onerror = () => { setSpeaking(false); utteranceRef.current = null; };
-    utteranceRef.current = u;
-    window.speechSynthesis.speak(u);
-    setSpeaking(true);
-  }, [lang, stopSpeech, checkVoiceSupport]);
+    const audio = new Audio(`/terms-audio/${lang}.mp3`);
+    audioRef.current = audio;
+    audio.onended = () => { setSpeaking(false); audioRef.current = null; };
+    audio.onerror = () => { setSpeaking(false); audioRef.current = null; };
+    audio.play().then(() => setSpeaking(true)).catch(() => { setSpeaking(false); audioRef.current = null; });
+  }, [lang, stopSpeech]);
 
   if (!open) return null;
 
@@ -143,7 +127,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
           {/* Language + TTS */}
           <div className="terms-lang-row">
             {(["en", "te", "hi"] as const).map((l) => (
-              <button key={l} onClick={() => { stopSpeech(); setLang(l); setVoiceWarning(""); }}
+              <button key={l} onClick={() => { stopSpeech(); setLang(l); }}
                 style={{ padding: "0.45rem 1rem", borderRadius: "100px", border: lang === l ? "1.5px solid #c8a97e" : "1.5px solid rgba(255,255,255,0.1)", background: lang === l ? "rgba(200,169,126,0.15)" : "transparent", color: lang === l ? "#c8a97e" : "rgba(245,240,235,0.4)", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.8rem", fontWeight: lang === l ? 700 : 500, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <span>{LANG_FLAGS[l]}</span> {LANG_LABELS[l]}
               </button>
@@ -157,11 +141,6 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
               )}
             </button>
           </div>
-          {voiceWarning && (
-            <div style={{ marginBottom: "1rem", padding: "0.6rem 1rem", borderRadius: "10px", background: "rgba(200,169,126,0.1)", border: "1px solid rgba(200,169,126,0.25)", fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.9rem", color: "#c8a97e" }}>
-              {voiceWarning}
-            </div>
-          )}
 
           {/* Terms */}
           <div style={{ marginBottom: "1.5rem" }}>
