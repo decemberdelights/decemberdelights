@@ -155,18 +155,17 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
 
         {/* Product grid with 3D cards */}
         {!shopEnabled ? (
-          <div style={{ textAlign: "center", padding: "2rem 0", width: "100%", maxWidth: 900, margin: "0 auto" }}>
+          <div style={{ width: "100%", maxWidth: 900, margin: "0 auto", borderRadius: 16, overflow: "hidden" }}>
             <video
               autoPlay
               muted
               loop
               playsInline
               preload="metadata"
-              style={{ width: "100%", borderRadius: 16, objectFit: "cover", maxHeight: 500 }}
+              style={{ width: "100%", display: "block" }}
             >
               <source src="/coming.mp4" type="video/mp4" />
             </video>
-            <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "clamp(2rem, 5vw, 4rem)", color: "#fdf9f4", letterSpacing: "0.08em", margin: "2rem 0 0" }}>Brewing Soon</h3>
           </div>
         ) : loading ? (
           <div className="shop-grid-3d">
