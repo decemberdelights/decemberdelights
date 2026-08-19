@@ -386,7 +386,7 @@ export default function ShopPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "4rem 0" }}>
-              <p style={{ fontFamily: fontBebas, color: dark, fontSize: "clamp(1.5rem, 3vw, 2.5rem)", letterSpacing: "0.05em", margin: 0 }}>Coming Soon</p>
+              <p style={{ fontFamily: fontBebas, color: dark, fontSize: "clamp(1.5rem, 3vw, 2.5rem)", letterSpacing: "0.05em", margin: 0 }}>Brewing Soon</p>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem" }}>
@@ -626,7 +626,7 @@ export default function ShopPage() {
 function ShopComingSoonPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-      <p style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#1b3c33", fontSize: "clamp(1.5rem, 4vw, 3rem)", letterSpacing: "0.05em", margin: 0 }}>Coming Soon</p>
+      <p style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#1b3c33", fontSize: "clamp(1.5rem, 4vw, 3rem)", letterSpacing: "0.05em", margin: 0 }}>Brewing Soon</p>
     </div>
   );
 }

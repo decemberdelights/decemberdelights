@@ -149,7 +149,7 @@ export default function MenuPage() {
         </div>
       ) : categories.length === 0 ? (
         <div style={{ textAlign: "center", padding: "6rem 2rem" }}>
-          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#6b6f6a", fontSize: "1rem" }}>Menu items coming soon. Check back later!</p>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#6b6f6a", fontSize: "1rem" }}>Menu items brewing soon. Check back later!</p>
           <Link href="/" style={{ display: "inline-block", marginTop: "1.5rem", padding: "0.9rem 2.5rem", borderRadius: "100px", background: "#1b3c33", color: "#fdf9f4", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.95rem", textDecoration: "none" }}>Back to Home</Link>
         </div>
       ) : (
