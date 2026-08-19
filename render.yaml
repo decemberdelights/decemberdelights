@@ -14,11 +14,11 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_DEFAULT_PASSWORD
-        generateValue: true
+        sync: false
       - key: ADMIN_USERNAME
         value: admin
       - key: CORS_ORIGINS
-        value: http://localhost:3000,https://dd-frontend.onrender.com,https://www.decemberdelights.in,https://decemberdelights.in
+        value: https://dd-frontend.onrender.com,https://www.decemberdelights.in,https://decemberdelights.in
       - key: FRONTEND_URL
         value: https://www.decemberdelights.in
       - key: SUPABASE_URL

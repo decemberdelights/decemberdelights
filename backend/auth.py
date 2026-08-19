@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.environ.get("JWT_SECRET", "")
 if not SECRET_KEY:
-    logger.warning("JWT_SECRET environment variable is NOT SET. Using insecure fallback for development.")
-    SECRET_KEY = "dev-insecure-fallback-do-not-use-in-production-abc123"
+    logger.critical("JWT_SECRET environment variable is NOT SET. Refusing to start with insecure fallback.")
+    raise RuntimeError("JWT_SECRET must be set in production. Aborting startup.")
 if len(SECRET_KEY) < 32:
     logger.warning("JWT_SECRET is too short. Padding to 32 characters.")
     SECRET_KEY = SECRET_KEY.ljust(32, "0")
