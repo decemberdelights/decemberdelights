@@ -336,6 +336,7 @@ export default function AdminPage() {
             orders={orders}
             setTab={(t) => setTab(t as Tab)}
             onViewOrder={(o) => setViewingOrder(o)}
+            role={role}
           />
         )}
       </div>
