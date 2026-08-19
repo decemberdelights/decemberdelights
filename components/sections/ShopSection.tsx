@@ -162,9 +162,21 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
               loop
               playsInline
               preload="metadata"
+              className="shop-video-desktop"
               style={{ width: "100%", display: "block" }}
             >
               <source src="/coming.mp4" type="video/mp4" />
+            </video>
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="shop-video-mobile"
+              style={{ width: "100%", display: "block" }}
+            >
+              <source src="/brewing-soon.mp4" type="video/mp4" />
             </video>
           </div>
         ) : loading ? (

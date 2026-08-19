@@ -632,9 +632,21 @@ function ShopComingSoonPage() {
         loop
         playsInline
         preload="metadata"
+        className="shop-video-desktop"
         style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }}
       >
         <source src="/coming.mp4" type="video/mp4" />
+      </video>
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        className="shop-video-mobile"
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }}
+      >
+        <source src="/brewing-soon.mp4" type="video/mp4" />
       </video>
     </div>
   );
