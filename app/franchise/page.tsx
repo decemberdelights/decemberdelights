@@ -1,0 +1,731 @@
+"use client";
+
+import { useState, useRef, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import TermsModal from "@/components/terms-modal";
+import { API } from "@/lib/api";
+import { inputStyle, labelStyle } from "@/lib/styles";
+import { User, Mail, Phone, Briefcase, MapPin, FileText, ArrowRight, Check } from "@/components/icons";
+import SuccessState from "@/components/SuccessState";
+import { generateFranchiseReceipt, FranchiseReceiptData } from "@/lib/receipt";
+
+const STEPS = ["Personal", "Business", "Documents", "Review"];
+
+async function fetchWithRetry(url: string, opts: RequestInit, retries = 2): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    try {
+      const res = await fetch(url, { ...opts, signal: controller.signal });
+      clearTimeout(timeout);
+      return res;
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+      if (i === retries) throw err;
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  throw new Error("Failed to connect");
+}
+
+const DOC_FIELDS = [
+  { key: "aadhaar", label: "Aadhaar Card", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>, required: true },
+  { key: "pan", label: "PAN Card", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>, required: true },
+  { key: "bank_statement", label: "Bank Statement", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18" /><path d="M3 10h18" /><path d="M5 6l7-3 7 3" /><path d="M4 10v11" /><path d="M20 10v11" /><path d="M8 14v3" /><path d="M12 14v3" /><path d="M16 14v3" /></svg>, required: true },
+  { key: "address_proof", label: "Address Proof", hint: "Electricity bill, Gas connection bill, or Home tax receipt", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>, required: true },
+  { key: "other_docs", label: "Other Documents", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>, required: false },
+];
+
+export default function FranchisePage() {
+  const [step, setStep] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("franchise_form");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if ((parsed.step || 0) > 1) return 0;
+        return parsed.step || 0;
+      }
+    } catch {}
+    return 0;
+  });
+  const [form, setForm] = useState(() => {
+    const defaults = { full_name: "", email: "", phone: "", dob: "", business_experience: "", preferred_location: "", investment_capability: "", message: "" };
+    try {
+      const saved = sessionStorage.getItem("franchise_form");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.form || defaults;
+      }
+    } catch {}
+    return defaults;
+  });
+  const [files, setFiles] = useState<Record<string, File | null>>({
+    aadhaar: null, pan: null, bank_statement: null, address_proof: null, other_docs: null,
+  });
+  const [status, setStatus] = useState<"idle" | "terms" | "submitting" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [tcAccepted, setTcAccepted] = useState(false);
+  const [receiptData, setReceiptData] = useState<FranchiseReceiptData | null>(null);
+  const [franchiseEnabled, setFranchiseEnabled] = useState(true);
+  const formRef = useRef<HTMLDivElement>(null);
+  const rzpRef = useRef<RazorpayCheckout | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/api/settings`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) {
+          setFranchiseEnabled(d.franchise_enabled);
+          localStorage.setItem("dd_franchise_enabled", String(d.franchise_enabled));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFranchiseEnabled(localStorage.getItem("dd_franchise_enabled") !== "false");
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || window.Razorpay) return;
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, []);
+
+  useEffect(() => {
+    if (status === "idle") {
+      try {
+        sessionStorage.setItem("franchise_form", JSON.stringify({ step, form }));
+      } catch {}
+    }
+  }, [step, form, status]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    if (name === "phone") {
+      const digits = value.replace(/\D/g, "").slice(0, 10);
+      setForm({ ...form, phone: digits });
+      return;
+    }
+    setForm({ ...form, [name]: value });
+  };
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  const ALLOWED_TYPES: Record<string, string> = {
+    "application/pdf": ".pdf",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  const compressImage = (file: File, maxSizeKB = 800): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let { width, height } = img;
+        const maxDim = 1600;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        const tryCompress = (quality: number) => {
+          canvas.toBlob((blob) => {
+            if (!blob) { resolve(file); return; }
+            if (blob.size > maxSizeKB * 1024 && quality > 0.3) {
+              tryCompress(quality - 0.1);
+            } else {
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+            }
+          }, "image/jpeg", quality);
+        };
+        tryCompress(0.8);
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      let file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE && file.type.startsWith("image/")) {
+        file = await compressImage(file, 500);
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setErrorMsg(`File "${file.name}" is ${formatFileSize(file.size)}. Maximum allowed is 5MB.`);
+        e.target.value = "";
+        return;
+      }
+      if (file.type && !ALLOWED_TYPES[file.type]) {
+        setErrorMsg(`File type "${file.type}" is not allowed. Accepted: PDF, JPG, PNG, DOC, DOCX.`);
+        e.target.value = "";
+        return;
+      }
+      setErrorMsg("");
+      setFiles({ ...files, [e.target.name]: file });
+      e.target.value = "";
+    }
+  };
+
+  const validateStep = (s: number): boolean => {
+    setErrorMsg("");
+    if (s === 0) {
+      if (!form.full_name.trim()) { setErrorMsg("Please enter your full name."); return false; }
+      if (!form.email.trim() || !/^[a-zA-Z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/.test(form.email)) { setErrorMsg("Please enter a valid email address."); return false; }
+      if (!form.phone.trim() || !/^\d{10}$/.test(form.phone)) { setErrorMsg("Please enter a valid 10-digit phone number."); return false; }
+      if (!form.dob) { setErrorMsg("Please enter your date of birth."); return false; }
+      const dobDate = new Date(form.dob);
+      const today = new Date();
+      let age = today.getFullYear() - dobDate.getFullYear();
+      const monthDiff = today.getMonth() - dobDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) age--;
+      if (age < 18) { setErrorMsg("You must be at least 18 years old to apply."); return false; }
+      return true;
+    }
+    if (s === 1) {
+      if (!form.preferred_location.trim()) { setErrorMsg("Please enter your preferred city."); return false; }
+      return true;
+    }
+    if (s === 2) {
+      const required = ["aadhaar", "pan", "bank_statement", "address_proof"];
+      const missing = required.filter((k) => !files[k]);
+      if (missing.length > 0) {
+        const labels: Record<string, string> = { aadhaar: "Aadhaar Card", pan: "PAN Card", bank_statement: "Bank Statement", address_proof: "Address Proof" };
+        setErrorMsg(`Please upload: ${missing.map((k) => labels[k]).join(", ")}`);
+        return false;
+      }
+      return true;
+    }
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validateStep(step)) {
+      setStep(step + 1);
+      setErrorMsg("");
+    }
+  };
+
+  const prevStep = () => {
+    setErrorMsg("");
+    setTcAccepted(false);
+    setStep(step - 1);
+  };
+
+  const handleSubmitClick = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return;
+    setStatus("terms");
+  };
+
+  const backendBase = process.env.NEXT_PUBLIC_API_URL || "";
+
+  const openRazorpayCheckout = useCallback((orderId: string, amount: number, language: string) => {
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    if (!keyId) {
+      setStatus("error");
+      setErrorMsg("Payment gateway not configured. Please try again later.");
+      return;
+    }
+    if (typeof window === "undefined" || !window.Razorpay) {
+      setStatus("error");
+      setErrorMsg("Payment gateway is loading. Please wait a moment and try again.");
+      return;
+    }
+
+    const options: RazorpayOptions = {
+      key: keyId,
+      amount,
+      currency: "INR",
+      name: "December Delights",
+      description: "Franchise Application Fee",
+      order_id: orderId,
+      prefill: { name: form.full_name, email: form.email, contact: form.phone },
+      theme: { color: "#1b3c33" },
+      modal: {
+        ondismiss: () => {
+          setStatus("idle");
+          setErrorMsg("Payment was cancelled. Your application has not been submitted.");
+        },
+      },
+      method: {
+        netbanking: true,
+        card: true,
+        upi: true,
+        wallet: false,
+      },
+      handler: async (response: RazorpayResponse) => {
+        setStatus("submitting");
+        try {
+          const formData = new FormData();
+          formData.append("full_name", form.full_name);
+          formData.append("email", form.email);
+          formData.append("phone", form.phone);
+          formData.append("dob", form.dob);
+          Object.entries(files).forEach(([key, file]) => { if (file) formData.append(key, file); });
+          formData.append("business_experience", form.business_experience);
+          formData.append("preferred_location", form.preferred_location);
+          formData.append("investment_capability", form.investment_capability);
+          formData.append("message", form.message);
+          formData.append("tc_accepted", "true");
+          formData.append("tc_language", language);
+          formData.append("razorpay_order_id", response.razorpay_order_id);
+          formData.append("razorpay_payment_id", response.razorpay_payment_id);
+          formData.append("razorpay_signature", response.razorpay_signature || "");
+
+          const submitUrl = backendBase ? `${backendBase}/api/franchise` : `${API}/api/franchise`;
+          const res = await fetchWithRetry(submitUrl, { method: "POST", body: formData });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Submission failed");
+          setReceiptData({
+            fullName: form.full_name,
+            phone: form.phone,
+            email: form.email,
+            preferredLocation: form.preferred_location,
+            paymentId: response.razorpay_payment_id,
+            orderId: response.razorpay_order_id,
+            applicationDate: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
+          });
+          setStatus("success");
+          try { sessionStorage.removeItem("franchise_form"); } catch {}
+        } catch (err: unknown) {
+          setStatus("error");
+          setErrorMsg(err instanceof Error ? err.message : "Payment verified but submission failed. Please contact support.");
+        }
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzpRef.current = rzp;
+    rzp.open();
+  }, [form, files, backendBase]);
+
+  useEffect(() => {
+    if (backendBase) fetch(`${backendBase}/api/health`).catch(() => {});
+  }, [backendBase]);
+
+  useEffect(() => {
+    if (status === "success" && receiptData) {
+      const timer = setTimeout(() => {
+        generateFranchiseReceipt(receiptData);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [status, receiptData]);
+
+  const handleTcAccept = async (language: string) => {
+    setStatus("submitting");
+    setErrorMsg("");
+
+    try {
+      const orderUrl = backendBase ? `${backendBase}/api/franchise/create-order` : `${API}/api/franchise/create-order`;
+      const orderRes = await fetchWithRetry(orderUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, phone: form.phone }),
+      });
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) throw new Error(orderData.detail || "Failed to create payment order");
+
+      openRazorpayCheckout(orderData.order_id, orderData.amount, language);
+    } catch (err: unknown) {
+      setStatus("error");
+      setErrorMsg(err instanceof Error && err.name === "AbortError"
+        ? "Server is waking up, please try again in 30 seconds."
+        : err instanceof Error ? err.message : "Failed to initiate payment. Please try again.");
+    }
+  };
+
+  if (status === "terms") {
+    return <>
+      <TermsModal onAccept={handleTcAccept} onClose={() => setStatus("idle")} />
+      <div data-bg="light" style={{ minHeight: "100vh", background: "#fdf9f4" }} />
+    </>;
+  }
+
+  if (status === "submitting") {
+    return (
+      <main data-bg="light" style={{ minHeight: "100vh", background: "#fdf9f4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: "56px", height: "56px", border: "3px solid #e0ddd8", borderTopColor: "#1b3c33", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 1.5rem" }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <p style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.3rem", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Submitting Your Application</p>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.9rem", marginBottom: "0.25rem" }}>Uploading documents and creating your account...</p>
+          <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem" }}>Please don&apos;t close this page</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (status === "success") {
+    return (
+      <SuccessState
+        title="Application Received"
+        description="Your franchise application has been submitted successfully. You can track your application status using your registered phone number and date of birth."
+        actions={[
+          { label: "Download Receipt", onClick: () => receiptData && generateFranchiseReceipt(receiptData) },
+          { label: "Check Status", onClick: () => router.push("/franchise/status"), primary: true },
+          { label: "Back to Home", onClick: () => router.push("/") },
+        ]}
+      />
+    );
+  }
+
+  if (!franchiseEnabled) {
+    return (
+      <ApplicationsClosedPage />
+    );
+  }
+
+  return (
+    <>
+      <style>{`
+        .franchise-hero { position: relative; min-height: 60vh; background: #074134; display: flex; align-items: center; overflow: hidden; }
+        .franchise-hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 70% 40%, rgba(234,185,106,0.08) 0%, transparent 60%); }
+        .step-indicator { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 3rem; }
+        .step-dot { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-outfit), sans-serif; font-weight: 700; font-size: 0.85rem; transition: all 0.3s; flex-shrink: 0; }
+        .step-line { flex: 1; height: 2px; max-width: 80px; transition: background 0.3s; }
+        .form-section { animation: fadeSlideUp 0.35s ease both; }
+        @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .doc-card { display: flex; align-items: center; gap: 0.85rem; padding: 1rem 1.25rem; border-radius: 14px; cursor: pointer; transition: all 0.2s; border: 1.5px dashed #d4d0ca; background: transparent; }
+        .doc-card:hover { border-color: #1b3c33; background: rgba(27,60,51,0.02); }
+        .doc-card.has-file { border-style: solid; border-color: #1b3c33; background: #f7f3ee; }
+        .field-group { position: relative; }
+        .field-group label { transition: color 0.2s; }
+        .field-group input:focus, .field-group textarea:focus, .field-group select:focus { border-color: #1b3c33; box-shadow: 0 0 0 3px rgba(27,60,51,0.06); }
+        .franchise-benefits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; }
+        .franchise-review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .franchise-step-labels { display: flex; justify-content: space-between; margin-top: 1rem; }
+        @media (max-width: 768px) {
+          .franchise-form-grid { grid-template-columns: 1fr !important; }
+          .franchise-docs-grid { grid-template-columns: 1fr !important; }
+          .franchise-form-card { padding: 1.25rem !important; }
+          .step-dot { width: 34px; height: 34px; font-size: 0.75rem; }
+          .step-line { max-width: 48px; }
+          .franchise-hero-image { display: none !important; }
+          .franchise-hero { min-height: auto !important; }
+          .franchise-hero-inner { padding: 6.5rem 4% 2.5rem !important; }
+          .franchise-benefits-grid { grid-template-columns: 1fr 1fr !important; }
+          .franchise-review-grid { grid-template-columns: 1fr !important; }
+          .franchise-step-labels span { font-size: 0.7rem !important; letter-spacing: 0 !important; }
+          .franchise-apply-section { padding: 3rem 4% !important; }
+        }
+        @media (max-width: 420px) {
+          .franchise-benefits-grid { grid-template-columns: 1fr !important; }
+          .franchise-hero-inner { padding: 6rem 4% 2rem !important; }
+          .franchise-apply-section { padding: 2.5rem 4% !important; }
+        }
+      `}</style>
+
+      {/* Hero */}
+      <section className="franchise-hero" data-bg="dark">
+        <div className="franchise-hero-inner" style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "8rem 5% 4rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "2rem" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+              <span style={{ width: "32px", height: "1px", background: "#eab96a" }} />
+              <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase" }}>Franchise Opportunity</span>
+            </div>
+            <h1 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#fdf9f4", fontSize: "clamp(2.5rem, 7vw, 5.5rem)", lineHeight: 0.95, letterSpacing: "0.02em", marginBottom: "1.25rem" }}>
+              Grow With<br />
+              <span style={{ color: "#eab96a" }}>December Delights</span>
+            </h1>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(253,249,244,0.7)", fontSize: "1rem", lineHeight: 1.7, maxWidth: "440px", marginBottom: "2rem" }}>
+              Bring the premium cafe experience to your city. We provide the brand, recipes, and complete support — you bring the passion.
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <a href="#apply" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.25rem", borderRadius: "100px", background: "#fdf9f4", color: "#074134", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.9rem", textDecoration: "none", letterSpacing: "0.03em", transition: "transform 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.02)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
+                Start Application <ArrowRight size={15} />
+              </a>
+              <Link href="/franchise/status" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.25rem", borderRadius: "100px", border: "1.5px solid rgba(253,249,244,0.2)", background: "transparent", color: "#fdf9f4", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none", transition: "border-color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(253,249,244,0.4)"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(253,249,244,0.2)"; }}>
+                Track Application
+              </Link>
+            </div>
+          </div>
+          <div className="franchise-hero-image" style={{ flex: "0 0 auto" }}>
+            <img src="/working.svg" alt="Franchise With Us" style={{ width: "380px", height: "auto" }} />
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Strip */}
+      <section data-bg="light" style={{ padding: "0 5%", background: "#fdf9f4", position: "relative", zIndex: 3, marginTop: "-2rem" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+          <div className="franchise-benefits-grid" style={{ background: "#e8e5e0", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 24px rgba(27,60,51,0.06)" }}>
+            {[
+              { num: "01", label: "Complete Setup", desc: "Interior to equipment" },
+              { num: "02", label: "Brand Protection", desc: "Exclusive territory" },
+              { num: "03", label: "Training Program", desc: "Operations & recipes" },
+              { num: "04", label: "Marketing Support", desc: "National campaigns" },
+            ].map((b) => (
+              <div key={b.num} style={{ background: "#fff", padding: "1.5rem 1.25rem", textAlign: "center" }}>
+                <span style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#eab96a", fontSize: "0.85rem", letterSpacing: "0.1em" }}>{b.num}</span>
+                <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1rem", letterSpacing: "0.03em", margin: "0.25rem 0" }}>{b.label}</h3>
+                <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>{b.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Application Form */}
+      <section id="apply" data-bg="light" className="franchise-apply-section" style={{ padding: "5rem 5% 6rem", background: "#fdf9f4" }}>
+        <div style={{ maxWidth: "680px", margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase" }}>Get Started</span>
+            <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2rem, 5vw, 3.5rem)", letterSpacing: "0.03em", marginTop: "0.5rem" }}>Franchise Application</h2>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.9rem", marginTop: "0.5rem" }}>Complete the form below to apply for a franchise.</p>
+          </div>
+
+          {/* Progress Line */}
+          <div style={{ marginBottom: "2.5rem" }}>
+            <div style={{ position: "relative", height: "4px", background: "#e8e5e0", borderRadius: "100px" }}>
+              <div style={{ height: "100%", width: `${((step + 1) / STEPS.length) * 100}%`, background: "#1b3c33", borderRadius: "100px", transition: "width 0.4s cubic-bezier(0.25,0.1,0.25,1)" }} />
+              {STEPS.map((_, i) => (
+                <div key={i} style={{ position: "absolute", top: "50%", left: `${(i / (STEPS.length - 1)) * 100}%`, transform: "translate(-50%, -50%)", width: i <= step ? "14px" : "10px", height: i <= step ? "14px" : "10px", borderRadius: "50%", background: i < step ? "#1b3c33" : i === step ? "#eab96a" : "#e8e5e0", border: i <= step ? "none" : "2px solid #d4d0ca", transition: "all 0.3s", zIndex: 1 }} />
+              ))}
+            </div>
+            <div className="franchise-step-labels">
+              {STEPS.map((s, i) => (
+                <span key={s} style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.8rem", fontWeight: i <= step ? 700 : 400, color: i <= step ? "#1b3c33" : "#bbb", transition: "color 0.3s", letterSpacing: "0.02em" }}>{s}</span>
+              ))}
+            </div>
+          </div>
+
+          <div ref={formRef}>
+            {/* Step 0: Personal */}
+            {step === 0 && (
+              <div className="form-section">
+                <div className="franchise-form-card" style={{ background: "#fff", borderRadius: "20px", padding: "2rem", boxShadow: "0 2px 16px rgba(27,60,51,0.04)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.75rem" }}>
+                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f7f3ee", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3c33" }}>
+                      <User size={18} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Personal Information</h3>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 1 of 4</p>
+                    </div>
+                  </div>
+                  <div className="franchise-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+                    <div className="field-group">
+                      <label style={labelStyle}><User size={14} /> Full Name *</label>
+                      <input required name="full_name" value={form.full_name} onChange={handleChange} onFocus={() => setFocusedField("full_name")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "full_name" ? "#1b3c33" : undefined }} placeholder="Enter your full name" />
+                    </div>
+                    <div className="field-group">
+                      <label style={labelStyle}><Mail size={14} /> Email Address *</label>
+                      <input required type="email" pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}" name="email" value={form.email} onChange={handleChange} onFocus={() => setFocusedField("email")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "email" ? "#1b3c33" : undefined }} placeholder="you@example.com" />
+                    </div>
+                    <div className="field-group">
+                      <label style={labelStyle}><Phone size={14} /> Phone Number * <span style={{ fontWeight: 400, color: "#bbb", fontSize: "0.8rem" }}>(10 digits)</span></label>
+                      <input required name="phone" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} value={form.phone} onChange={handleChange} onFocus={() => setFocusedField("phone")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "phone" ? "#1b3c33" : undefined }} placeholder="XXXXXXXXXX" />
+                    </div>
+                    <div className="field-group">
+                      <label style={labelStyle}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /></svg> Date of Birth *</label>
+                      <input required type="date" name="dob" value={form.dob} onChange={handleChange} onFocus={() => setFocusedField("dob")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "dob" ? "#1b3c33" : undefined }} max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]} />
+                    </div>
+                  </div>
+                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#bbb", fontSize: "0.85rem", marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+                    You must be 18 or older. Your password will be auto-generated and sent to your email.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 1: Business */}
+            {step === 1 && (
+              <div className="form-section">
+                <div className="franchise-form-card" style={{ background: "#fff", borderRadius: "20px", padding: "2rem", boxShadow: "0 2px 16px rgba(27,60,51,0.04)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.75rem" }}>
+                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f7f3ee", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3c33" }}>
+                      <Briefcase size={18} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Business Details</h3>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 2 of 4</p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                    <div className="field-group">
+                      <label style={labelStyle}><MapPin size={14} /> Preferred City *</label>
+                      <input required name="preferred_location" value={form.preferred_location} onChange={handleChange} onFocus={() => setFocusedField("preferred_location")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "preferred_location" ? "#1b3c33" : undefined }} placeholder="e.g. Hyderabad, Mumbai, Delhi" />
+                    </div>
+                    <div className="field-group">
+                      <label style={labelStyle}><Briefcase size={14} /> Business Experience</label>
+                      <textarea name="business_experience" value={form.business_experience} onChange={handleChange} onFocus={() => setFocusedField("business_experience")} onBlur={() => setFocusedField(null)} rows={3} style={{ ...inputStyle, resize: "vertical" as const, borderColor: focusedField === "business_experience" ? "#1b3c33" : undefined }} placeholder="Tell us about your business background, industry experience, or any relevant skills..." />
+                    </div>
+                    <div className="field-group">
+                      <label style={labelStyle}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> Investment Capability</label>
+                      <input name="investment_capability" value={form.investment_capability} onChange={handleChange} onFocus={() => setFocusedField("investment_capability")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "investment_capability" ? "#1b3c33" : undefined }} placeholder="e.g. 15-25 Lakhs" />
+                    </div>
+                    <div className="field-group">
+                      <label style={labelStyle}><FileText size={14} /> Additional Message</label>
+                      <textarea name="message" value={form.message} onChange={handleChange} onFocus={() => setFocusedField("message")} onBlur={() => setFocusedField(null)} rows={3} style={{ ...inputStyle, resize: "vertical" as const, borderColor: focusedField === "message" ? "#1b3c33" : undefined }} placeholder="Anything else you'd like us to know about you or your vision..." />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Documents */}
+            {step === 2 && (
+              <div className="form-section">
+                <div className="franchise-form-card" style={{ background: "#fff", borderRadius: "20px", padding: "2rem", boxShadow: "0 2px 16px rgba(27,60,51,0.04)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f7f3ee", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3c33" }}>
+                      <FileText size={18} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Upload Documents</h3>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 3 of 4</p>
+                    </div>
+                  </div>
+                   <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #f0ede8" }}>Upload your documents for verification. PDF, JPG, PNG accepted. Max 5MB per file.</p>
+                   <div className="franchise-docs-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                     {DOC_FIELDS.map(({ key, label, icon, required, hint }) => (
+                       <label key={key} className={`doc-card ${files[key] ? "has-file" : ""}`}>
+                         <input type="file" name={key} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFileChange} style={{ display: "none" }} />
+                         <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: files[key] ? "#1b3c33" : "#f0ede8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: files[key] ? "#fff" : "#586159", transition: "all 0.2s" }}>
+                           {files[key] ? <Check size={18} /> : icon}
+                         </div>
+                         <div style={{ minWidth: 0, flex: 1 }}>
+                           <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.82rem", color: "#1b3c33", marginBottom: "0.1rem" }}>{label}{required && " *"}</p>
+                           {hint && <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.7rem", color: "#888", marginBottom: "0.15rem" }}>{hint}</p>}
+                           <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", color: files[key] ? "#586159" : "#bbb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{files[key] ? `${files[key]!.name} (${formatFileSize(files[key]!.size)})` : "Tap to upload"}</p>
+                         </div>
+                       </label>
+                     ))}
+                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Review & Terms */}
+            {step === 3 && (
+              <div className="form-section">
+                <div className="franchise-form-card" style={{ background: "#fff", borderRadius: "20px", padding: "2rem", boxShadow: "0 2px 16px rgba(27,60,51,0.04)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.75rem" }}>
+                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f7f3ee", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3c33" }}>
+                      <Check size={18} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.1rem", letterSpacing: "0.04em" }}>Review Your Application</h3>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 4 of 4</p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <div style={{ background: "#f7f3ee", borderRadius: "12px", padding: "1.25rem" }}>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Personal Details</p>
+                      <div className="franchise-review-grid">
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Name</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.full_name}</p></div>
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Email</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.email}</p></div>
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Phone</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.phone}</p></div>
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>DOB</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.dob ? new Date(form.dob + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : ""}</p></div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: "#f7f3ee", borderRadius: "12px", padding: "1.25rem" }}>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Business Details</p>
+                      <div className="franchise-review-grid">
+                        <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Preferred City</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.preferred_location}</p></div>
+                        {form.investment_capability && <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Investment</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.investment_capability}</p></div>}
+                      </div>
+                    </div>
+
+                    <div style={{ background: "#f7f3ee", borderRadius: "12px", padding: "1.25rem" }}>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Documents</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        {DOC_FIELDS.filter((d) => d.required).map(({ key, label }) => (
+                          <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.35rem 0.75rem", borderRadius: "100px", background: files[key] ? "#1b3c33" : "#e74c3c18", color: files[key] ? "#fff" : "#e74c3c", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 600, fontSize: "0.78rem" }}>
+                            {files[key] ? <Check size={12} /> : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>}
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ background: "rgba(200,169,126,0.08)", border: "1px solid rgba(200,169,126,0.2)", borderRadius: "12px", padding: "1.25rem" }}>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", lineHeight: 1.6 }}>
+                        Application fee: <strong>₹11,799</strong> (₹9,999 + 18% GST, non-refundable). Click <strong>&quot;Accept &amp; Pay&quot;</strong> to review Terms &amp; Conditions and complete payment.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {errorMsg && (
+              <div style={{ background: "#fdf0ef", borderRadius: "14px", padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", animation: "fadeSlideUp 0.3s ease" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#e74c3c", fontSize: "0.85rem", fontWeight: 500 }}>{errorMsg}</p>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {step === 3 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", cursor: "pointer", padding: "1rem 1.25rem", borderRadius: "14px", background: tcAccepted ? "rgba(27,60,51,0.04)" : "#f9f8f6", border: tcAccepted ? "1.5px solid #1b3c33" : "1.5px solid #e8e5e0", transition: "all 0.2s" }}>
+                    <input type="checkbox" checked={tcAccepted} onChange={(e) => setTcAccepted(e.target.checked)} style={{ accentColor: "#1b3c33", width: "18px", height: "18px", marginTop: "2px", flexShrink: 0 }} />
+                    <div>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#1b3c33", margin: 0, lineHeight: 1.5 }}>
+                        I have read and understood the Terms &amp; Conditions
+                      </p>
+                      <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.78rem", color: "#999", margin: "0.25rem 0 0" }}>
+                        You must accept before proceeding to payment.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
+              {step > 0 && (
+                <button type="button" onClick={prevStep} style={{ flex: "0 0 auto", padding: "1rem 2rem", borderRadius: "100px", border: "1.5px solid #e0ddd8", background: "#fff", color: "#586159", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer", transition: "border-color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#1b3c33"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e0ddd8"; }}>
+                  Back
+                </button>
+              )}
+              {step < 3 ? (
+                <button type="button" onClick={nextStep} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}>
+                  Continue <ArrowRight size={16} />
+                </button>
+              ) : (
+                <button type="button" onClick={handleSubmitClick} disabled={!tcAccepted} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: tcAccepted ? "#1b3c33" : "#ccc", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "clamp(0.8rem, 3vw, 0.95rem)", cursor: tcAccepted ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s", whiteSpace: "nowrap", minWidth: 0, opacity: tcAccepted ? 1 : 0.6 }} onMouseEnter={(e) => { if (tcAccepted) e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { if (tcAccepted) e.currentTarget.style.background = "#1b3c33"; }}>
+                  Accept &amp; Pay ₹11,799<ArrowRight size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function ApplicationsClosedPage() {
+  return (
+    <div data-bg="dark" style={{ minHeight: "100vh", background: "#074134", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(1.5rem, 4vw, 3rem)", fontWeight: 700, color: "#fdf9f4", letterSpacing: "0.05em", margin: 0 }}>Applications Closed</p>
+    </div>
+  );
+}

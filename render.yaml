@@ -1,0 +1,55 @@
+services:
+  # ── Backend API (Python / FastAPI) ──
+  - type: web
+    name: dd-backend
+    runtime: docker
+    dockerfilePath: Dockerfile.backend
+    envVars:
+      - key: ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_DEFAULT_PASSWORD
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: CORS_ORIGINS
+        value: http://localhost:3000,https://dd-frontend.onrender.com,https://www.decemberdelights.in,https://decemberdelights.in
+      - key: FRONTEND_URL
+        value: https://www.decemberdelights.in
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.12
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+  # ── Frontend (Next.js) ──
+  - type: web
+    name: dd-frontend
+    runtime: docker
+    dockerfilePath: Dockerfile.frontend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BACKEND_URL
+        value: https://dd-backend.onrender.com
+      - key: NEXT_PUBLIC_API_URL
+        value: https://dd-backend.onrender.com
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_RAZORPAY_KEY_ID
+        sync: false
+    autoDeploy: true

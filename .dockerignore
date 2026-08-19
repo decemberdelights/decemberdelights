@@ -1,0 +1,55 @@
+# Dependencies
+node_modules
+
+# Backend (separate Docker image)
+backend
+
+# Git
+.git
+.gitignore
+
+# Next.js build artifacts
+.next
+out
+build
+
+# Environment files
+.env*
+!.env.frontend.example
+
+# IDE / editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+LICENSE
+
+# Docker files (don't copy into context)
+Dockerfile.*
+render.yaml
+
+# Large video files (host on CDN instead)
+
+
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts
+
+# Backend runtime data
+backend/uploads
+backend/backups
+__pycache__
+*.pyc
+*.pyo
+
+# Unused dev artifacts
+coverage
+.vercel
