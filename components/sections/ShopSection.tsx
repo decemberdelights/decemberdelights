@@ -156,7 +156,7 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
         {/* Product grid with 3D cards */}
         {!shopEnabled ? (
           <div style={{ textAlign: "center", padding: "4rem 0" }}>
-            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "clamp(3rem, 8vw, 6rem)", color: "#fdf9f4", letterSpacing: "0.1em", margin: 0 }}>BREWING SOON</p>
+            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "clamp(3rem, 8vw, 6rem)", color: "#4ade80", letterSpacing: "0.1em", margin: 0 }}>BREWING SOON</p>
           </div>
         ) : loading ? (
           <div className="shop-grid-3d">
