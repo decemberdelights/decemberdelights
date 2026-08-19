@@ -14,15 +14,7 @@ export function useSiteSettings(): SiteSettings {
 
   useEffect(() => {
     let cancelled = false;
-    const backendBase = process.env.NEXT_PUBLIC_API_URL || "";
-    if (!backendBase) {
-      setSettings({
-        shop_enabled: localStorage.getItem("dd_shop_enabled") !== "false",
-        franchise_enabled: localStorage.getItem("dd_franchise_enabled") !== "false",
-      });
-      return;
-    }
-    fetch(`${backendBase}/api/settings`, { cache: "no-store" })
+    fetch("/api/settings", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         if (!cancelled) {

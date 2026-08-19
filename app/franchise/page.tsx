@@ -240,7 +240,7 @@ export default function FranchisePage() {
     setStatus("terms");
   };
 
-  const backendBase = process.env.NEXT_PUBLIC_API_URL || "";
+  const backendBase = "";
 
   const openRazorpayCheckout = useCallback((orderId: string, amount: number, language: string) => {
     const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
