@@ -43,9 +43,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: BACKEND_URL
-        value: https://dd-backend.onrender.com
+        value: https://dd-backend-c3qn.onrender.com
       - key: NEXT_PUBLIC_API_URL
-        value: https://dd-backend.onrender.com
+        value: https://dd-backend-c3qn.onrender.com
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
