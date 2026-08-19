@@ -18,7 +18,7 @@ services:
       - key: ADMIN_USERNAME
         value: admin
       - key: CORS_ORIGINS
-        value: http://localhost:3000,https://decemberdelights.onrender.com,https://decemberdelights.in,https://www.decemberdelights.in
+        value: http://localhost:3000,https://dd-frontend.onrender.com,https://decemberdelights.onrender.com,https://decemberdelights.in,https://www.decemberdelights.in
       - key: FRONTEND_URL
         value: https://decemberdelights.onrender.com
       - key: SUPABASE_URL
