@@ -625,14 +625,14 @@ export default function ShopPage() {
 
 function ShopComingSoonPage() {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000" }}>
+    <div style={{ minHeight: "100vh", width: "100%", position: "relative", overflow: "hidden" }}>
       <video
         autoPlay
         muted
         loop
         playsInline
         preload="metadata"
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }}
       >
         <source src="/coming.mp4" type="video/mp4" />
       </video>
