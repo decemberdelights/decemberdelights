@@ -72,13 +72,6 @@ img, video {
     will-change: auto !important;
     transform: none !important;
   }
-  .shop-video-desktop { display: none !important; }
-  .shop-video-mobile { display: block !important; }
-}
-
-@media (min-width: 769px) {
-  .shop-video-mobile { display: none !important; }
-  .shop-video-desktop { display: block !important; }
 }
 
 :root {
