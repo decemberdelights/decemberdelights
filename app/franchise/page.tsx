@@ -724,8 +724,13 @@ export default function FranchisePage() {
 
 function ApplicationsClosedPage() {
   return (
-    <div data-bg="dark" style={{ minHeight: "100vh", background: "#074134", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(1.5rem, 4vw, 3rem)", fontWeight: 700, color: "#fdf9f4", letterSpacing: "0.05em", margin: 0 }}>Applications Closed</p>
+    <div data-bg="dark" style={{ minHeight: "100vh", background: "#074134", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "2rem", padding: "2rem", textAlign: "center" }}>
+      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(1.5rem, 4vw, 3rem)", fontWeight: 700, color: "#fdf9f4", letterSpacing: "0.05em", margin: 0 }}>Franchise Applications</p>
+      <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", maxWidth: "400px", lineHeight: 1.7 }}>Applications are currently closed. Please check back later or track your existing application status.</p>
+      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center" }}>
+        <Link href="/franchise/status" style={{ padding: "0.85rem 2rem", borderRadius: "999px", background: "#c8a97a", color: "#074134", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.1em", textDecoration: "none", textTransform: "uppercase" }}>Track Application</Link>
+        <Link href="/" style={{ padding: "0.85rem 2rem", borderRadius: "999px", border: "1.5px solid rgba(255,255,255,0.25)", background: "transparent", color: "#fdf9f4", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.1em", textDecoration: "none", textTransform: "uppercase" }}>Back to Home</Link>
+      </div>
     </div>
   );
 }
