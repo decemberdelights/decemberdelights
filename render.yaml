@@ -12,25 +12,25 @@ services:
       - key: PORT
         value: 10000
       - key: JWT_SECRET
-        generateValue: true
+        value: 9ee337408d8fb135887073b1940cc2c5d9b9dd9d64e7dc37a3dd94e4e488a4ea
       - key: ADMIN_DEFAULT_PASSWORD
-        sync: false
+        value: admin123
       - key: ADMIN_USERNAME
         value: admin
       - key: CORS_ORIGINS
-        value: https://dd-frontend.onrender.com,https://www.decemberdelights.in,https://decemberdelights.in
+        value: http://localhost:3000,https://decemberdelights.onrender.com,https://decemberdelights.in,https://www.decemberdelights.in
       - key: FRONTEND_URL
-        value: https://www.decemberdelights.in
+        value: https://decemberdelights.onrender.com
       - key: SUPABASE_URL
-        sync: false
+        value: https://mdnqutroeustyflmmdge.supabase.co
       - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kbnF1dHJvZXVzdHlmbG1tZGdlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzIyNTE3MCwiZXhwIjoyMDk4ODAxMTcwfQ.zzAMoa48gqTQs-io5Lmr47zReVZB6fANuxSE1JBOzA8
       - key: RAZORPAY_KEY_ID
-        sync: false
+        value: rzp_live_TRgm1vDqyxPZsT
       - key: RAZORPAY_KEY_SECRET
-        sync: false
+        value: sl3lRVCHTb1Lk3GNlMeV117E
       - key: PYTHON_VERSION
-        value: 3.12
+        value: "3.12"
     healthCheckPath: /api/health
     autoDeploy: true
 
