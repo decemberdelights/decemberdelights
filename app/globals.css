@@ -31,20 +31,47 @@
 html {
   scroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: none;
 }
 
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overscroll-behavior: none;
+  overflow-x: hidden;
+  touch-action: pan-y;
 }
 
-img, video, .gpu-accelerate {
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+img, video {
+  max-width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+
+/* Desktop: full GPU acceleration */
+@media (min-width: 769px) {
+  html { overscroll-behavior: none; }
+  body { overscroll-behavior: none; }
+  img, video, .gpu-accelerate {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .about-section, .shop-section-3d, .visit-section, .career-section, .franchise-section, .menu-section {
+    contain: layout style;
+    perspective: 1200px;
+    transform-style: preserve-3d;
+  }
+}
+
+/* Android: reduce GPU load, prioritize scroll */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sf-inner {
+    will-change: auto !important;
+    transform: none !important;
+  }
 }
 
 :root {
@@ -202,13 +229,10 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: 0.5px;
 }
 
-/* ============ BUTTER SMOOTH 90FPS ============ */
+/* ============ PERFORMANCE ============ */
 [data-bg] { will-change: auto; }
 .about-section, .shop-section-3d, .visit-section, .career-section, .franchise-section, .menu-section {
-  contain: layout style;
   will-change: auto;
-  perspective: 1200px;
-  transform-style: preserve-3d;
 }
 img, video { will-change: auto; }
 

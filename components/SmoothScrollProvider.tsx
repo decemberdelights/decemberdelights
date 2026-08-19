@@ -7,6 +7,9 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
   const lenisRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) return;
+
     const lenis = new Lenis({
       duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -26,13 +29,11 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
 
     requestAnimationFrame(raf);
 
-    // Handle anchor clicks for smooth scroll to sections
     const handleClick = (e: MouseEvent) => {
       const target = (e.target as HTMLElement).closest("a[href]");
       if (!target) return;
       const href = (target as HTMLAnchorElement).getAttribute("href") || "";
 
-      // Handle same-page anchors (#section)
       if (href.startsWith("#")) {
         e.preventDefault();
         const id = href.slice(1);
@@ -45,10 +46,8 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
         return;
       }
 
-      // Handle cross-page anchors (/#section)
       if (href.startsWith("/#")) {
         const id = href.slice(2);
-        // If already on homepage, smooth scroll instead of navigating
         if (window.location.pathname === "/" || window.location.pathname === "") {
           e.preventDefault();
           const el = document.getElementById(id);
@@ -58,7 +57,6 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
             window.scrollTo({ top: 0, behavior: "smooth" });
           }
         }
-        // If on another page, let the browser navigate normally to /#hero
       }
     };
 
