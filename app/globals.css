@@ -682,12 +682,14 @@ body {
 .franchise-text { width: 50%; padding: 0px 80px 0px 40px; display: flex; flex-direction: column; justify-content: center; }
 .franchise-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(32px, 4vw, 60px); font-weight: 700; line-height: 0.95; color: #ffffff; margin-bottom: 24px; }
 .franchise-text p { font-family: 'Montserrat', sans-serif; font-size: clamp(15px, 3.5vw, 19px); font-weight: 400; line-height: 1.8; color: rgba(255,255,255,0.85); margin-bottom: 36px; max-width: 520px; }
-.franchise-cta { display: inline-flex; align-items: center; gap: 12px; padding: 16px 40px; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #074134; background: #ffffff; border: none; border-radius: 999px; cursor: pointer; text-decoration: none; width: fit-content; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.franchise-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
-.franchise-cta:active { transform: scale(0.97); }
+.franchise-cta-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; width: fit-content; }
+.franchise-cta-closed { display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 999px; cursor: default; }
+.franchise-cta-track { display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #074134; background: #ffffff; border: none; border-radius: 999px; cursor: pointer; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.franchise-cta-track:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+.franchise-cta-track:active { transform: scale(0.97); }
 .franchise-svg { width: 100%; max-width: 700px; object-fit: contain; margin-top: 80px; }
-@media (max-width: 768px) { .franchise-section { padding: 40px 0; } .franchise-inner { flex-direction: column; } .franchise-video { width: 100%; padding: 0 24px; order: -1; } .franchise-svg { margin-top: 0; max-width: 100%; } .franchise-text { width: 100%; padding: 24px 24px 0; text-align: center; align-items: center; } .franchise-text p { max-width: 100%; margin-bottom: 28px; } .franchise-cta { width: 100%; justify-content: center; padding: 18px 32px; font-size: 11px; } }
-@media (max-width: 480px) { .franchise-section { padding: 24px 0; } .franchise-heading { font-size: clamp(28px, 7vw, 40px); line-height: 1; margin-bottom: 18px; } .franchise-text p { font-size: 15px; line-height: 1.7; margin-bottom: 24px; } .franchise-cta { font-size: 10px; padding: 16px 24px; } }
+@media (max-width: 768px) { .franchise-section { padding: 40px 0; } .franchise-inner { flex-direction: column; } .franchise-video { width: 100%; padding: 0 24px; order: -1; } .franchise-svg { margin-top: 0; max-width: 100%; } .franchise-text { width: 100%; padding: 24px 24px 0; text-align: center; align-items: center; } .franchise-text p { max-width: 100%; margin-bottom: 28px; } .franchise-cta-row { width: 100%; justify-content: center; } .franchise-cta-closed, .franchise-cta-track { flex: 1; justify-content: center; min-width: 0; padding: 14px 20px; font-size: 10px; letter-spacing: 1.5px; } }
+@media (max-width: 480px) { .franchise-section { padding: 24px 0; } .franchise-heading { font-size: clamp(28px, 7vw, 40px); line-height: 1; margin-bottom: 18px; } .franchise-text p { font-size: 15px; line-height: 1.7; margin-bottom: 24px; } .franchise-cta-closed, .franchise-cta-track { font-size: 9px; padding: 12px 16px; letter-spacing: 1px; } }
 
 /* ============ VISIT SECTION ============ */
 .visit-section { position: relative; z-index: 25; height: 80vh; display: flex; background: linear-gradient(135deg, #063529 0%, #074134 50%, #0a5c49 100%); isolation: isolate; overflow: hidden; }
@@ -1200,4 +1202,63 @@ body {
   .shop-section-3d { padding: 40px 16px; }
   .shop-grid-3d { grid-template-columns: 1fr; gap: 16px; }
   .shop-card-img-3d { height: 220px; }
+}
+
+/* ============ GLOBAL MOBILE RESPONSIVE POLISH ============ */
+
+/* Shop header label line hide on small screens */
+@media (max-width: 600px) {
+  .shop-label-line { display: none; }
+  .shop-label-3d { gap: 0; }
+}
+
+/* Menu grid equal columns on mobile */
+@media (max-width: 480px) {
+  .menu-grid-equal { grid-template-columns: 1fr; }
+  .menu-card-vert { border-radius: 12px; }
+}
+
+/* Careers section mobile */
+@media (max-width: 768px) {
+  .career-heading { font-size: clamp(24px, 6vw, 40px); }
+  .career-text p { font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
+}
+
+/* Contact page form responsive */
+@media (max-width: 768px) {
+  main[data-bg="light"] form { padding: 1.5rem !important; }
+}
+
+/* Track page order cards mobile */
+@media (max-width: 480px) {
+  .track-step-row { gap: 4px !important; }
+  .track-step-label { font-size: 9px !important; }
+}
+
+/* Shop page checkout & cart drawer mobile */
+@media (max-width: 768px) {
+  .shop-cart-drawer { width: 100% !important; right: 0 !important; }
+  .shop-checkout-modal { padding: 16px !important; }
+}
+
+/* Franchise form review grid mobile */
+@media (max-width: 768px) {
+  .franchise-review-grid { grid-template-columns: 1fr !important; }
+  .franchise-step-labels span { font-size: 0.65rem !important; letter-spacing: 0 !important; }
+}
+
+/* Footer mobile polish */
+@media (max-width: 768px) {
+  .footer-links { justify-content: center; }
+}
+
+/* Image + video safety */
+@media (max-width: 768px) {
+  video { object-fit: cover !important; }
+}
+
+/* Terms modal mobile */
+@media (max-width: 480px) {
+  .tc-body { padding: 1rem !important; }
+  .tc-title { font-size: 1rem !important; }
 }
