@@ -137,8 +137,7 @@ export default function ContactPage() {
                   onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.06)"; }}>
                   <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(234,185,106,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#eab96a", flexShrink: 0 }}><MapPin size={20} /></div>
                   <div>
-                    <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(253,249,244,0.45)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", margin: 0 }}>Visit Us</p>
-                    <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#fdf9f4", fontSize: "0.9rem", fontWeight: 500, margin: 0 }}>Open daily 10 AM – 11 PM</p>
+                    <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#fdf9f4", fontSize: "0.9rem", fontWeight: 500, margin: 0 }}>Visit Us</p>
                   </div>
                 </a>
                 <a href="tel:+919676946460" style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1rem", borderRadius: "12px", background: "rgba(253,249,244,0.06)", border: "1px solid rgba(253,249,244,0.08)", textDecoration: "none", transition: "background 0.2s" }}
@@ -227,7 +226,7 @@ export default function ContactPage() {
             onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 24px rgba(27,60,51,0.04)"; }}>
             <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(7,65,52,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#074134" }}><MapPin size={28} /></div>
             <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.4rem", letterSpacing: "0.03em" }}>Visit Our Cafe</h3>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>Open daily from 10 AM to 11 PM.<br />Come experience the vibe in person.</p>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>Come experience the vibe in person.</p>
             <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#074134", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.05em" }}>Get Directions &rarr;</span>
           </a>
           <a href="https://www.instagram.com/decemberdelights" target="_blank" rel="noopener noreferrer" className="contact-card" style={{ background: "#fff", border: "1px solid rgba(27,60,51,0.08)" }}
@@ -243,7 +242,7 @@ export default function ContactPage() {
             onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 24px rgba(27,60,51,0.04)"; }}>
             <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(39,174,96,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#27ae60" }}><Phone size={28} /></div>
             <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.4rem", letterSpacing: "0.03em" }}>Call Us</h3>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>+91 96769 46460<br />Mon - Sun, 10 AM to 11 PM</p>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>+91 96769 46460</p>
             <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#27ae60", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.05em" }}>Call Now &rarr;</span>
           </a>
         </div>

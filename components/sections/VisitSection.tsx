@@ -25,6 +25,10 @@ export default function VisitSection() {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />
+              <a href="tel:+919676946460" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "15px", fontWeight: 500, color: "#fdf9f4", textDecoration: "none", transition: "color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#fdf9f4"; }}>+91 96769 46460</a>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />
               <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "15px", fontWeight: 500, color: "#fdf9f4" }}>Follow us <a href="https://www.instagram.com/decemberdelights/" target="_blank" rel="noopener noreferrer" style={{ color: "#c8a97a", textDecoration: "none", borderBottom: "1px solid rgba(200,169,126,0.4)", transition: "border-color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(200,169,126,0.4)"; }}>@decemberdelights</a></p>
             </div>
           </div>
