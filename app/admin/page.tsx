@@ -322,7 +322,7 @@ export default function AdminPage() {
         </button>
         <div className={`admin-overlay${sidebarOpen ? " open" : ""}`} onClick={() => setSidebarOpen(false)} />
         <div className={`sidebar${sidebarOpen ? " open" : ""}`}>
-          <AdminSidebar tab={tab} setTab={(t) => { setTab(t); setEditingItem(null); setEditType(null); setSidebarOpen(false); }} role={role} stats={stats} onLogout={handleLogout} />
+          <AdminSidebar tab={tab} setTab={(t) => { setTab(t); setEditingItem(null); setEditType(null); setSidebarOpen(false); }} role={role} onLogout={handleLogout} />
         </div>
         <div className="main">
           {loading && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: "#3b6d11", zIndex: 9999, animation: "loading-progress 2s ease-in-out infinite" }} />}

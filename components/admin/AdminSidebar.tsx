@@ -1,12 +1,11 @@
 "use client";
 
-import { Tab, Stats } from "./types";
+import { Tab } from "./types";
 
 interface AdminSidebarProps {
   tab: Tab;
   setTab: (tab: Tab) => void;
   role: string;
-  stats: Stats | null;
   onLogout: () => void;
 }
 
@@ -27,47 +26,42 @@ const S = {
   btnActive: { cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontSize: 14, padding: "10px 12px", borderRadius: 8, background: "#2c5c4a", color: "#fff", border: "none", margin: 0, fontFamily: "inherit", transition: "all 0.15s", width: "100%", textAlign: "left" as const, fontWeight: 600 },
   navIcon: { fontSize: 10, width: 22, textAlign: "center" as const, flexShrink: 0, fontWeight: 700, letterSpacing: "0.5px", color: "rgba(255,255,255,0.5)" },
   navLabel: { flex: 1, color: "#cdd9d2" },
-  badge: { marginLeft: "auto", background: "#e24b4a", color: "#fff", fontSize: 11, padding: "2px 8px", borderRadius: 10, fontWeight: 600, minWidth: 22, textAlign: "center" as const },
   logout: { margin: "12px 10px 16px", border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)", color: "#dfe7e2", padding: 11, borderRadius: 8, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontFamily: "inherit" },
 } as const;
 
-export default function AdminSidebar({ tab, setTab, role, stats, onLogout }: AdminSidebarProps) {
+export default function AdminSidebar({ tab, setTab, role, onLogout }: AdminSidebarProps) {
   const roleLabel = role === "super_admin" ? "Super Admin" : "Admin";
 
-  const pendingFranchise = (stats?.pending_franchise || 0) + (stats?.submitted_franchise || 0) + (stats?.under_process_franchise || 0);
-  const activeOrders = (stats?.pending_orders || 0) + (stats?.preparing_orders || 0);
-
-  const mainTabs: [Tab, string, number | string | undefined][] = [
-    ["overview", "Overview", undefined],
-    ["orders", "Orders", activeOrders || undefined],
-    ["franchise", "Franchise", pendingFranchise || undefined],
-    ["careers", "Careers", (stats?.pending_careers || 0) || undefined],
-    ["contacts", "Contacts", (stats?.pending_contacts || 0) || undefined],
+  const mainTabs: [Tab, string][] = [
+    ["overview", "Overview"],
+    ["orders", "Orders"],
+    ["franchise", "Franchise"],
+    ["careers", "Careers"],
+    ["contacts", "Contacts"],
   ];
 
-  const contentTabs: [Tab, string, number | string | undefined][] = [
-    ["menu", "Menu Items", stats?.menu_count || undefined],
-    ["products", "Products", undefined],
-    ["jobs", "Jobs", undefined],
+  const contentTabs: [Tab, string][] = [
+    ["menu", "Menu Items"],
+    ["products", "Products"],
+    ["jobs", "Jobs"],
   ];
 
-  const analyticsTabs: [Tab, string, number | string | undefined][] = [
-    ["charts", "Analytics", undefined],
+  const analyticsTabs: [Tab, string][] = [
+    ["charts", "Analytics"],
   ];
 
-  const adminTabs: [Tab, string, number | string | undefined][] = [
-    ["admins", "Admin Users", `${stats?.admin_count || 0}/4`],
-    ["logs", "Activity Log", undefined],
+  const adminTabs: [Tab, string][] = [
+    ["admins", "Admin Users"],
+    ["logs", "Activity Log"],
   ];
 
-  const renderTabGroup = (tabs: [Tab, string, number | string | undefined][]) => (
-    tabs.map(([key, label, count]) => {
+  const renderTabGroup = (tabs: [Tab, string][]) => (
+    tabs.map(([key, label]) => {
       const isActive = tab === key;
       return (
         <button key={key} onClick={() => setTab(key)} style={isActive ? S.btnActive : { ...S.btn, color: "#cdd9d2" }}>
           <span style={S.navIcon}>{icons[key]}</span>
           <span style={{ ...S.navLabel, color: isActive ? "#fff" : "#cdd9d2" }}>{label}</span>
-          {count ? <span style={S.badge}>{count}</span> : null}
         </button>
       );
     })
