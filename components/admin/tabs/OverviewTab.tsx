@@ -114,7 +114,7 @@ export default function OverviewTab({ stats, setTab, todayOrders = 0, monthOrder
         <div style={{ flex: "1 1 200px", background: "#fff", borderRadius: 12, padding: "18px 20px", border: "1px solid #e5e5e5", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: "#1b2b25" }}>Shop Section</div>
-            <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{shopEnabled ? "Active on homepage" : "Hidden — shop closed"}</div>
+            <div style={{ fontSize: 12, color: shopEnabled ? "#888" : "#2d6a4f", marginTop: 2, fontWeight: shopEnabled ? 400 : 600 }}>{shopEnabled ? "Active on homepage" : "Brewing Soon"}</div>
           </div>
           <button onClick={toggleShop} disabled={settingsLoading} style={{ width: 48, height: 26, borderRadius: 13, border: "none", cursor: settingsLoading ? "not-allowed" : "pointer", position: "relative", background: shopEnabled ? "#2d6a4f" : "#ccc", transition: "background 0.2s", flexShrink: 0, opacity: settingsLoading ? 0.5 : 1 }}>
             <span style={{ position: "absolute", top: 3, left: shopEnabled ? 25 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
