@@ -625,8 +625,24 @@ export default function ShopPage() {
 
 function ShopComingSoonPage() {
   return (
-    <div style={{ minHeight: "100vh", width: "100%", background: "#074134", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <p style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#fdf9f4", fontSize: "clamp(3rem, 8vw, 6rem)", letterSpacing: "0.1em", margin: 0 }}>BREWING SOON</p>
-    </div>
+    <>
+      {/* Mobile: video */}
+      <div className="shop-cs-mobile" style={{ minHeight: "100vh", width: "100%", background: "#074134", position: "relative", overflow: "hidden", display: "none", alignItems: "center", justifyContent: "center" }}>
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }}
+        >
+          <source src="/CS.mp4" type="video/mp4" />
+        </video>
+      </div>
+      {/* Desktop: text */}
+      <div className="shop-cs-desktop" style={{ minHeight: "100vh", width: "100%", background: "#074134", display: "none", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#fdf9f4", fontSize: "clamp(3rem, 8vw, 6rem)", letterSpacing: "0.1em", margin: 0 }}>BREWING SOON</p>
+      </div>
+    </>
   );
 }
