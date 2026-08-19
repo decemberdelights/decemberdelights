@@ -256,7 +256,7 @@ export default function Navbar() {
           padding: 10px;
           background: none;
           border: none;
-          z-index: 110;
+          z-index: 1002;
           position: relative;
           min-height: 44px;
           min-width: 44px;
@@ -418,6 +418,9 @@ export default function Navbar() {
       </nav>
 
       <div className={`dd-mobile-menu ${menuOpen ? "open" : ""}`} role="dialog" aria-label="Navigation menu">
+        <button onClick={() => setMenuOpen(false)} aria-label="Close menu" style={{ position: "absolute", top: "calc(1.5rem + env(safe-area-inset-top, 0px))", right: "calc(1.5rem + env(safe-area-inset-right, 0px))", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10, transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
         <Image src="/logo-icon.png" alt="" width={48} height={48} style={{ height: "48px", width: "auto", marginBottom: "0.5rem", opacity: 0.9 }} />
         <div className="dd-mobile-divider" />
         {links.map((link) => (
