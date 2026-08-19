@@ -281,6 +281,7 @@ export default function FranchiseStatusPage() {
     <>
       <style>{`
         @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .login-card { animation: fadeSlideUp 0.5s ease both; }
         .login-card:nth-child(2) { animation-delay: 0.1s; }
         .login-card:nth-child(3) { animation-delay: 0.2s; }
