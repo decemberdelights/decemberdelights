@@ -166,7 +166,7 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
             >
               <source src="/coming.mp4" type="video/mp4" />
             </video>
-            <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "clamp(1.5rem, 3vw, 2.5rem)", color: "#fdf9f4", letterSpacing: "0.08em", margin: "1.5rem 0 0" }}>Brewing Soon</h3>
+            <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "clamp(2rem, 5vw, 4rem)", color: "#4ade80", letterSpacing: "0.08em", margin: "2rem 0 0", textShadow: "0 2px 20px rgba(74,222,128,0.3)" }}>Brewing Soon</h3>
           </div>
         ) : loading ? (
           <div className="shop-grid-3d">
