@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { MapPin, Instagram, Phone, Mail, ArrowRight, User, MessageSquare } from "@/components/icons";
+import { Instagram, Phone, Mail, ArrowRight, User, MessageSquare } from "@/components/icons";
 import { API } from "@/lib/api";
 import { labelStyle } from "@/lib/styles";
 import SuccessState from "@/components/SuccessState";
@@ -132,14 +132,6 @@ export default function ContactPage() {
                 Visit us at our cafe, give us a call, or send us a message. We would love to hear from you.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <a href="https://maps.app.goo.gl/zP5pu9ynX7dtSkow7" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1rem", borderRadius: "12px", background: "rgba(253,249,244,0.06)", border: "1px solid rgba(253,249,244,0.08)", textDecoration: "none", transition: "background 0.2s" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.1)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.06)"; }}>
-                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(234,185,106,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#eab96a", flexShrink: 0 }}><MapPin size={20} /></div>
-                  <div>
-                    <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#fdf9f4", fontSize: "0.9rem", fontWeight: 500, margin: 0 }}>Visit Us</p>
-                  </div>
-                </a>
                 <a href="tel:+919676946460" style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1rem", borderRadius: "12px", background: "rgba(253,249,244,0.06)", border: "1px solid rgba(253,249,244,0.08)", textDecoration: "none", transition: "background 0.2s" }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.1)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.06)"; }}>
@@ -221,14 +213,6 @@ export default function ContactPage() {
         </div>
 
         <div className="contact-card-grid" style={{ maxWidth: "1000px", margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <a href="https://maps.app.goo.gl/zP5pu9ynX7dtSkow7" target="_blank" rel="noopener noreferrer" className="contact-card" style={{ background: "#fff", border: "1px solid rgba(27,60,51,0.08)" }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(27,60,51,0.1)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 24px rgba(27,60,51,0.04)"; }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(7,65,52,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#074134" }}><MapPin size={28} /></div>
-            <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.4rem", letterSpacing: "0.03em" }}>Visit Our Cafe</h3>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>Come experience the vibe in person.</p>
-            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#074134", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.05em" }}>Get Directions &rarr;</span>
-          </a>
           <a href="https://www.instagram.com/decemberdelights" target="_blank" rel="noopener noreferrer" className="contact-card" style={{ background: "#fff", border: "1px solid rgba(27,60,51,0.08)" }}
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(27,60,51,0.1)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 24px rgba(27,60,51,0.04)"; }}>

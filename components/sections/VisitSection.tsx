@@ -33,16 +33,6 @@ export default function VisitSection() {
             </div>
           </div>
           <div data-reveal-child className="visit-buttons">
-            <a href="https://www.google.com/maps/place/December+Delights/@18.0050405,79.5520925,17z/data=!3m1!4b1!4m6!3m5!1s0x3a334f0071e6bb0f:0xcb45fa2eee537062!8m2!3d18.0050405!4d79.5520925!16s%2Fg%2F11x1__1gvb?entry=ttu&g_ep=EgoyMDI2MDYxNi4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "14px 32px", fontFamily: "'Montserrat', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#074134", background: "#fdf9f4", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", transition: "all 0.3s ease" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#c8a97a"; e.currentTarget.style.color = "#074134"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#fdf9f4"; e.currentTarget.style.color = "#074134"; }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#074134" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              Get Directions
-            </a>
             <a href="https://www.instagram.com/decemberdelights/" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "14px 32px", fontFamily: "'Montserrat', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#074134", background: "#fdf9f4", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", transition: "all 0.3s ease" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "#c8a97a"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "#fdf9f4"; }}
