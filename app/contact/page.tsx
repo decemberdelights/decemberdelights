@@ -147,7 +147,7 @@ export default function ContactPage() {
                   <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(234,185,106,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#eab96a", flexShrink: 0 }}><Instagram size={20} /></div>
                   <div>
                     <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(253,249,244,0.45)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", margin: 0 }}>Follow Us</p>
-                    <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#fdf9f4", fontSize: "0.9rem", fontWeight: 500, margin: 0 }}>@decemberdelights.cafe</p>
+                    <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#fdf9f4", fontSize: "0.9rem", fontWeight: 500, margin: 0 }}>@decemberdelights</p>
                   </div>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(253,249,244,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
                 </a>
@@ -218,7 +218,7 @@ export default function ContactPage() {
             onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 24px rgba(27,60,51,0.04)"; }}>
             <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(225,48,108,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#e1306c" }}><Instagram size={28} /></div>
             <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.4rem", letterSpacing: "0.03em" }}>Follow on Instagram</h3>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>@decemberdelights.cafe<br />Stay updated with our latest posts.</p>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>@decemberdelights<br />Stay updated with our latest posts.</p>
             <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#e1306c", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.05em" }}>Follow Us &rarr;</span>
           </a>
           <a href="tel:+919676946460" className="contact-card" style={{ background: "#fff", border: "1px solid rgba(27,60,51,0.08)" }}
