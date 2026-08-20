@@ -191,31 +191,34 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!authed || !supabase) return;
-    const channel = supabase
-      .channel("admin-orders")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
-        refresh();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "franchise_applications" }, () => {
-        refresh();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "career_applications" }, () => {
-        refresh();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "contact_messages" }, () => {
-        refresh();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "menu_items" }, () => {
-        refresh();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => {
-        refresh();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
-        refresh();
-      })
-      .subscribe();
-    return () => { supabase?.removeChannel(channel); };
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel("admin-orders")
+        .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+          refresh();
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "franchise_applications" }, () => {
+          refresh();
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "career_applications" }, () => {
+          refresh();
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "contact_messages" }, () => {
+          refresh();
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "menu_items" }, () => {
+          refresh();
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => {
+          refresh();
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
+          refresh();
+        })
+        .subscribe();
+    } catch {}
+    return () => { if (channel) supabase?.removeChannel(channel); };
   }, [authed, refresh]);
 
   if (authed === null) return <div className="admin-page"><div className="app" style={{ alignItems: "center", justifyContent: "center" }}><p style={{ color: "#888" }}>Loading...</p></div></div>;

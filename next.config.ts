@@ -8,7 +8,7 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
   {
     key: "Content-Security-Policy",
-    value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' http://localhost:* https://*.supabase.co https://*.railway.app https://*.onrender.com https://api.razorpay.com; frame-src 'self' https://checkout.razorpay.com https://*.razorpay.com; frame-ancestors 'none';",
+    value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' http://localhost:* https://*.supabase.co wss://*.supabase.co https://*.railway.app https://*.onrender.com https://api.razorpay.com; frame-src 'self' https://checkout.razorpay.com https://*.razorpay.com; frame-ancestors 'none';",
   },
 ];
 
