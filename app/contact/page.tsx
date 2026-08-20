@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Instagram, Phone, Mail, ArrowRight, User, MessageSquare } from "@/components/icons";
+import { MapPin, Instagram, Phone, Mail, ArrowRight, User, MessageSquare } from "@/components/icons";
 import { API } from "@/lib/api";
 import { labelStyle } from "@/lib/styles";
 import SuccessState from "@/components/SuccessState";
@@ -213,6 +213,11 @@ export default function ContactPage() {
         </div>
 
         <div className="contact-card-grid" style={{ maxWidth: "1000px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+          <div className="contact-card" style={{ background: "#fff", border: "1px solid rgba(27,60,51,0.08)" }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(7,65,52,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#074134" }}><MapPin size={28} /></div>
+            <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.4rem", letterSpacing: "0.03em" }}>Visit Us</h3>
+            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>December Delights, Narsingi, Hyderabad</p>
+          </div>
           <a href="https://www.instagram.com/decemberdelights" target="_blank" rel="noopener noreferrer" className="contact-card" style={{ background: "#fff", border: "1px solid rgba(27,60,51,0.08)" }}
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(27,60,51,0.1)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 24px rgba(27,60,51,0.04)"; }}>
