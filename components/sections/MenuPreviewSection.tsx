@@ -27,7 +27,7 @@ export default function MenuPreviewSection() {
           </span>
           <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(36px, 6vw, 90px)", fontWeight: 700, color: "#074134", marginBottom: "20px", lineHeight: 1.15 }}>
-            <ScrollFloat animation="slideUp3D" containerClassName="!my-0" textClassName="whitespace-nowrap">Must-Try Delights</ScrollFloat>
+            <ScrollFloat animation="slideUp3D" containerClassName="!my-0">Must-Try Delights</ScrollFloat>
           </h2>
           <p data-reveal-child style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: 400, fontStyle: "italic", lineHeight: 1.6, color: "#3d4a3e", maxWidth: "700px", marginBottom: "40px", position: "relative", paddingLeft: "24px", borderLeft: "3px solid rgba(200,169,122,0.4)" }}>
             Carefully crafted with the finest ingredients, every dish and drink is designed to delight your senses and create unforgettable moments.

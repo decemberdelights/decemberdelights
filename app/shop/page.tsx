@@ -377,7 +377,7 @@ export default function ShopPage() {
           </div>
 
           {loading ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", gap: "1.5rem" }}>
               {[1,2,3,4,5,6].map(i => <ProductCardSkeleton key={i} />)}
             </div>
           ) : fetchError ? (
@@ -389,7 +389,7 @@ export default function ShopPage() {
               <p style={{ fontFamily: fontBebas, color: dark, fontSize: "clamp(1.5rem, 3vw, 2.5rem)", letterSpacing: "0.05em", margin: 0 }}>Brewing Soon</p>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", gap: "1.5rem" }}>
               {filtered.map((product) => {
                 const hasDiscount = product.original_price > product.price;
                 const discountPct = hasDiscount ? Math.round((1 - product.price / product.original_price) * 100) : 0;
@@ -432,9 +432,9 @@ export default function ShopPage() {
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                <button onClick={() => updateQty(product.id, -1)} style={{ width: "36px", height: "36px", borderRadius: "10px", border: `1.5px solid ${dark}`, background: "#fff", color: dark, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", transition: "all 0.15s" }}>-</button>
+                                <button onClick={() => updateQty(product.id, -1)} style={{ width: "44px", height: "44px", borderRadius: "10px", border: `1.5px solid ${dark}`, background: "#fff", color: dark, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", transition: "all 0.15s" }}>-</button>
                                 <span style={{ fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.95rem", minWidth: "28px", textAlign: "center" as const, color: dark }}>{inCart.quantity}</span>
-                                <button onClick={() => updateQty(product.id, 1)} disabled={inCart.quantity >= product.stock} style={{ width: "36px", height: "36px", borderRadius: "10px", border: "none", background: dark, color: "#fff", fontWeight: 700, cursor: inCart.quantity >= product.stock ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", opacity: inCart.quantity >= product.stock ? 0.4 : 1, transition: "all 0.15s" }}>+</button>
+                                <button onClick={() => updateQty(product.id, 1)} disabled={inCart.quantity >= product.stock} style={{ width: "44px", height: "44px", borderRadius: "10px", border: "none", background: dark, color: "#fff", fontWeight: 700, cursor: inCart.quantity >= product.stock ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", opacity: inCart.quantity >= product.stock ? 0.4 : 1, transition: "all 0.15s" }}>+</button>
                               </div>
                               {inCart.quantity >= product.stock && <span style={{ fontFamily: fontOutfit, fontSize: "0.7rem", color: "#999", whiteSpace: "nowrap" }}>Max {product.stock} available</span>}
                             </div>
@@ -501,7 +501,7 @@ export default function ShopPage() {
                 <h2 style={{ fontFamily: fontBebas, color: dark, fontSize: "1.5rem", margin: 0 }}>Your Cart</h2>
                 <p style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.85rem", margin: "2px 0 0" }}>{cartCount} {cartCount === 1 ? "item" : "items"}</p>
               </div>
-              <button onClick={() => setShowCart(false)} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "1px solid #eee", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", color: muted, transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#f5f3ef"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}>&times;</button>
+              <button onClick={() => setShowCart(false)} style={{ width: "44px", height: "44px", borderRadius: "50%", border: "1px solid #eee", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", color: muted, transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#f5f3ef"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}>&times;</button>
             </div>
 
             {/* Items */}
@@ -530,13 +530,13 @@ export default function ShopPage() {
                         <h4 style={{ fontFamily: fontOutfit, color: dark, fontSize: "0.85rem", fontWeight: 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{item.product.name}</h4>
                         <p style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.85rem", margin: "2px 0 0" }}>{formatPriceINR(item.product.price)} each</p>
                       </div>
-                      <button onClick={() => removeFromCart(item.product.id)} style={{ background: "none", border: "none", color: "#ccc", cursor: "pointer", padding: "4px", fontSize: "1rem", lineHeight: 1, flexShrink: 0, transition: "color 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#e74c3c"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#ccc"; }}>&times;</button>
+                      <button onClick={() => removeFromCart(item.product.id)} style={{ background: "none", border: "none", color: "#ccc", cursor: "pointer", padding: "8px", minWidth: "44px", minHeight: "44px", fontSize: "1rem", lineHeight: 1, flexShrink: 0, transition: "color 0.15s", display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#e74c3c"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#ccc"; }}>&times;</button>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "0.5rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
-                        <button onClick={() => updateQty(item.product.id, -1)} style={{ width: "32px", height: "32px", borderRadius: "8px", border: "1px solid #e8e5e0", background: "#fff", cursor: "pointer", fontSize: "0.85rem", color: dark, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = dark; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e8e5e0"; }}>-</button>
+                        <button onClick={() => updateQty(item.product.id, -1)} style={{ width: "40px", height: "40px", borderRadius: "8px", border: "1px solid #e8e5e0", background: "#fff", cursor: "pointer", fontSize: "0.85rem", color: dark, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = dark; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e8e5e0"; }}>-</button>
                         <span style={{ fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.85rem", minWidth: "36px", textAlign: "center" as const, color: dark }}>{item.quantity}</span>
-                        <button onClick={() => updateQty(item.product.id, 1)} disabled={item.quantity >= item.product.stock} style={{ width: "32px", height: "32px", borderRadius: "8px", border: "none", background: dark, color: "#fff", cursor: item.quantity >= item.product.stock ? "not-allowed" : "pointer", fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, opacity: item.quantity >= item.product.stock ? 0.4 : 1, transition: "all 0.15s" }}>+</button>
+                        <button onClick={() => updateQty(item.product.id, 1)} disabled={item.quantity >= item.product.stock} style={{ width: "40px", height: "40px", borderRadius: "8px", border: "none", background: dark, color: "#fff", cursor: item.quantity >= item.product.stock ? "not-allowed" : "pointer", fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, opacity: item.quantity >= item.product.stock ? 0.4 : 1, transition: "all 0.15s" }}>+</button>
                       </div>
                        <span style={{ fontFamily: fontOutfit, fontWeight: 800, fontSize: "0.9rem", color: dark }}>{formatPriceINR(item.product.price * item.quantity)}</span>
                     </div>

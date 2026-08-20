@@ -97,7 +97,7 @@ function TrackContent() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#faf8f5" }}>
-      <style>{`@keyframes fadeSlideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 currentColor; } 50% { box-shadow: 0 0 0 8px transparent; } } .track-hero { background: linear-gradient(135deg, #074134 0%, #063a2f 50%, #1b3c33 100%); padding: 8rem 2rem 5rem; text-align: center; position: relative; overflow: hidden; } .track-search-wrap { max-width: 560px; margin: -2.5rem auto 0; padding: 0 1.5rem; position: relative; z-index: 2; } .track-step-label { font-family: 'Montserrat', sans-serif; font-size: 0.55rem; color: inherit; text-align: center; line-height: 1.2; } .track-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; } .track-search-row { display: flex; gap: 0.75rem; } @media (max-width: 768px) { .track-hero { padding: 6rem 1.5rem 4rem; } .track-step-label { font-size: 0 !important; height: 0; overflow: hidden; opacity: 0; } .track-detail-grid { grid-template-columns: 1fr; } } @media (max-width: 480px) { .track-hero { padding: 5rem 1rem 3rem; } .track-search-wrap { padding: 0 1rem; } .track-search-row { flex-direction: column; } }      `}</style>
+      <style>{`@keyframes fadeSlideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 currentColor; } 50% { box-shadow: 0 0 0 8px transparent; } } .track-hero { background: linear-gradient(135deg, #074134 0%, #063a2f 50%, #1b3c33 100%); padding: 8rem 2rem 5rem; text-align: center; position: relative; overflow: hidden; } .track-search-wrap { max-width: 560px; margin: -2.5rem auto 0; padding: 0 1.5rem; position: relative; z-index: 2; } .track-step-label { font-family: 'Montserrat', sans-serif; font-size: 0.65rem; color: inherit; text-align: center; line-height: 1.2; } .track-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; } .track-search-row { display: flex; gap: 0.75rem; } @media (max-width: 768px) { .track-hero { padding: 6rem 1.5rem 4rem; } .track-step-label { font-size: 0 !important; height: 0; overflow: hidden; opacity: 0; } .track-detail-grid { grid-template-columns: 1fr; } } @media (max-width: 480px) { .track-hero { padding: 5rem 1rem 3rem; } .track-search-wrap { padding: 0 1rem; } .track-search-row { flex-direction: column; } }      `}</style>
 
       <style>{`
         @media (max-width: 768px) {
@@ -136,7 +136,7 @@ function TrackContent() {
               onChange={(e) => setPhone(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && track()}
               placeholder="Enter your 10-digit number"
-              style={{ flex: 1, padding: "0.9rem 1.2rem", borderRadius: "14px", border: "2px solid #eee", background: "#faf8f5", fontFamily: "'Montserrat', sans-serif", fontSize: "0.95rem", color: "#1b3c33", outline: "none", transition: "border-color 0.3s, box-shadow 0.3s", boxSizing: "border-box" as const }}
+              style={{ flex: 1, padding: "0.9rem 1.2rem", borderRadius: "14px", border: "2px solid #eee", background: "#faf8f5", fontFamily: "'Montserrat', sans-serif", fontSize: "1rem", color: "#1b3c33", outline: "none", transition: "border-color 0.3s, box-shadow 0.3s", boxSizing: "border-box" as const }}
               onFocus={(e) => { e.target.style.borderColor = "#1b3c33"; e.target.style.boxShadow = "0 0 0 3px rgba(27,60,51,0.08)"; }}
               onBlur={(e) => { e.target.style.borderColor = "#eee"; e.target.style.boxShadow = "none"; }}
             />
@@ -254,12 +254,12 @@ function TrackContent() {
                               const current = i === currentIdx;
                               return (
                                 <div key={step} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35rem", position: "relative", zIndex: 1, flex: 1 }}>
-                                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? info.color : "#eee", display: "flex", alignItems: "center", justifyContent: "center", color: done ? "#fff" : "#ccc", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.55rem", border: current ? `2px solid ${info.color}` : "2px solid transparent", boxShadow: current ? `0 0 0 4px ${info.color}18` : "none", transition: "all 0.3s" }}>
+                                   <div style={{ width: 32, height: 32, borderRadius: "50%", background: done ? info.color : "#eee", display: "flex", alignItems: "center", justifyContent: "center", color: done ? "#fff" : "#ccc", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.6rem", border: current ? `2px solid ${info.color}` : "2px solid transparent", boxShadow: current ? `0 0 0 4px ${info.color}18` : "none", transition: "all 0.3s" }}>
                                     {done ? (
                                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
                                     ) : (i + 1)}
                                   </div>
-                                   <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "clamp(0.5rem, 2.5vw, 0.55rem)", color: done ? info.color : "#ccc", fontWeight: current ? 700 : 400, textAlign: "center", lineHeight: 1.2 }}>{info.label}</span>
+                                    <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "clamp(0.65rem, 2.5vw, 0.75rem)", color: done ? info.color : "#ccc", fontWeight: current ? 700 : 400, textAlign: "center", lineHeight: 1.2 }}>{info.label}</span>
                                 </div>
                               );
                             })}

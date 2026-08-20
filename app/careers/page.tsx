@@ -139,7 +139,7 @@ export default function CareersPage() {
           .careers-apply-btn{padding:0.85rem 1.8rem!important}
           .careers-track-btn{padding:1rem 2rem!important}
           .careers-track-card{padding:1.5rem!important}
-          .careers-hero-section{height:auto!important;min-height:100vh!important;padding:6.5rem 4% 3rem!important}
+          .careers-hero-section{height:auto!important;min-height:100dvh!important;padding:6.5rem 4% 3rem!important}
           .careers-jobs-section{padding:5rem 4%!important}
           .careers-apply-section{padding:5rem 4%!important}
           .careers-track-section{padding:5rem 4%!important}

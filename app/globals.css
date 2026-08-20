@@ -128,6 +128,7 @@ body {
   color: #f5f0eb;
   min-height: 100vh;
   min-height: 100dvh;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   padding-top: env(safe-area-inset-top);
@@ -135,20 +136,13 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
-@media (min-width: 769px) {
-  body { overflow-x: hidden; }
-}
-
 html {
   scroll-behavior: auto;
   scroll-padding-top: 80px;
+  overflow-x: hidden;
   scrollbar-width: none;
 }
 html::-webkit-scrollbar { width: 0; height: 0; }
-
-@media (min-width: 769px) {
-  html { overflow-x: hidden; }
-}
 
 a { color: inherit; text-decoration: none; }
 
@@ -422,7 +416,7 @@ html.lenis, html.lenis body {
   .admin-page .topbar h2 { font-size: 20px; }
   .admin-page .role-pill { font-size: 12px; padding: 5px 10px; }
   .footer-links { flex-wrap: wrap; gap: 18px; }
-  .footer-links a { font-size: 12px; padding: 6px 0; min-height: 36px; display: inline-flex; align-items: center; }
+  .footer-links a { font-size: 12px; padding: 6px 0; min-height: 44px; display: inline-flex; align-items: center; }
   .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
   .footer-copy { font-size: 12px; }
   main[data-bg="light"] { padding-top: 6.5rem !important; padding-bottom: 3rem !important; }
@@ -639,6 +633,7 @@ body {
 }
 @media(max-width:768px) {
   .admin-page .admin-hamburger { display: flex; }
+  .admin-login-card { padding: 28px 20px !important; margin: 0 16px; }
   .admin-page .sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 1000; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); padding-top: env(safe-area-inset-top,0px); padding-bottom: env(safe-area-inset-bottom,0px); box-shadow: 4px 0 24px rgba(0,0,0,0.2); }
   .admin-page .sidebar.open { transform: translateX(0); }
   .admin-page .admin-overlay.open { display: block; }

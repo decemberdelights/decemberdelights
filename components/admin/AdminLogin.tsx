@@ -41,7 +41,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
   };
 
   return (
-    <div style={{ position: "relative", zIndex: 2, background: "#fff", border: "1px solid #e8e5e0", borderRadius: 16, padding: "44px 36px", width: "100%", maxWidth: 400, boxShadow: "0 8px 32px rgba(0,0,0,0.1)" }}>
+    <div className="admin-login-card" style={{ position: "relative", zIndex: 2, background: "#fff", border: "1px solid #e8e5e0", borderRadius: 16, padding: "44px 36px", width: "100%", maxWidth: 400, boxShadow: "0 8px 32px rgba(0,0,0,0.1)" }}>
       <img src="/logo-icon.png" alt="" style={{ width: 48, height: 48, margin: "0 auto 16px", borderRadius: 12, display: "block" }} />
       <h2 style={{ textAlign: "center", fontSize: 20, letterSpacing: 1, color: "#1b3c33", marginBottom: 4, fontFamily: "var(--font-bebas-neue), sans-serif" }}>DD ADMIN</h2>
       <p style={{ textAlign: "center", fontSize: 12, color: "#999", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 28, fontFamily: "var(--font-outfit), sans-serif" }}>Admin Portal</p>

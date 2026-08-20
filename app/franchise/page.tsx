@@ -711,7 +711,7 @@ export default function FranchisePage() {
                   Continue <ArrowRight size={16} />
                 </button>
               ) : (
-                <button type="button" onClick={handleSubmitClick} disabled={!tcAccepted} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: tcAccepted ? "#1b3c33" : "#ccc", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "clamp(0.8rem, 3vw, 0.95rem)", cursor: tcAccepted ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s", whiteSpace: "nowrap", minWidth: 0, opacity: tcAccepted ? 1 : 0.6 }} onMouseEnter={(e) => { if (tcAccepted) e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { if (tcAccepted) e.currentTarget.style.background = "#1b3c33"; }}>
+                <button type="button" onClick={handleSubmitClick} disabled={!tcAccepted} style={{ flex: 1, padding: "1rem", borderRadius: "100px", border: "none", background: tcAccepted ? "#1b3c33" : "#ccc", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "clamp(0.85rem, 3vw, 0.95rem)", cursor: tcAccepted ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", transition: "background 0.2s", whiteSpace: "nowrap", minWidth: 0, opacity: tcAccepted ? 1 : 0.6 }} onMouseEnter={(e) => { if (tcAccepted) e.currentTarget.style.background = "#153229"; }} onMouseLeave={(e) => { if (tcAccepted) e.currentTarget.style.background = "#1b3c33"; }}>
                   Accept &amp; Pay ₹11,799<ArrowRight size={16} />
                 </button>
               )}
