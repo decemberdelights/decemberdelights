@@ -1,7 +1,13 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) return null;
+
   return (
     <footer data-bg="light" style={{
       background: "#FFFFFF",

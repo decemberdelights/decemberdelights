@@ -29,6 +29,7 @@ export default function LoadingScreen() {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          onClick={() => setShow(false)}
           style={{
             position: "fixed",
             inset: 0,
@@ -39,6 +40,7 @@ export default function LoadingScreen() {
             alignItems: "center",
             justifyContent: "center",
             perspective: "1200px",
+            cursor: "pointer",
           }}
         >
           {/* Radial glow */}
