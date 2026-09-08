@@ -1,13 +1,10 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import ScrollProgress from "@/components/ScrollProgress";
 
-export const metadata: Metadata = {
-  title: "Terms & Conditions | December Delights",
-  description: "Read the full Terms and Conditions for December Delights franchise application.",
-};
-
-const ALL_TERMS = [
+const FALLBACK_TERMS = [
   { title: "Acceptance of Terms", text: "By submitting a Franchise Application and paying the prescribed Application Fee, the Applicant confirms that they have carefully read, understood, and voluntarily accepted these Terms & Conditions." },
   { title: "Purpose of the Application Fee", text: "The Application Fee of ₹9,999/- plus 18% GST (₹11,799/- total) is collected solely for: Initial screening of the applicant, Verification of submitted information, Financial assessment, Background verification, Business suitability review, Market feasibility analysis, Administrative processing. This fee is strictly an Application Processing Fee and shall not be treated as: Franchise Fee, Security Deposit, Booking Amount, Refundable Deposit, Advance towards Franchise." },
   { title: "Non-Refundable Fee", text: "The Application Fee is strictly non-refundable under all circumstances, including but not limited to: Application rejection, Withdrawal by applicant, Failure to submit documents, Delay in review, Non-selection, Business policy changes, Applicant becoming ineligible, Expiry of application. No request for refund shall be entertained." },
@@ -31,7 +28,26 @@ const ALL_TERMS = [
   { title: "Declaration by Applicant", text: "By submitting this application and paying the prescribed Application Fee, I hereby declare that: I have read and understood these Terms & Conditions, All information submitted by me is true and accurate, I understand that payment of the Application Fee does not guarantee franchise approval, I understand that the Application Fee is non-refundable, I agree to comply with all policies of December Delights." },
 ];
 
+interface ApiTerm {
+  title_en: string;
+  text_en: string;
+}
+
 export default function TermsPage() {
+  const [terms, setTerms] = useState(FALLBACK_TERMS);
+  const [lastUpdated, setLastUpdated] = useState("August 2026");
+
+  useEffect(() => {
+    fetch("/api/terms")
+      .then(r => r.ok ? r.json() : null)
+      .then((data: ApiTerm[] | null) => {
+        if (data && data.length > 0) {
+          setTerms(data.map(t => ({ title: t.title_en, text: t.text_en })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <>
       <style>{`
@@ -56,7 +72,6 @@ export default function TermsPage() {
 
       <div className="terms-page">
         <ScrollProgress />
-        {/* Hero */}
         <section className="terms-hero" data-bg="dark">
           <Link href="/" className="terms-back">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -68,13 +83,12 @@ export default function TermsPage() {
           </p>
         </section>
 
-        {/* Terms list */}
         <section className="terms-body">
           <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", color: "rgba(27,60,51,0.4)", marginBottom: "2rem", textAlign: "center" }}>
-            Last updated: August 2026 &middot; {ALL_TERMS.length} clauses
+            Last updated: {lastUpdated} &middot; {terms.length} clauses
           </p>
 
-          {ALL_TERMS.map((term, i) => (
+          {terms.map((term, i) => (
             <div key={i} className="term-card">
               <span className="term-num">{String(i + 1).padStart(2, "0")}</span>
               <div className="term-content">
@@ -84,7 +98,6 @@ export default function TermsPage() {
             </div>
           ))}
 
-          {/* Footer note */}
           <div style={{ textAlign: "center", marginTop: "3rem", padding: "2rem", borderRadius: "14px", background: "rgba(27,60,51,0.03)", border: "1px solid rgba(27,60,51,0.06)" }}>
             <p style={{ fontFamily: "var(--font-outfit), sans-serif", fontSize: "0.85rem", color: "rgba(27,60,51,0.5)", lineHeight: 1.7, margin: 0 }}>
               By submitting your franchise application and paying the application fee, you confirm that you have read, understood, and agree to be bound by all the terms and conditions set forth above.

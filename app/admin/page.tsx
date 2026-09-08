@@ -14,9 +14,12 @@ import ProductsTab from "@/components/admin/tabs/ProductsTab";
 import JobsTab from "@/components/admin/tabs/JobsTab";
 import AdminsTab from "@/components/admin/tabs/AdminsTab";
 import LogsTab from "@/components/admin/tabs/LogsTab";
+import SettingsTab from "@/components/admin/tabs/SettingsTab";
+import TermsTab from "@/components/admin/tabs/TermsTab";
 import EditModal from "@/components/admin/EditModal";
 import NotificationSidebar from "@/components/admin/NotificationSidebar";
 import { RejectModal, ViewOrderModal, CancelModal, ViewDocsModal } from "@/components/admin/Modals";
+import Pagination from "@/components/admin/Pagination";
 import { OverviewSkeleton, OrdersSkeleton, ChartsSkeleton, AdminTableSkeleton, ApplicationsSkeleton, AdminsSkeleton, LogsSkeleton } from "@/components/Skeleton";
 import { supabase } from "@/lib/supabase";
 
@@ -41,6 +44,12 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderStats, setOrderStats] = useState<OrderStats | null>(null);
   const [activityLogs, setActivityLogs] = useState<{ id: number; admin_username: string; action: string; target_type: string; target_id: number; details: string; created_at: string }[]>([]);
+  const [page, setPage] = useState(1);
+  const [ordersTotal, setOrdersTotal] = useState(0);
+  const [franchiseTotal, setFranchiseTotal] = useState(0);
+  const [careersTotal, setCareersTotal] = useState(0);
+  const [contactsTotal, setContactsTotal] = useState(0);
+  const perPage = 20;
 
   const [rejectTarget, setRejectTarget] = useState<{ type: string; id: number } | null>(null);
   const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
@@ -89,7 +98,7 @@ export default function AdminPage() {
   const loadAll = useCallback(async (retries = 4) => {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const [statsR, appsR] = await Promise.all([api("/api/admin/stats"), api("/api/admin/applications")]);
+        const [statsR, appsR] = await Promise.all([api("/api/admin/stats", { cache: "no-store" }), api("/api/admin/applications", { cache: "no-store" })]);
         if (statsR.ok) setStats(await statsR.json());
         if (appsR.ok) { const d = await appsR.json(); setFranchises(d.franchise || []); setCareers(d.careers || []); setContacts(d.contacts || []); }
         return;
@@ -100,12 +109,15 @@ export default function AdminPage() {
         }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
   useEffect(() => {
     if (!authed) return;
     let cancelled = false;
-    const load = async () => {
+    const offset = (page - 1) * perPage;
+
+    const loadData = async () => {
       setLoading(true);
       setTabError(false);
       setRetryCount(0);
@@ -113,40 +125,50 @@ export default function AdminPage() {
         if (tab === "overview") {
           await loadAll();
           if (!cancelled) {
-            const statsR2 = await api("/api/admin/orders/stats");
+            const statsR2 = await api("/api/admin/orders/stats", { cache: "no-store" });
             if (statsR2.ok) setOrderStats(await statsR2.json());
           }
         }
-        else if (tab === "franchise") { const r = await api("/api/admin/applications"); if (r.ok) { const d = await r.json(); setFranchises(d.franchise || []); } }
-        else if (tab === "careers") { const r = await api("/api/admin/applications"); if (r.ok) { const d = await r.json(); setCareers(d.careers || []); } }
-        else if (tab === "contacts") { const r = await api("/api/admin/applications"); if (r.ok) { const d = await r.json(); setContacts(d.contacts || []); } }
-        else if (tab === "menu") { const r = await api("/api/menu/all"); if (r.ok) { const d = await r.json(); setMenuItems(Array.isArray(d) ? d : Object.values(d).flat() as MenuItem[]); } }
-        else if (tab === "products") { const r = await api("/api/admin/products"); if (r.ok) setProducts(await r.json()); }
-        else if (tab === "jobs") { const r = await api("/api/admin/jobs"); if (r.ok) setJobs(await r.json()); }
+        else if (tab === "franchise") { const r = await api(`/api/admin/applications?offset=${offset}&limit=${perPage}`, { cache: "no-store" }); if (r.ok) { const d = await r.json(); setFranchises(d.franchise || []); setFranchiseTotal(d.franchise_total || 0); } }
+        else if (tab === "careers") { const r = await api(`/api/admin/applications?offset=${offset}&limit=${perPage}`, { cache: "no-store" }); if (r.ok) { const d = await r.json(); setCareers(d.careers || []); setCareersTotal(d.careers_total || 0); } }
+        else if (tab === "contacts") { const r = await api(`/api/admin/applications?offset=${offset}&limit=${perPage}`, { cache: "no-store" }); if (r.ok) { const d = await r.json(); setContacts(d.contacts || []); setContactsTotal(d.contacts_total || 0); } }
+        else if (tab === "menu") { const r = await api("/api/menu/all", { cache: "no-store" }); if (r.ok) { const d = await r.json(); setMenuItems(Array.isArray(d) ? d : Object.values(d).flat() as MenuItem[]); } }
+        else if (tab === "products") { const r = await api("/api/admin/products", { cache: "no-store" }); if (r.ok) setProducts(await r.json()); }
+        else if (tab === "jobs") { const r = await api("/api/admin/jobs", { cache: "no-store" }); if (r.ok) setJobs(await r.json()); }
+        else if (tab === "terms") { /* TermsTab handles its own loading */ }
         else if (tab === "orders") {
-          const [ordersR, statsR] = await Promise.all([api("/api/admin/orders?limit=200"), api("/api/admin/orders/stats")]);
-          if (ordersR.ok) { const d = await ordersR.json(); setOrders(d.orders || d || []); }
+          const [ordersR, statsR] = await Promise.all([api(`/api/admin/orders?offset=${offset}&limit=${perPage}`, { cache: "no-store" }), api("/api/admin/orders/stats", { cache: "no-store" })]);
+          if (ordersR.ok) { const d = await ordersR.json(); setOrders(d.orders || d || []); setOrdersTotal(d.total || 0); }
           if (statsR.ok) setOrderStats(await statsR.json());
         }
         else if (tab === "charts") {
           await loadAll();
-          const [ordersR, statsR] = await Promise.all([api("/api/admin/orders?limit=200"), api("/api/admin/orders/stats")]);
+          const [ordersR, statsR] = await Promise.all([api(`/api/admin/orders?limit=200`, { cache: "no-store" }), api("/api/admin/orders/stats", { cache: "no-store" })]);
           if (ordersR.ok) { const d = await ordersR.json(); setOrders(d.orders || d || []); }
           if (statsR.ok) setOrderStats(await statsR.json());
         }
-        else if (tab === "admins" && role === "super_admin") { const r = await api("/api/admin/users"); if (r.ok) setAdminUsers(await r.json()); }
-        else if (tab === "logs" && role === "super_admin") { const r = await api("/api/admin/logs?limit=100"); if (r.ok) { const d = await r.json(); setActivityLogs(d.logs || []); } }
+        else if (tab === "admins" && role === "super_admin") { const r = await api("/api/admin/users", { cache: "no-store" }); if (r.ok) setAdminUsers(await r.json()); }
+        else if (tab === "logs" && role === "super_admin") { const r = await api("/api/admin/logs?limit=100", { cache: "no-store" }); if (r.ok) { const d = await r.json(); setActivityLogs(d.logs || []); } }
         if (!cancelled) setRetryCount(0);
       } catch {
         if (!cancelled) setTabError(true);
       }
       if (!cancelled) setLoading(false);
     };
-    load();
+    loadData();
     return () => { cancelled = true; };
-  }, [authed, tab, api, role, loadAll, refreshKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, tab, api, role, refreshKey, page]);
 
   const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
+
+  const handleTabChange = useCallback((newTab: Tab) => {
+    setTab(newTab);
+    setPage(1);
+    setEditingItem(null);
+    setEditType(null);
+    setSidebarOpen(false);
+  }, []);
 
   const updateStatus = async (endpoint: string, id: number, status: string, notes: string) => {
     await api(`/api/admin/${endpoint}/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, admin_notes: notes }) });
@@ -169,9 +191,11 @@ export default function AdminPage() {
       if (v !== undefined && v !== null) fd.append(k, String(v));
     }
     if (_imageFile) fd.append("image", _imageFile as File);
-    if (isNew) { await api(`/api/${endpoint}`, { method: "POST", body: fd }); }
-    else { await api(`/api/${endpoint}/${rest.id}`, { method: "PUT", body: fd }); }
-    setEditingItem(null); setEditType(null); refresh();
+    let r;
+    if (isNew) { r = await api(`/api/${endpoint}`, { method: "POST", body: fd, cache: "no-store" }); }
+    else { r = await api(`/api/${endpoint}/${rest.id}`, { method: "PUT", body: fd, cache: "no-store" }); }
+    if (r && r.ok) { setEditingItem(null); setEditType(null); refresh(); }
+    else { alert("Failed to save. Please try again."); }
   };
 
   const handleLogout = async () => {
@@ -216,6 +240,9 @@ export default function AdminPage() {
         .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
           refresh();
         })
+        .on("postgres_changes", { event: "*", schema: "public", table: "terms_conditions" }, () => {
+          refresh();
+        })
         .subscribe();
     } catch {}
     return () => { if (channel) supabase?.removeChannel(channel); };
@@ -256,26 +283,38 @@ export default function AdminPage() {
       if (loading && !stats) return <OverviewSkeleton />;
       if (tabError && !stats) return errorFallback;
       if (!stats && !loading) return errorFallback;
-      return <OverviewTab stats={stats!} setTab={(t) => setTab(t as Tab)} todayOrders={orderStats?.today_orders || stats!.today_orders || 0} monthOrders={orderStats?.month_orders || 0} api={api} />;
+      return <OverviewTab stats={stats!} setTab={(t) => handleTabChange(t as Tab)} todayOrders={orderStats?.today_orders || stats!.today_orders || 0} monthOrders={orderStats?.month_orders || 0} api={api} />;
     }
 
     if (tab === "franchise") {
       if (loading && franchises.length === 0) return <ApplicationsSkeleton />;
-      return <ApplicationsTab type="franchise" items={franchises} role={role} onApprove={(id) => updateStatus("franchise", id, "approved", "")} onUnderProcess={(id) => updateStatus("franchise", id, "under_process", "")} onReject={(id) => setRejectTarget({ type: "franchise", id })} onDelete={(id, reason) => deleteItem("franchise", id, reason)} onViewDocs={(item) => setViewingDocs(item)} />;
+      return <>
+        <ApplicationsTab type="franchise" items={franchises} role={role} onApprove={(id) => updateStatus("franchise", id, "approved", "")} onUnderProcess={(id) => updateStatus("franchise", id, "under_process", "")} onReject={(id) => setRejectTarget({ type: "franchise", id })} onDelete={(id, reason) => deleteItem("franchise", id, reason)} onViewDocs={(item) => setViewingDocs(item)} />
+        <Pagination page={page} total={franchiseTotal} perPage={perPage} onChange={setPage} />
+      </>;
     }
     if (tab === "careers") {
       if (loading && careers.length === 0) return <ApplicationsSkeleton />;
-      return <ApplicationsTab type="careers" items={careers} role={role} onApprove={(id) => updateStatus("careers", id, "approved", "")} onReject={(id) => setRejectTarget({ type: "careers", id })} onDelete={(id, reason) => deleteItem("careers", id, reason)} onViewDocs={(item) => setViewingDocs(item)} />;
+      return <>
+        <ApplicationsTab type="careers" items={careers} role={role} onApprove={(id) => updateStatus("careers", id, "approved", "")} onReject={(id) => setRejectTarget({ type: "careers", id })} onDelete={(id, reason) => deleteItem("careers", id, reason)} onViewDocs={(item) => setViewingDocs(item)} />
+        <Pagination page={page} total={careersTotal} perPage={perPage} onChange={setPage} />
+      </>;
     }
     if (tab === "contacts") {
       if (loading && contacts.length === 0) return <ApplicationsSkeleton />;
-      return <ApplicationsTab type="contacts" items={contacts} role={role} onApprove={(id) => updateStatus("contacts", id, "approved", "")} onReject={(id) => setRejectTarget({ type: "contacts", id })} onDelete={(id, reason) => deleteItem("contacts", id, reason)} onViewDocs={() => {}} />;
+      return <>
+        <ApplicationsTab type="contacts" items={contacts} role={role} onApprove={(id) => updateStatus("contacts", id, "approved", "")} onReject={(id) => setRejectTarget({ type: "contacts", id })} onDelete={(id, reason) => deleteItem("contacts", id, reason)} onViewDocs={() => {}} />
+        <Pagination page={page} total={contactsTotal} perPage={perPage} onChange={setPage} />
+      </>;
     }
 
     if (tab === "orders") {
       if (loading && !orderStats) return <OrdersSkeleton />;
       if (tabError && !orderStats) return errorFallback;
-      return <OrdersTab orders={orders} orderStats={orderStats} api={api} onRefresh={refresh} onViewOrder={(o) => setViewingOrder(o)} onCancelOrder={(id) => setCancelOrderId(id)} />;
+      return <>
+        <OrdersTab orders={orders} orderStats={orderStats} api={api} onRefresh={refresh} onViewOrder={(o) => setViewingOrder(o)} onCancelOrder={(id) => setCancelOrderId(id)} />
+        <Pagination page={page} total={ordersTotal} perPage={perPage} onChange={setPage} />
+      </>;
     }
 
     if (tab === "charts") {
@@ -299,19 +338,29 @@ export default function AdminPage() {
       return <JobsTab jobs={jobs} role={role} onAdd={() => { setEditingItem({ title: "", department: "", location: "", description: "", requirements: "", salary_range: "", job_type: "full-time", is_active: true }); setEditType("add"); }} onEdit={(j) => { setEditingItem({ ...j }); setEditType("edit"); }} onDelete={(id) => deleteItem("jobs", id)} />;
     }
 
+    if (tab === "terms") {
+      return <TermsTab api={api} role={role} />;
+    }
+
     if (tab === "admins" && role !== "super_admin") {
       return <div style={{ textAlign: "center", padding: "4rem" }}><p style={{ color: "#a32d2d", fontSize: 14 }}>Access denied. Super admin privileges required.</p></div>;
     }
     if (tab === "logs" && role !== "super_admin") {
       return <div style={{ textAlign: "center", padding: "4rem" }}><p style={{ color: "#a32d2d", fontSize: 14 }}>Access denied. Super admin privileges required.</p></div>;
     }
+    if (tab === "settings" && role !== "super_admin") {
+      return <div style={{ textAlign: "center", padding: "4rem" }}><p style={{ color: "#a32d2d", fontSize: 14 }}>Access denied. Super admin privileges required.</p></div>;
+    }
     if (tab === "admins" && role === "super_admin") {
       if (loading && adminUsers.length === 0) return <AdminsSkeleton />;
-      return <AdminsTab adminUsers={adminUsers} stats={stats} api={api} onRefresh={refresh} />;
+      return <AdminsTab adminUsers={adminUsers} stats={stats} api={api} onRefresh={refresh} onEditUser={(u) => { setEditingItem({ ...u, _editType: "admin_user" }); setEditType("edit"); }} />;
     }
     if (tab === "logs" && role === "super_admin") {
       if (loading && activityLogs.length === 0) return <LogsSkeleton />;
       return <LogsTab logs={activityLogs} />;
+    }
+    if (tab === "settings" && role === "super_admin") {
+      return <SettingsTab adminUsers={adminUsers} api={api} onRefresh={refresh} />;
     }
 
     return null;
@@ -325,7 +374,7 @@ export default function AdminPage() {
         </button>
         <div className={`admin-overlay${sidebarOpen ? " open" : ""}`} onClick={() => setSidebarOpen(false)} />
         <div className={`sidebar${sidebarOpen ? " open" : ""}`}>
-          <AdminSidebar tab={tab} setTab={(t) => { setTab(t); setEditingItem(null); setEditType(null); setSidebarOpen(false); }} role={role} onLogout={handleLogout} />
+          <AdminSidebar tab={tab} setTab={handleTabChange} role={role} onLogout={handleLogout} />
         </div>
         <div className="main">
           {loading && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: "#3b6d11", zIndex: 9999, animation: "loading-progress 2s ease-in-out infinite" }} />}

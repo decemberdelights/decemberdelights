@@ -76,6 +76,12 @@ const TERMS_HI = [
 
 const TERMS = { en: TERMS_EN, te: TERMS_TE, hi: TERMS_HI };
 
+interface ApiTerm {
+  text_en: string;
+  text_te: string;
+  text_hi: string;
+}
+
 const SECTION_LABELS: Record<string, { sections: string[] }> = {
   en: {
     sections: ["Application & Fee", "Fee Details", "Non-Refundable", "No Guarantee", "Evaluation", "Market Coverage", "Experience", "Financial Documents", "Review Timeline", "Territory", "Communication", "Fraud Protection", "Confidentiality", "Intellectual Property", "Defamation", "Company Rights", "Data Usage", "Governing Law", "Force Majeure", "Entire Agreement", "Declaration"],
@@ -95,8 +101,25 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
   const [scrollProgress, setScrollProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [apiTerms, setApiTerms] = useState<{ en: string[]; te: string[]; hi: string[] } | null>(null);
 
-  const terms = TERMS[lang];
+  useEffect(() => {
+    fetch("/api/terms")
+      .then(r => r.ok ? r.json() : null)
+      .then((data: ApiTerm[] | null) => {
+        if (data && data.length > 0) {
+          setApiTerms({
+            en: data.map(t => t.text_en),
+            te: data.map(t => t.text_te),
+            hi: data.map(t => t.text_hi),
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const activeTerms = apiTerms || TERMS;
+  const terms = activeTerms[lang];
 
   const stopSpeech = useCallback(() => {
     if (audioRef.current) {

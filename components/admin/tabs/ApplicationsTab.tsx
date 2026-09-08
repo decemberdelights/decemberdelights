@@ -86,7 +86,7 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
   const titles = {
     franchise: "FRANCHISE APPLICATIONS",
     careers: "CAREER APPLICATIONS",
-    contacts: "CONTACT MESSAGES",
+    contacts: "FEEDBACK MESSAGES",
   };
 
   const statusColors: Record<string, string> = {
@@ -150,7 +150,7 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
                   ) : isPdf && fullUrl ? (
                     <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
                   ) : (
-                    <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer" }} onClick={() => openFile(url)}>
+                    <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer", wordBreak: "break-all", overflow: "hidden" }} onClick={() => openFile(url)}>
                       {fileName} — Click View to open
                     </div>
                   )}
@@ -184,7 +184,7 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
             ) : isPdf && fullUrl ? (
               <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
             ) : (
-              <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer" }} onClick={() => openFile(item.resume_url!)}>
+              <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer", wordBreak: "break-all", overflow: "hidden" }} onClick={() => openFile(item.resume_url!)}>
                 {fileName} — Click View to open
               </div>
             )}
@@ -409,7 +409,6 @@ body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;display:flex;justify-c
   };
 
   const renderContactCard = (item: App) => {
-    const showActions = item.status === "pending" || item.status === "submitted";
     return (
       <div key={item.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e4e1d6", marginBottom: 14, padding: "20px 24px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
@@ -430,10 +429,9 @@ body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;display:flex;justify-c
             {renderStatusBadge(item.status)}
           </div>
         </div>
-        {showActions && (
+        {role === "super_admin" && (
           <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-            <button className="btn approve" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onApprove(item.id)}>Approve</button>
-            <button className="btn danger" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => onReject(item.id)}>Reject</button>
+            <button className="btn danger" style={{ fontSize: 13, padding: "7px 16px" }} onClick={() => { setDeleteTarget({ id: item.id, name: item.name || "this" }); setDeleteReason(""); }}>Delete</button>
           </div>
         )}
       </div>
@@ -454,7 +452,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;display:flex;justify-c
       />
 
       <div>
-        {filteredItems.length === 0 && <div className="empty">{items.length === 0 ? `No ${type === "franchise" ? "franchise applications" : type === "careers" ? "career applications" : "contact messages"}.` : "No items match your filters."}</div>}
+        {filteredItems.length === 0 && <div className="empty">{items.length === 0 ? `No ${type === "franchise" ? "franchise applications" : type === "careers" ? "career applications" : "feedback messages"}.` : "No items match your filters."}</div>}
         {type === "franchise" && filteredItems.map(item => renderFranchiseCard(item))}
         {type === "careers" && filteredItems.map(item => renderCareerCard(item))}
         {type === "contacts" && filteredItems.map(item => renderContactCard(item))}

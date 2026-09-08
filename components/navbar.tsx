@@ -61,7 +61,8 @@ export default function Navbar() {
     { label: "Shop", href: "/shop" },
     { label: "Careers", href: "/careers" },
     { label: "About Us", href: "/#our-story" },
-    { label: "Contact", href: "/contact" },
+    { label: "Feedback", href: "/contact" },
+    { label: "Menu", href: "/menu" },
     ...(shop_enabled ? [
       { label: "Track Order", href: "/track" },
     ] : []),
@@ -241,6 +242,8 @@ export default function Navbar() {
         .dd-logo-icon {
           display: inline-block;
           flex-shrink: 0;
+          width: auto;
+          height: auto;
           transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
           perspective: 600px;
         }
@@ -367,7 +370,7 @@ export default function Navbar() {
             top: 8px; left: 10px; right: 10px;
             padding: 8px 16px;
           }
-          .dd-nav > .dd-logo-icon { height: 24px; width: auto; }
+          .dd-nav > .dd-logo-icon { height: auto; width: auto; }
         }
       `}</style>
 
@@ -384,7 +387,6 @@ export default function Navbar() {
               width={30}
               height={30}
               priority
-              style={{ width: "auto", height: "30px" }}
             />
           </Link>
           <div className="dd-nav-center">
@@ -403,7 +405,6 @@ export default function Navbar() {
             width={28}
             height={28}
             priority
-            style={{ width: "auto", height: "28px" }}
           />
         </Link>
 
@@ -421,7 +422,7 @@ export default function Navbar() {
         <button onClick={() => setMenuOpen(false)} aria-label="Close menu" style={{ position: "absolute", top: "calc(1.5rem + env(safe-area-inset-top, 0px))", right: "calc(1.5rem + env(safe-area-inset-right, 0px))", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10, transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </button>
-        <Image src="/logo-icon.png" alt="" width={48} height={48} style={{ height: "48px", width: "auto", marginBottom: "0.5rem", opacity: 0.9 }} />
+        <Image src="/logo-icon.png" alt="" width={48} height={48} style={{ marginBottom: "0.5rem", opacity: 0.9 }} />
         <div className="dd-mobile-divider" />
         {links.map((link) => (
           <Link key={link.label} href={link.href} onClick={() => setMenuOpen(false)}>

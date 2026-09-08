@@ -6,6 +6,11 @@ export default function HeroSection() {
   const bgRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoReady, setVideoReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -63,27 +68,19 @@ export default function HeroSection() {
             zIndex: 1,
           }}
         />
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center center",
-            willChange: "transform",
-            transform: "translateZ(0)",
-            zIndex: 2,
-          }}
-        >
-          <source src="/DDhero.mp4" type="video/mp4" />
-        </video>
+        {mounted && (
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="hero-video"
+          >
+            <source src="/DDhero.mp4" type="video/mp4" />
+          </video>
+        )}
       </div>
     </>
   );

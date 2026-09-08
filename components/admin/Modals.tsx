@@ -29,18 +29,38 @@ export function RejectModal({ open, onReject, onCancel }: RejectModalProps) {
     if (open) setReason("");
   }, [open]);
 
+  const trimmedReason = reason.trim();
+  const minLen = 10;
+  const isValid = trimmedReason.length >= minLen;
+  const showError = reason.length > 0 && !isValid;
+
   if (!open) return null;
 
   return (
     <div className="overlay show" onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
       <div className="modal">
         <h4>Reject application</h4>
-        <p>A reason is required so the applicant and team know why this was rejected.</p>
-        <textarea placeholder="e.g. Incomplete information, location not available..." value={reason} onChange={e => setReason(e.target.value)} />
-        <div style={{ display: !reason.trim() ? "block" : "none", color: "#a32d2d", fontSize: 12, marginTop: 6 }}>Enter a reason before rejecting.</div>
+        <p>A detailed reason is required so the applicant and team understand why this was rejected.</p>
+        <textarea
+          placeholder="e.g. Incomplete documentation, location already occupied, investment criteria not met..."
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          maxLength={2000}
+          style={{ minHeight: 100 }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+          <div style={{ color: showError ? "#a32d2d" : reason.length > 0 && isValid ? "#1a7a4a" : "#999", fontSize: 12 }}>
+            {showError
+              ? `Reason must be at least ${minLen} characters (${trimmedReason.length}/${minLen})`
+              : reason.length > 0 && isValid
+                ? "Reason looks good"
+                : `Enter at least ${minLen} characters`}
+          </div>
+          <div style={{ color: "#bbb", fontSize: 11 }}>{trimmedReason.length}/2000</div>
+        </div>
         <div className="modal-actions">
           <button className="btn" onClick={onCancel}>Cancel</button>
-          <button className="btn danger" disabled={!reason.trim()} onClick={() => onReject(reason.trim())}>Reject</button>
+          <button className="btn danger" disabled={!isValid} onClick={() => onReject(trimmedReason)}>Reject</button>
         </div>
       </div>
     </div>

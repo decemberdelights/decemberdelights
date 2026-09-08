@@ -9,6 +9,7 @@ import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
 import { User, Mail, Phone, Briefcase, MapPin, FileText, ArrowRight, Check } from "@/components/icons";
 import SuccessState from "@/components/SuccessState";
+import DatePicker from "@/components/DatePicker";
 import { generateFranchiseReceipt, FranchiseReceiptData } from "@/lib/receipt";
 
 const STEPS = ["Personal", "Business", "Documents", "Review"];
@@ -39,6 +40,14 @@ const DOC_FIELDS = [
 ];
 
 export default function FranchisePage() {
+  const [franchiseOpen, setFranchiseOpen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch(`${API}/api/settings`).then(r => r.json()).then(d => {
+      setFranchiseOpen(d.franchise_enabled !== false);
+    }).catch(() => setFranchiseOpen(true));
+  }, []);
+
   const [step, setStep] = useState(() => {
     try {
       const saved = sessionStorage.getItem("franchise_form");
@@ -464,7 +473,7 @@ export default function FranchisePage() {
             </div>
           </div>
           <div className="franchise-hero-image" style={{ flex: "0 0 auto" }}>
-            <NextImage src="/working.svg" alt="Franchise With Us" width={380} height={380} unoptimized style={{ width: "380px", height: "auto" }} />
+            <NextImage src="/working.svg" alt="Franchise With Us" width={380} height={380} unoptimized />
           </div>
         </div>
       </section>
@@ -542,7 +551,7 @@ export default function FranchisePage() {
                     </div>
                     <div className="field-group">
                       <label style={labelStyle}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /></svg> Date of Birth *</label>
-                      <input required type="date" name="dob" value={form.dob} onChange={handleChange} onFocus={() => setFocusedField("dob")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "dob" ? "#1b3c33" : undefined }} max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]} />
+                      <DatePicker value={form.dob} onChange={(d) => setForm({ ...form, dob: d })} max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]} />
                     </div>
                   </div>
                   <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#bbb", fontSize: "0.85rem", marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
@@ -577,7 +586,7 @@ export default function FranchisePage() {
                     </div>
                     <div className="field-group">
                       <label style={labelStyle}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> Investment Capability</label>
-                      <input name="investment_capability" value={form.investment_capability} onChange={handleChange} onFocus={() => setFocusedField("investment_capability")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "investment_capability" ? "#1b3c33" : undefined }} placeholder="e.g. 15-25 Lakhs" />
+                      <input name="investment_capability" value={form.investment_capability} onChange={handleChange} onFocus={() => setFocusedField("investment_capability")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "investment_capability" ? "#1b3c33" : undefined }} placeholder="e.g. 70 Lakhs - 1 Crore" />
                     </div>
                     <div className="field-group">
                       <label style={labelStyle}><FileText size={14} /> Additional Message</label>
@@ -604,7 +613,7 @@ export default function FranchisePage() {
                    <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #f0ede8" }}>Upload your documents for verification. PDF, JPG, PNG accepted. Max 5MB per file.</p>
                    <div className="franchise-docs-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                      {DOC_FIELDS.map(({ key, label, icon, required, hint }) => (
-                       <label key={key} className={`doc-card ${files[key] ? "has-file" : ""}`}>
+                        <label key={key} className={`doc-card ${files[key] ? "has-file" : ""}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", border: "1px solid #e4e1d6", borderRadius: "12px", cursor: "pointer", overflow: "hidden", transition: "all 0.2s" }}>
                          <input type="file" name={key} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFileChange} style={{ display: "none" }} />
                          <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: files[key] ? "#1b3c33" : "#f0ede8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: files[key] ? "#fff" : "#586159", transition: "all 0.2s" }}>
                            {files[key] ? <Check size={18} /> : icon}

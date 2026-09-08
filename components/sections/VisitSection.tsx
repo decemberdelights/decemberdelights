@@ -25,7 +25,7 @@ export default function VisitSection() {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />
-              <a href="tel:+919676946460" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "15px", fontWeight: 500, color: "#fdf9f4", textDecoration: "none", transition: "color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#fdf9f4"; }}>+91 96769 46460</a>
+              <a href="tel:+918801460641" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "15px", fontWeight: 500, color: "#fdf9f4", textDecoration: "none", transition: "color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#fdf9f4"; }}>+91 88014 60641</a>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />

@@ -142,5 +142,7 @@ export type Tab =
   | "menu"
   | "products"
   | "jobs"
+  | "terms"
   | "admins"
-  | "logs";
+  | "logs"
+  | "settings";

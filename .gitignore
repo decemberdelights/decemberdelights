@@ -44,8 +44,14 @@ next-env.d.ts
 # backend runtime data
 /backend/uploads/
 /backend/backups/
+/backend/.data/
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
+
+# deployment artifacts
+/deploy/
+/.data/
+decemberdelights-deploy.tar.gz

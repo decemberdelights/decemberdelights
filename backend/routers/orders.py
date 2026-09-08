@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
 from security import validate_order_status, sanitize_input, RateLimiter, validate_email, get_client_ip
+from store import KVStore
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import os
 import json
 import uuid
-import time
 import razorpay
 import logging
 
@@ -87,24 +87,18 @@ class ContactRequest(BaseModel):
 
 
 class OrderStatsCache:
-    """In-memory cache for order stats."""
+    """SQLite-backed cache for order stats with TTL."""
     def __init__(self, ttl_seconds: int = 60):
-        self._cache: dict[str, tuple[float, any]] = {}
-        self._ttl = ttl_seconds
+        self._store = KVStore(namespace="order_stats", default_ttl=ttl_seconds)
 
     def get(self, key: str):
-        if key in self._cache:
-            ts, val = self._cache[key]
-            if time.time() - ts < self._ttl:
-                return val
-            del self._cache[key]
-        return None
+        return self._store.get(key)
 
     def set(self, key: str, val):
-        self._cache[key] = (time.time(), val)
+        self._store.set(key, val)
 
     def invalidate(self):
-        self._cache.clear()
+        self._store.invalidate()
 
 
 _order_cache = OrderStatsCache(ttl_seconds=60)
@@ -128,6 +122,7 @@ def _verify_razorpay_signature(order_id: str, payment_id: str, signature: str) -
 
 
 from activity import log_activity
+from email_service import send_contact_notification
 
 
 @router.post("/api/orders/create-order")
@@ -273,7 +268,7 @@ def create_public_order(body: CreateOrderRequest, request: Request):
                 logger.warning(f"Could not verify Razorpay payment details: {e}")
         payment_status = "paid"
 
-    # Batch-read current stock for all products in one query
+    # Atomic stock decrement: read all stocks first, validate, then batch update
     product_ids = [item["id"] for item in sanitized_items]
     try:
         stock_result = supabase.table("products").select("id,stock").in_("id", product_ids).execute()
@@ -282,25 +277,32 @@ def create_public_order(body: CreateOrderRequest, request: Request):
         logger.error(f"Failed to read product stocks: {e}")
         raise HTTPException(status_code=500, detail="Failed to verify stock")
 
-    # Atomic stock decrement using conditional UPDATE with gte guard
+    # Validate all stock BEFORE making any updates
+    for item in sanitized_items:
+        current_stock = stock_map.get(item["id"], 0)
+        if current_stock < item["quantity"]:
+            raise HTTPException(status_code=400, detail=f"Insufficient stock for {item.get('name', 'item')}")
+
+    # All stock is sufficient — perform batch update
     decremented = []
     for item in sanitized_items:
-        try:
-            current_stock = stock_map.get(item["id"], 0)
-            if current_stock < item["quantity"]:
-                raise HTTPException(status_code=400, detail=f"Insufficient stock for {item.get('name', 'item')}")
-            result = supabase.table("products").update(
-                {"stock": current_stock - item["quantity"]}
-            ).eq("id", item["id"]).gte("stock", item["quantity"]).execute()
+        current_stock = stock_map.get(item["id"], 0)
+        new_stock = current_stock - item["quantity"]
+        result = supabase.table("products").update(
+            {"stock": new_stock}
+        ).eq("id", item["id"]).gte("stock", item["quantity"]).execute()
 
-            if not result.data:
-                raise HTTPException(status_code=400, detail="Insufficient stock — item was just purchased by someone else")
-            decremented.append({"id": item["id"], "quantity": item["quantity"]})
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Stock update failed for product {item['id']}: {e}")
-            raise HTTPException(status_code=500, detail="Failed to update stock")
+        if not result.data:
+            # Rollback all previous decrements
+            for prev in decremented:
+                try:
+                    fresh = supabase.table("products").select("stock").eq("id", prev["id"]).execute()
+                    current = fresh.data[0]["stock"] if fresh.data else 0
+                    supabase.table("products").update({"stock": current + prev["quantity"]}).eq("id", prev["id"]).execute()
+                except Exception as rollback_err:
+                    logger.error(f"Stock rollback failed for product {prev['id']}: {rollback_err}")
+            raise HTTPException(status_code=400, detail="Insufficient stock — item was just purchased by someone else")
+        decremented.append({"id": item["id"], "quantity": item["quantity"]})
 
     # Insert order AFTER stock is decremented
     order_data = {
@@ -359,7 +361,7 @@ def track_order(phone: str, request: Request):
 
 
 @router.post("/api/contact")
-def submit_contact(data: ContactRequest, request: Request):
+def submit_contact(data: ContactRequest, request: Request, background_tasks: BackgroundTasks):
     client_ip = get_client_ip(request)
     rate_key = f"contact:{client_ip}"
     contact_limiter.check(rate_key)
@@ -384,6 +386,11 @@ def submit_contact(data: ContactRequest, request: Request):
         "message": message,
         "status": "pending",
     }).execute()
+
+    background_tasks.add_task(
+        send_contact_notification, name, email, phone, subject, message
+    )
+
     return {"ok": True, "id": result.data[0]["id"]}
 
 
@@ -422,41 +429,69 @@ def get_order_stats(_=Depends(get_current_admin)):
     if cached:
         return cached
 
-    today = datetime.now(timezone.utc).date()
-    month_start = today.replace(day=1)
-    week_start = today - timedelta(days=today.weekday())
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    month_start = today.replace(day=1).isoformat()
+    week_start = (today - timedelta(days=today.weekday())).isoformat()
+    today_str = today.isoformat()
 
+    # Use DB-level date filtering instead of loading all orders
     try:
-        result = supabase.table("orders").select("total,status,created_at", count="exact").order("created_at", desc=True).execute()
+        # Today's orders
+        today_q = supabase.table("orders").select("total,status").gte("created_at", today_str).execute()
+        today_orders = today_q.data or []
+
+        # This week's orders (reuses today_q data for week if today is start of week)
+        if week_start == today_str:
+            week_orders = today_orders
+        else:
+            week_q = supabase.table("orders").select("total,status").gte("created_at", week_start).execute()
+            week_orders = week_q.data or []
+
+        # This month's orders
+        if month_start == today_str:
+            month_orders = today_orders
+        elif month_start == week_start:
+            month_orders = week_orders
+        else:
+            month_q = supabase.table("orders").select("total,status").gte("created_at", month_start).execute()
+            month_orders = month_q.data or []
+
+        # All orders for daily/monthly charts — only select needed columns, limit to recent 90 days
+        ninety_days_ago = (today - timedelta(days=90)).isoformat()
+        chart_q = supabase.table("orders").select("total,status,created_at").gte("created_at", ninety_days_ago).order("created_at", desc=True).execute()
+        chart_orders = chart_q.data or []
+
+        # Total count
+        total_count = supabase.table("orders").select("id", count="exact").execute().count or 0
+
     except Exception as e:
         logger.error(f"Failed to fetch orders for stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to load order stats")
-    orders = result.data or []
-    total_count = result.count or 0
 
+    # Daily chart (last 7 days)
     daily = {}
     for i in range(6, -1, -1):
         d = today - timedelta(days=i)
         key = d.strftime("%a")
-        day_orders = [o for o in orders if _parse_created_date(o) == d]
+        day_orders = [o for o in chart_orders if _parse_created_date(o) == d]
         daily[key] = {"orders": len(day_orders), "revenue": sum(o.get("total", 0) for o in day_orders)}
 
+    # Monthly chart (last 6 months)
     monthly = {}
     for i in range(5, -1, -1):
-        m = today.month - i
-        y = today.year
+        m = now.month - i
+        y = now.year
         if m <= 0:
             m += 12
             y -= 1
         key = datetime(y, m, 1).strftime("%b %Y")
-        month_orders = [o for o in orders if _parse_created_month(o) == (m, y)]
-        monthly[key] = {"orders": len(month_orders), "revenue": sum(o.get("total", 0) for o in month_orders)}
+        month_orders_chart = [o for o in chart_orders if _parse_created_month(o) == (m, y)]
+        monthly[key] = {"orders": len(month_orders_chart), "revenue": sum(o.get("total", 0) for o in month_orders_chart)}
 
-    today_orders = []
-    week_orders = []
-    month_orders_filtered = []
+    # Status counts from today's orders
     pending = preparing = delivered = cancelled = 0
-    for o in orders:
+    for o in today_orders:
         status = o.get("status")
         if status == "pending":
             pending += 1
@@ -466,15 +501,6 @@ def get_order_stats(_=Depends(get_current_admin)):
             delivered += 1
         elif status == "cancelled":
             cancelled += 1
-        d = _parse_created_date(o)
-        if not d:
-            continue
-        if d == today:
-            today_orders.append(o)
-        if d >= week_start:
-            week_orders.append(o)
-        if d >= month_start:
-            month_orders_filtered.append(o)
 
     result_data = {
         "daily": daily,
@@ -483,10 +509,10 @@ def get_order_stats(_=Depends(get_current_admin)):
         "today_revenue": sum(o.get("total", 0) for o in today_orders),
         "week_orders": len(week_orders),
         "week_revenue": sum(o.get("total", 0) for o in week_orders),
-        "month_orders": len(month_orders_filtered),
-        "month_revenue": sum(o.get("total", 0) for o in month_orders_filtered),
+        "month_orders": len(month_orders),
+        "month_revenue": sum(o.get("total", 0) for o in month_orders),
         "total_orders": total_count,
-        "total_revenue": sum(o.get("total", 0) for o in orders),
+        "total_revenue": sum(o.get("total", 0) for o in chart_orders),
         "pending": pending,
         "preparing": preparing,
         "delivered": delivered,

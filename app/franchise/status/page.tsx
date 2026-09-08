@@ -5,6 +5,7 @@ import Link from "next/link";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle } from "@/lib/styles";
 import { generateFranchiseReceipt } from "@/lib/receipt";
+import DatePicker from "@/components/DatePicker";
 
 interface Application {
   id: number;
@@ -202,6 +203,12 @@ export default function FranchiseStatusPage() {
                   <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#e74c3c", fontSize: "0.82rem" }}>Your application was not approved at this time.</p>
                 </div>
               )}
+              {isRejected && application.admin_notes && (
+                <div style={{ marginTop: "1rem", padding: "1rem 1.25rem", background: "#fdf0ef", borderRadius: "12px", border: "1px solid #f5c6c6" }}>
+                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#a32d2d", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Reason for Rejection</p>
+                  <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.88rem", lineHeight: 1.7 }}>{application.admin_notes}</p>
+                </div>
+              )}
             </div>
 
             {/* Application Details */}
@@ -310,7 +317,7 @@ export default function FranchiseStatusPage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                   Date of Birth
                 </label>
-                <input required type="date" value={dob} onChange={(e) => setDob(e.target.value)} style={inputStyle} />
+                <DatePicker value={dob} onChange={(d) => setDob(d)} />
               </div>
             </div>
             {loginError && (

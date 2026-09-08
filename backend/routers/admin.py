@@ -5,9 +5,10 @@ from auth import get_current_admin, require_super_admin
 from security import validate_application_status, sanitize_input
 from routers.franchise import delete_app_files
 from routers.careers import delete_career_files
+from store import KVStore
 from typing import Optional
 from datetime import datetime, timezone, timedelta
-import time
+from email_service import send_franchise_approved, send_franchise_rejected
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,31 +27,7 @@ class UpdateStatusRequest(BaseModel):
 from activity import log_activity
 
 
-class StatsCache:
-    """In-memory cache with TTL for expensive stats queries."""
-    def __init__(self, ttl_seconds: int = 60):
-        self._cache: dict[str, tuple[float, any]] = {}
-        self._ttl = ttl_seconds
-
-    def get(self, key: str):
-        if key in self._cache:
-            ts, val = self._cache[key]
-            if time.time() - ts < self._ttl:
-                return val
-            del self._cache[key]
-        return None
-
-    def set(self, key: str, val):
-        self._cache[key] = (time.time(), val)
-
-    def invalidate(self, key: str = None):
-        if key:
-            self._cache.pop(key, None)
-        else:
-            self._cache.clear()
-
-
-_stats_cache = StatsCache(ttl_seconds=60)
+_stats_cache = KVStore(namespace="admin_stats", default_ttl=60)
 
 
 def _safe_query(table, select="*", filters=None, order=None, limit=None, offset=None, count_only=False):
@@ -77,13 +54,6 @@ def _safe_query(table, select="*", filters=None, order=None, limit=None, offset=
         return [] if not count_only else 0
 
 
-def _parse_date_safe(date_str):
-    try:
-        return datetime.fromisoformat(date_str).date()
-    except (ValueError, TypeError):
-        return None
-
-
 @router.get("/api/admin/stats")
 def get_stats(_=Depends(get_current_admin)):
     cached = _stats_cache.get("admin_stats")
@@ -102,63 +72,36 @@ def get_stats(_=Depends(get_current_admin)):
     job_count = supabase.table("jobs").select("id", count="exact").eq("is_active", True).execute().count or 0
     admin_count = supabase.table("admin_users").select("id", count="exact").execute().count or 0
 
-    # Batch: Franchise status counts (single fetch + in-memory count)
-    franchise_all = supabase.table("franchise_applications").select("status", count="exact").execute()
-    franchise_all_data = franchise_all.data or []
-    franchise_total_count = franchise_all.count or 0
-    pending_franchise = sum(1 for f in franchise_all_data if f.get("status") == "pending")
-    submitted_franchise = sum(1 for f in franchise_all_data if f.get("status") == "submitted")
-    under_process_franchise = sum(1 for f in franchise_all_data if f.get("status") == "under_process")
-    approved_franchise = sum(1 for f in franchise_all_data if f.get("status") == "approved")
-    rejected_franchise = sum(1 for f in franchise_all_data if f.get("status") == "rejected")
+    # Franchise status counts using DB-level filtering
+    pending_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "pending").execute().count or 0
+    submitted_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "submitted").execute().count or 0
+    under_process_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "under_process").execute().count or 0
+    approved_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "approved").execute().count or 0
+    rejected_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "rejected").execute().count or 0
 
-    # Batch: Career status counts
-    career_all = supabase.table("career_applications").select("status").execute()
-    career_all_data = career_all.data or []
-    pending_careers = sum(1 for c in career_all_data if c.get("status") == "pending")
-    approved_careers = sum(1 for c in career_all_data if c.get("status") == "approved")
-    rejected_careers = sum(1 for c in career_all_data if c.get("status") == "rejected")
+    # Career status counts using DB-level filtering
+    pending_careers = supabase.table("career_applications").select("id", count="exact").eq("status", "pending").execute().count or 0
+    approved_careers = supabase.table("career_applications").select("id", count="exact").eq("status", "approved").execute().count or 0
+    rejected_careers = supabase.table("career_applications").select("id", count="exact").eq("status", "rejected").execute().count or 0
 
-    # Batch: Contact pending count
-    contact_all = supabase.table("contact_messages").select("status").execute()
-    contact_all_data = contact_all.data or []
-    pending_contacts = sum(1 for c in contact_all_data if c.get("status") == "pending")
+    # Contact pending count using DB-level filtering
+    pending_contacts = supabase.table("contact_messages").select("id", count="exact").eq("status", "pending").execute().count or 0
 
-    # Orders data — limit to recent 1000 for performance
-    order_data_all = supabase.table("orders").select("total,status,created_at").order("created_at", desc=True).limit(1000).execute()
-    order_data = order_data_all.data or []
+    # Orders — use date-filtered queries instead of loading all orders
+    today_str = today.isoformat()
+    today_orders_data = supabase.table("orders").select("total,status").gte("created_at", today_str).execute()
+    today_orders_list = today_orders_data.data or []
     total_orders_count = supabase.table("orders").select("id", count="exact").execute().count or 0
-    total_revenue = sum(o.get("total", 0) for o in order_data)
-    order_count = total_orders_count
+
+    today_orders_count = len(today_orders_list)
+    today_revenue = sum(o.get("total", 0) for o in today_orders_list)
+    pending_orders = sum(1 for o in today_orders_list if o.get("status") == "pending")
+    preparing_orders = sum(1 for o in today_orders_list if o.get("status") == "preparing")
+    delivered_orders = sum(1 for o in today_orders_list if o.get("status") == "delivered")
+    cancelled_orders = sum(1 for o in today_orders_list if o.get("status") == "cancelled")
 
     # Products online count
     online_count = supabase.table("products").select("id", count="exact").eq("is_active", True).execute().count or 0
-
-    # Compute today/month from order data (in-memory, no extra queries)
-    today_orders = 0
-    today_revenue = 0.0
-    pending_orders = 0
-    preparing_orders = 0
-    delivered_orders = 0
-    cancelled_orders = 0
-    for o in order_data:
-        status = o.get("status")
-        if status == "pending":
-            pending_orders += 1
-        elif status == "preparing":
-            preparing_orders += 1
-        elif status == "delivered":
-            delivered_orders += 1
-        elif status == "cancelled":
-            cancelled_orders += 1
-        ca = o.get("created_at")
-        if ca:
-            try:
-                if datetime.fromisoformat(ca).date() == today:
-                    today_orders += 1
-                    today_revenue += o.get("total", 0)
-            except (ValueError, TypeError):
-                pass
 
     # Franchise month count using date filter
     month_str = today.strftime("%Y-%m-01")
@@ -171,8 +114,8 @@ def get_stats(_=Depends(get_current_admin)):
         "menu_count": menu_count,
         "product_count": product_count,
         "job_opening_count": job_count,
-        "order_count": order_count,
-        "total_revenue": total_revenue,
+        "order_count": total_orders_count,
+        "total_revenue": 0,
         "admin_count": admin_count,
         "pending_franchise": pending_franchise,
         "pending_careers": pending_careers,
@@ -187,7 +130,7 @@ def get_stats(_=Depends(get_current_admin)):
         "preparing_orders": preparing_orders,
         "delivered_orders": delivered_orders,
         "cancelled_orders": cancelled_orders,
-        "today_orders": today_orders,
+        "today_orders": today_orders_count,
         "today_revenue": today_revenue,
         "products_online": online_count,
         "franchise_month_count": month_count,
@@ -217,6 +160,8 @@ def get_applications(offset: int = 0, limit: int = 50, _=Depends(get_current_adm
 def update_franchise(app_id: int, data: UpdateStatusRequest, admin=Depends(get_current_admin)):
     if not validate_application_status(data.status):
         raise HTTPException(status_code=400, detail="Invalid status")
+    if data.status == "rejected" and len(data.admin_notes.strip()) < 10:
+        raise HTTPException(status_code=400, detail="A detailed rejection reason (min 10 characters) is required")
     existing = supabase.table("franchise_applications").select("*").eq("id", app_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -228,9 +173,21 @@ def update_franchise(app_id: int, data: UpdateStatusRequest, admin=Depends(get_c
     supabase.table("franchise_applications").update(update_data).eq("id", app_id).execute()
     log_activity(admin["username"], data.status, "franchise", app_id, f"Franchise application of {app.get('full_name', '')} → {data.status}")
     _stats_cache.invalidate("admin_stats")
+
+    email = app.get("email", "")
+    full_name = app.get("full_name", "")
+    login_id = app.get("login_id", "")
+    phone = app.get("phone", "")
+    notes = data.admin_notes or ""
+
+    if email and data.status == "approved":
+        send_franchise_approved(email, full_name, login_id, phone, notes)
+    elif email and data.status == "rejected":
+        send_franchise_rejected(email, full_name, login_id, phone, notes)
+
     try:
         from auth import _franchise_cache
-        _franchise_cache.invalidate(app_id)
+        _franchise_cache.invalidate(str(app_id))
     except Exception:
         pass
     return {"ok": True}
@@ -240,6 +197,8 @@ def update_franchise(app_id: int, data: UpdateStatusRequest, admin=Depends(get_c
 def update_career(app_id: int, data: UpdateStatusRequest, admin=Depends(get_current_admin)):
     if not validate_application_status(data.status):
         raise HTTPException(status_code=400, detail="Invalid status")
+    if data.status == "rejected" and len(data.admin_notes.strip()) < 10:
+        raise HTTPException(status_code=400, detail="A detailed rejection reason (min 10 characters) is required")
     existing = supabase.table("career_applications").select("*").eq("id", app_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -258,6 +217,8 @@ def update_career(app_id: int, data: UpdateStatusRequest, admin=Depends(get_curr
 def update_contact(app_id: int, data: UpdateStatusRequest, admin=Depends(get_current_admin)):
     if not validate_application_status(data.status):
         raise HTTPException(status_code=400, detail="Invalid status")
+    if data.status == "rejected" and len(data.admin_notes.strip()) < 10:
+        raise HTTPException(status_code=400, detail="A detailed rejection reason (min 10 characters) is required")
     existing = supabase.table("contact_messages").select("*").eq("id", app_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Message not found")
@@ -285,7 +246,7 @@ def delete_franchise(app_id: int, data: Optional[DeleteRequest] = None, admin=De
     _stats_cache.invalidate("admin_stats")
     try:
         from auth import _franchise_cache
-        _franchise_cache.invalidate(app_id)
+        _franchise_cache.invalidate(str(app_id))
     except Exception:
         pass
     return {"ok": True}

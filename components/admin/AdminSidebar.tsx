@@ -11,7 +11,7 @@ interface AdminSidebarProps {
 
 const icons: Record<string, string> = {
   overview: "OV", orders: "OR", franchise: "FR", products: "PR", charts: "CH",
-  careers: "CA", contacts: "CO", menu: "MN", jobs: "JB", admins: "AU", logs: "LG",
+  careers: "CA", contacts: "CO", menu: "MN", jobs: "JB", terms: "TC", admins: "AU", logs: "LG", settings: "ST",
 };
 
 const S = {
@@ -37,13 +37,14 @@ export default function AdminSidebar({ tab, setTab, role, onLogout }: AdminSideb
     ["orders", "Orders"],
     ["franchise", "Franchise"],
     ["careers", "Careers"],
-    ["contacts", "Contacts"],
+    ["contacts", "Feedback"],
   ];
 
   const contentTabs: [Tab, string][] = [
     ["menu", "Menu Items"],
     ["products", "Products"],
     ["jobs", "Jobs"],
+    ["terms", "Terms & Conditions"],
   ];
 
   const analyticsTabs: [Tab, string][] = [
@@ -53,6 +54,7 @@ export default function AdminSidebar({ tab, setTab, role, onLogout }: AdminSideb
   const adminTabs: [Tab, string][] = [
     ["admins", "Admin Users"],
     ["logs", "Activity Log"],
+    ["settings", "Settings"],
   ];
 
   const renderTabGroup = (tabs: [Tab, string][]) => (

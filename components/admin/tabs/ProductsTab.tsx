@@ -64,7 +64,7 @@ export default function ProductsTab({ products, role, onAdd, onEdit, onDelete }:
                 <td>{p.name}</td>
                 <td>{p.category}</td>
                 <td>₹{p.price}</td>
-                <td>{p.stock}</td>
+                <td>{p.stock <= 0 ? <span className="status rejected">Out of Stock</span> : p.stock <= 10 ? <span className="status pending">{p.stock} (Low)</span> : p.stock}</td>
                 <td><span className={`status ${p.is_active ? "approved" : "rejected"}`}>{p.is_active ? "Yes" : "No"}</span></td>
                 <td>
                   <div className="row-actions">

@@ -1,6 +1,5 @@
 import logging
 import os
-import time
 from dotenv import load_dotenv
 
 _env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
@@ -14,6 +13,7 @@ import bcrypt
 from fastapi import Cookie, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from supabase_client import supabase
+from store import KVStore
 
 logger = logging.getLogger(__name__)
 
@@ -29,31 +29,8 @@ ACCESS_TOKEN_EXPIRE_HOURS = 4
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
-
-class UserCache:
-    def __init__(self, ttl_seconds: int = 120):
-        self._cache: dict[int, tuple[float, dict]] = {}
-        self._ttl = ttl_seconds
-
-    def get(self, user_id: int):
-        if user_id in self._cache:
-            ts, user = self._cache[user_id]
-            if time.time() - ts < self._ttl:
-                return user
-            del self._cache[user_id]
-        return None
-
-    def set(self, user_id: int, user: dict):
-        self._cache[user_id] = (time.time(), user)
-
-    def invalidate(self, user_id: int = None):
-        if user_id:
-            self._cache.pop(user_id, None)
-        else:
-            self._cache.clear()
-
-
-_user_cache = UserCache(ttl_seconds=120)
+_user_cache = KVStore(namespace="user_cache", default_ttl=120)
+_franchise_cache = KVStore(namespace="franchise_cache", default_ttl=120)
 
 
 def hash_password(password: str) -> str:
@@ -92,7 +69,7 @@ def _extract_user(token: str) -> dict:
     except (ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    cached = _user_cache.get(user_id)
+    cached = _user_cache.get(str(user_id))
     if cached:
         if not cached.get("is_active", True):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
@@ -105,7 +82,7 @@ def _extract_user(token: str) -> dict:
     if not user.get("is_active", True):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
 
-    _user_cache.set(user_id, user)
+    _user_cache.set(str(user_id), user)
     return user
 
 
@@ -136,7 +113,7 @@ def require_super_admin(
     return user
 
 
-_franchise_cache = UserCache(ttl_seconds=120)
+_franchise_cache = KVStore("franchise_cache", default_ttl=120)
 
 
 def get_current_franchise(
@@ -152,7 +129,7 @@ def get_current_franchise(
     except (ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    cached = _franchise_cache.get(app_id)
+    cached = _franchise_cache.get(str(app_id))
     if cached:
         return cached
 
@@ -160,5 +137,5 @@ def get_current_franchise(
     if not result.data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Application not found")
     app = result.data[0]
-    _franchise_cache.set(app_id, app)
+    _franchise_cache.set(str(app_id), app)
     return app

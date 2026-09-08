@@ -67,7 +67,7 @@ def auth_login(request: Request, creds: dict, response: Response):
     login_limiter.reset(rate_key)
 
     token = create_token({"sub": str(user["id"]), "type": "admin", "role": user["role"]})
-    response.set_cookie("session", token, httponly=True, samesite="none", max_age=86400, secure=True, path="/")
+    response.set_cookie("session", token, httponly=True, samesite="lax", max_age=86400, secure=False, path="/")
     csrf_token = generate_csrf_token()
     set_csrf_cookie(response, csrf_token)
     return {"ok": True, "role": user["role"], "username": user["username"]}
@@ -75,6 +75,6 @@ def auth_login(request: Request, creds: dict, response: Response):
 
 @router.post("/api/auth/logout")
 def auth_logout(response: Response):
-    response.delete_cookie("session", samesite="none", secure=True, path="/")
-    response.delete_cookie("csrf_token", samesite="none", secure=True, path="/")
+    response.delete_cookie("session", samesite="lax", secure=False, path="/")
+    response.delete_cookie("csrf_token", samesite="lax", secure=False, path="/")
     return {"ok": True}

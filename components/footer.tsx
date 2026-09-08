@@ -19,12 +19,12 @@ export default function Footer() {
     }}>
       <div className="footer-grid">
         <div className="footer-brand">
-          <Image src="/logo.png" alt="December Delights" width={300} height={140} sizes="300px" loading="lazy" style={{ height: "140px", width: "auto", marginBottom: "12px" }} />
+          <Image src="/logo.png" alt="December Delights" width={300} height={140} sizes="300px" loading="eager" style={{ marginBottom: "12px" }} />
         </div>
 
         {[
-          { title: "Explore", links: [{ l: "Menu", h: "/menu" }, { l: "Story", h: "/#our-story" }, { l: "Contact", h: "/contact" }] },
-          { title: "Company", links: [{ l: "Franchise", h: "/franchise" }, { l: "Careers", h: "/careers" }, { l: "Contact", h: "/contact" }] },
+          { title: "Explore", links: [{ l: "Menu", h: "/menu" }, { l: "Story", h: "/#our-story" }, { l: "Feedback", h: "/contact" }] },
+          { title: "Company", links: [{ l: "Franchise", h: "/franchise" }, { l: "Careers", h: "/careers" }] },
           { title: "Social", links: [{ l: "Instagram", h: "https://www.instagram.com/decemberdelights/" }, { l: "YouTube", h: "https://www.youtube.com/@Decemberdelights-Notjustacafe" }] },
         ].map((col) => (
           <div key={col.title}>

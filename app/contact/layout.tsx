@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Contact Us | December Delights",
-  description: "Get in touch with December Delights cafe in Hyderabad. Visit us, call us, or send a message. We would love to hear from you.",
+  title: "Feedback | December Delights",
+  description: "Share your feedback with December Delights cafe in Hyderabad. We value your thoughts and would love to hear from you.",
   openGraph: {
-    title: "Contact December Delights",
+    title: "Feedback - December Delights",
     description: "Visit us at our cafe, give us a call, or send us a message.",
     type: "website",
     locale: "en_IN",

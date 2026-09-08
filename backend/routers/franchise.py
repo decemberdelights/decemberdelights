@@ -6,7 +6,7 @@ import asyncio
 
 import razorpay
 
-from fastapi import APIRouter, HTTPException, Response, UploadFile, File, Form, Cookie, Request
+from fastapi import APIRouter, HTTPException, Response, UploadFile, File, Form, Cookie, Request, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional
 from supabase_client import supabase
@@ -14,6 +14,7 @@ from schemas import FranchiseLogin, FranchiseOut
 from auth import create_token, decode_token
 from security import franchise_limiter, get_client_ip, validate_email, validate_phone, sanitize_input
 from csrf import generate_csrf_token, set_csrf_cookie
+from email_service import send_franchise_confirmation, send_franchise_admin_notification
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -139,6 +140,7 @@ async def create_order(body: CreateOrderReq, request: Request):
 @router.post("/api/franchise")
 async def submit_application(
     request: Request,
+    background_tasks: BackgroundTasks,
     full_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
@@ -263,6 +265,13 @@ async def submit_application(
         logger.error(f"DB insert failed: {e}")
         raise HTTPException(500, "Failed to save application")
 
+    background_tasks.add_task(
+        send_franchise_confirmation, email, full_name, login_id, phone
+    )
+    background_tasks.add_task(
+        send_franchise_admin_notification, full_name, email, phone, preferred_location
+    )
+
     return {"ok": True, "id": app_id, "login_id": login_id}
 
 
@@ -283,12 +292,12 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response)
         raise HTTPException(401, "Invalid credentials")
 
     token = create_token({"sub": str(app["id"]), "type": "franchise"})
-    response.set_cookie("franchise_session", token, httponly=True, samesite="none", max_age=86400, secure=True, path="/")
+    response.set_cookie("franchise_session", token, httponly=True, samesite="lax", max_age=86400, secure=False, path="/")
     csrf_token = generate_csrf_token()
     set_csrf_cookie(response, csrf_token)
 
     from auth import _franchise_cache
-    _franchise_cache.set(app["id"], app)
+    _franchise_cache.set(str(app["id"]), app)
 
     return {"application": FranchiseOut(**app).model_dump()}
 
@@ -306,7 +315,7 @@ def franchise_status(franchise_session: Optional[str] = Cookie(None)):
     except (ValueError, TypeError):
         raise HTTPException(401, "Invalid token")
 
-    cached = _franchise_cache.get(app_id)
+    cached = _franchise_cache.get(str(app_id))
     if cached:
         return {"application": FranchiseOut(**cached).model_dump()}
 
@@ -314,12 +323,12 @@ def franchise_status(franchise_session: Optional[str] = Cookie(None)):
     if not result.data:
         raise HTTPException(404, "Application not found")
     app = result.data[0]
-    _franchise_cache.set(app_id, app)
+    _franchise_cache.set(str(app_id), app)
     return {"application": FranchiseOut(**app).model_dump()}
 
 
 @router.post("/api/franchise/logout")
 def franchise_logout(response: Response):
-    response.delete_cookie("franchise_session", samesite="none", secure=True, path="/")
-    response.delete_cookie("csrf_token", samesite="none", secure=True, path="/")
+    response.delete_cookie("franchise_session", samesite="lax", secure=False, path="/")
+    response.delete_cookie("csrf_token", samesite="lax", secure=False, path="/")
     return {"ok": True}

@@ -31,7 +31,7 @@ export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOr
       }
       return true;
     });
-    return filtered.slice(0, 50).map(o => {
+    return filtered.map(o => {
       let parsedItems: unknown[] = [];
       try { parsedItems = JSON.parse(o.items); } catch { /* ignore */ }
       return { ...o, parsedItems };

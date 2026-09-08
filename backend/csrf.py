@@ -14,8 +14,8 @@ def set_csrf_cookie(response, token: str):
     response.set_cookie(
         CSRF_COOKIE_NAME, token,
         httponly=False,
-        samesite="none",
-        secure=True,
+        samesite="lax",
+        secure=False,
         max_age=86400,
         path="/",
     )

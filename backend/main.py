@@ -19,16 +19,14 @@ else:
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from routers import menu, products, auth_router, admin, franchise, careers, admin_users, orders
-from csrf import CSRF_COOKIE_NAME, CSRF_HEADER_NAME, validate_csrf
+from routers import menu, products, auth_router, admin, franchise, careers, admin_users, orders, terms
+
+_health_cache = {"last_check": 0, "result": None}
+_HEALTH_CACHE_TTL = 30  # seconds
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        import seed
-        logger.info("Seed completed")
-    except Exception as e:
-        logger.warning(f"Seed failed: {str(e)}")
+    logger.info("API started")
     yield
 
 app = FastAPI(title="December Delights API", version="2.0.0", lifespan=lifespan)
@@ -72,6 +70,7 @@ app.include_router(franchise.router)
 app.include_router(careers.router)
 app.include_router(admin_users.router)
 app.include_router(orders.router)
+app.include_router(terms.router)
 
 
 @app.middleware("http")
@@ -112,13 +111,19 @@ def root():
 
 @app.get("/api/health")
 def health_check():
+    now = time.time()
+    if _health_cache["result"] and (now - _health_cache["last_check"]) < _HEALTH_CACHE_TTL:
+        return _health_cache["result"]
     try:
         from supabase_client import supabase
         supabase.table("admin_users").select("id").limit(1).execute()
-        return {"status": "healthy", "database": "connected"}
+        result = {"status": "healthy", "database": "connected"}
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "disconnected"})
+        result = JSONResponse(status_code=503, content={"status": "unhealthy", "database": "disconnected"})
+    _health_cache["last_check"] = now
+    _health_cache["result"] = result
+    return result
 
 
 if __name__ == "__main__":

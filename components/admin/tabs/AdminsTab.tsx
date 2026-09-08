@@ -9,9 +9,10 @@ interface AdminsTabProps {
   stats: { admin_count: number } | null;
   api: (path: string, opts?: RequestInit) => Promise<Response>;
   onRefresh: () => void;
+  onEditUser: (user: AdminUser) => void;
 }
 
-export default function AdminsTab({ adminUsers, api, onRefresh }: AdminsTabProps) {
+export default function AdminsTab({ adminUsers, api, onRefresh, onEditUser }: AdminsTabProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -100,6 +101,7 @@ export default function AdminsTab({ adminUsers, api, onRefresh }: AdminsTabProps
               </div>
               <div className="row-actions">
                 <span className={`status ${u.is_active ? "approved" : "rejected"}`}>{u.is_active ? "Active" : "Inactive"}</span>
+                <button className="btn" onClick={() => onEditUser(u)} style={{ padding: "6px 12px", fontSize: 12, border: "1px solid #e4e1d6", borderRadius: 6, background: "#fff", color: "#1b3c33", cursor: "pointer", fontWeight: 600 }}>Edit</button>
                 {u.role !== "super_admin" && (
                   <button className="btn danger" onClick={() => handleDelete(u)}>Delete</button>
                 )}

@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 
 export default function SmoothScrollProvider({ children }: { children: React.ReactNode }) {
   const lenisRef = useRef<Lenis | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (isMobile) return;
+    if (pathname.startsWith("/admin")) return;
 
     const lenis = new Lenis({
       duration: 1.2,
@@ -26,8 +29,7 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
       lenis.raf(time);
       requestAnimationFrame(raf);
     }
-
-    requestAnimationFrame(raf);
+    const rafId = requestAnimationFrame(raf);
 
     const handleClick = (e: MouseEvent) => {
       const target = (e.target as HTMLElement).closest("a[href]");
@@ -39,9 +41,7 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
         const id = href.slice(1);
         if (id) {
           const el = document.getElementById(id);
-          if (el) {
-            lenis.scrollTo(el, { offset: -80, duration: 1.6 });
-          }
+          if (el) lenis.scrollTo(el, { offset: -80, duration: 1.6 });
         }
         return;
       }
@@ -56,6 +56,8 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
           } else {
             window.scrollTo({ top: 0, behavior: "smooth" });
           }
+        } else {
+          sessionStorage.setItem("scrollToHash", id);
         }
       }
     };
@@ -63,10 +65,28 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
     document.addEventListener("click", handleClick, true);
 
     return () => {
+      cancelAnimationFrame(rafId);
       lenis.destroy();
+      lenisRef.current = null;
       document.removeEventListener("click", handleClick, true);
     };
-  }, []);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+    const stored = sessionStorage.getItem("scrollToHash");
+    if (stored && lenisRef.current) {
+      sessionStorage.removeItem("scrollToHash");
+      setTimeout(() => {
+        const el = document.getElementById(stored);
+        if (el) {
+          lenisRef.current?.scrollTo(el, { offset: -80, duration: 1.6 });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }, 500);
+    }
+  }, [pathname]);
 
   return <>{children}</>;
 }
