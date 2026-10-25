@@ -14,6 +14,35 @@ import { generateFranchiseReceipt, FranchiseReceiptData } from "@/lib/receipt";
 
 const STEPS = ["Personal", "Business", "Documents", "Review"];
 
+interface FranchiseForm {
+  full_name: string;
+  email: string;
+  phone: string;
+  dob: string;
+  business_experience: string;
+  preferred_location: string;
+  franchise_type: string;
+  investment_capability: string;
+  message: string;
+}
+
+function FranchiseEditionIcon({ edition, size = 24 }: { edition: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {edition === "Highway Edition" ? (
+        <>
+          <path d="M5 21 9 3M19 21 15 3M12 5v3m0 3v3m0 3v3" />
+        </>
+      ) : (
+        <>
+          <path d="M3 21h18M5 21V9l6-4v16m2 0V3l6 3v15" />
+          <path d="M8 12h1m-1 3h1m7-6h1m-1 3h1m-1 3h1" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 async function fetchWithRetry(url: string, opts: RequestInit, retries = 2): Promise<Response> {
   for (let i = 0; i <= retries; i++) {
     const controller = new AbortController();
@@ -40,36 +69,12 @@ const DOC_FIELDS = [
 ];
 
 export default function FranchisePage() {
-  const [franchiseOpen, setFranchiseOpen] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    fetch(`${API}/api/settings`).then(r => r.json()).then(d => {
-      setFranchiseOpen(d.franchise_enabled !== false);
-    }).catch(() => setFranchiseOpen(true));
-  }, []);
-
-  const [step, setStep] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem("franchise_form");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if ((parsed.step || 0) > 1) return 0;
-        return parsed.step || 0;
-      }
-    } catch {}
-    return 0;
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState<FranchiseForm>({
+    full_name: "", email: "", phone: "", dob: "", business_experience: "",
+    preferred_location: "", franchise_type: "", investment_capability: "", message: "",
   });
-  const [form, setForm] = useState(() => {
-    const defaults = { full_name: "", email: "", phone: "", dob: "", business_experience: "", preferred_location: "", investment_capability: "", message: "" };
-    try {
-      const saved = sessionStorage.getItem("franchise_form");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.form || defaults;
-      }
-    } catch {}
-    return defaults;
-  });
+  const [formRestored, setFormRestored] = useState(false);
   const [files, setFiles] = useState<Record<string, File | null>>({
     aadhaar: null, pan: null, bank_statement: null, address_proof: null, other_docs: null,
   });
@@ -82,6 +87,25 @@ export default function FranchisePage() {
   const formRef = useRef<HTMLDivElement>(null);
   const rzpRef = useRef<RazorpayCheckout | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const restoreForm = window.setTimeout(() => {
+      try {
+        const saved = sessionStorage.getItem("franchise_form");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const savedStep = Number(parsed.step) || 0;
+          setStep(savedStep > 1 ? 0 : savedStep);
+          setForm((current) => ({ ...current, ...parsed.form }));
+        }
+      } catch {
+        // Ignore unavailable or malformed saved form data and start a new application.
+      } finally {
+        setFormRestored(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(restoreForm);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,12 +133,12 @@ export default function FranchisePage() {
   }, []);
 
   useEffect(() => {
-    if (status === "idle") {
+    if (formRestored && status === "idle") {
       try {
         sessionStorage.setItem("franchise_form", JSON.stringify({ step, form }));
       } catch {}
     }
-  }, [step, form, status]);
+  }, [step, form, status, formRestored]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -214,6 +238,7 @@ export default function FranchisePage() {
       return true;
     }
     if (s === 1) {
+      if (!form.franchise_type) { setErrorMsg("Please choose a franchise edition."); return false; }
       if (!form.preferred_location.trim()) { setErrorMsg("Please enter your preferred city."); return false; }
       return true;
     }
@@ -296,7 +321,7 @@ export default function FranchisePage() {
           Object.entries(files).forEach(([key, file]) => { if (file) formData.append(key, file); });
           formData.append("business_experience", form.business_experience);
           formData.append("preferred_location", form.preferred_location);
-          formData.append("investment_capability", form.investment_capability);
+          formData.append("franchise_type", form.franchise_type);
           formData.append("message", form.message);
           formData.append("tc_accepted", "true");
           formData.append("tc_language", language);
@@ -498,6 +523,45 @@ export default function FranchisePage() {
         </div>
       </section>
 
+      <section data-bg="light" style={{ padding: "5rem 5% 2rem", background: "#fdf9f4" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#b58b50", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Choose Your Format</span>
+            <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2rem, 5vw, 3.5rem)", letterSpacing: "0.03em", margin: "0.5rem 0 0" }}>Franchise Editions</h2>
+          </div>
+          <div className="franchise-editions-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1.5rem" }}>
+            {[
+              {
+                name: "Highway Edition",
+                investment: "₹1.5 Cr – ₹3 Cr",
+                description: "A premium highway restaurant format with an expanded and customizable menu, including cafe offerings, snacks, and additional food concepts. Ideal for high-footfall highway locations.",
+              },
+              {
+                name: "City Edition",
+                investment: "₹70 Lakh – ₹1 Cr",
+                description: "A modern city restaurant format with the core December Delights menu, designed for urban locations. Menu options can be customized based on local demand.",
+              },
+            ].map((edition) => (
+              <article key={edition.name} className="franchise-edition-card" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", padding: "clamp(1.5rem, 4vw, 2.25rem)", borderRadius: "20px", background: "#fff", border: "1px solid #eee8df", boxShadow: "0 12px 35px rgba(27,60,51,0.06)" }}>
+                <h3 style={{ display: "flex", alignItems: "center", gap: "0.65rem", fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.8rem", letterSpacing: "0.04em", margin: 0 }}>
+                  <span style={{ display: "inline-flex", color: "#b58b50" }}><FranchiseEditionIcon edition={edition.name} size={28} /></span>
+                  {edition.name}
+                </h3>
+                <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.85rem", fontWeight: 700, margin: "0.75rem 0 0.5rem" }}>Investment: <span style={{ color: "#1b3c33" }}>{edition.investment}</span></p>
+                <p style={{ flex: 1, fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.95rem", lineHeight: 1.75, margin: "0.5rem 0 1.5rem" }}>{edition.description}</p>
+                <a
+                  href="#apply"
+                  onClick={() => setForm((previous) => ({ ...previous, franchise_type: edition.name, investment_capability: edition.investment }))}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.85rem 1.4rem", borderRadius: "100px", background: "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.85rem", textDecoration: "none" }}
+                >
+                  Apply for {edition.name} <ArrowRight size={15} />
+                </a>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Application Form */}
       <section id="apply" data-bg="light" className="franchise-apply-section" style={{ padding: "5rem 5% 6rem", background: "#fdf9f4" }}>
         <div style={{ maxWidth: "680px", margin: "0 auto" }}>
@@ -577,16 +641,38 @@ export default function FranchisePage() {
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                     <div className="field-group">
+                      <label style={labelStyle}><Briefcase size={14} /> Choose Your Format *</label>
+                      <div className="franchise-editions-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0.75rem" }}>
+                        {[
+                          { name: "Highway Edition", investment: "₹1.5 Cr – ₹3 Cr" },
+                          { name: "City Edition", investment: "₹70 Lakh – ₹1 Cr" },
+                        ].map((edition) => {
+                          const selected = form.franchise_type === edition.name;
+                          return (
+                            <button
+                              key={edition.name}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => setForm((previous) => ({ ...previous, franchise_type: edition.name, investment_capability: edition.investment }))}
+                              style={{ padding: "1rem", borderRadius: "14px", border: `1.5px solid ${selected ? "#1b3c33" : "#e8e5e0"}`, background: selected ? "#f1f6f3" : "#fff", color: "#1b3c33", textAlign: "left", cursor: "pointer", boxShadow: selected ? "0 0 0 2px rgba(27,60,51,0.08)" : "none" }}
+                            >
+                              <span style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.95rem" }}>
+                                <span style={{ display: "inline-flex", color: "#b58b50" }}><FranchiseEditionIcon edition={edition.name} /></span>
+                                {edition.name}
+                              </span>
+                              <span style={{ display: "block", marginTop: "0.35rem", fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Investment: {edition.investment}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="field-group">
                       <label style={labelStyle}><MapPin size={14} /> Preferred City *</label>
                       <input required name="preferred_location" value={form.preferred_location} onChange={handleChange} onFocus={() => setFocusedField("preferred_location")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "preferred_location" ? "#1b3c33" : undefined }} placeholder="e.g. Hyderabad, Mumbai, Delhi" />
                     </div>
                     <div className="field-group">
                       <label style={labelStyle}><Briefcase size={14} /> Business Experience</label>
                       <textarea name="business_experience" value={form.business_experience} onChange={handleChange} onFocus={() => setFocusedField("business_experience")} onBlur={() => setFocusedField(null)} rows={3} style={{ ...inputStyle, resize: "vertical" as const, borderColor: focusedField === "business_experience" ? "#1b3c33" : undefined }} placeholder="Tell us about your business background, industry experience, or any relevant skills..." />
-                    </div>
-                    <div className="field-group">
-                      <label style={labelStyle}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> Investment Capability</label>
-                      <input name="investment_capability" value={form.investment_capability} onChange={handleChange} onFocus={() => setFocusedField("investment_capability")} onBlur={() => setFocusedField(null)} style={{ ...inputStyle, borderColor: focusedField === "investment_capability" ? "#1b3c33" : undefined }} placeholder="e.g. 70 Lakhs - 1 Crore" />
                     </div>
                     <div className="field-group">
                       <label style={labelStyle}><FileText size={14} /> Additional Message</label>
@@ -659,6 +745,7 @@ export default function FranchisePage() {
                       <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Business Details</p>
                       <div className="franchise-review-grid">
                         <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Preferred City</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.preferred_location}</p></div>
+                        {form.franchise_type && <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Franchise Edition</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.franchise_type}</p></div>}
                         {form.investment_capability && <div><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.8rem" }}>Investment</p><p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#1b3c33", fontSize: "0.9rem", fontWeight: 600 }}>{form.investment_capability}</p></div>}
                       </div>
                     </div>

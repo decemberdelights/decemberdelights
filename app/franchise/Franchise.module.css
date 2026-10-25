@@ -1,0 +1,146 @@
+.franchiseHero {
+  position: relative;
+  min-height: 60vh;
+  background: #074134;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.franchiseHero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 70% 40%, rgba(234,185,106,0.08) 0%, transparent 60%);
+}
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 3rem;
+}
+.stepDot {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+.stepLine {
+  flex: 1;
+  height: 2px;
+  max-width: 80px;
+  transition: background 0.3s;
+}
+.formSection {
+  animation: fadeSlideUp 0.35s ease both;
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.docCard {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1.5px dashed #d4d0ca;
+  background: transparent;
+}
+.docCard:hover {
+  border-color: #1b3c33;
+  background: rgba(27,60,51,0.02);
+}
+.docCard.hasFile {
+  border-style: solid;
+  border-color: #1b3c33;
+  background: #f7f3ee;
+}
+.fieldGroup {
+  position: relative;
+}
+.fieldGroup label {
+  transition: color 0.2s;
+}
+.fieldGroup input:focus,
+.fieldGroup textarea:focus,
+.fieldGroup select:focus {
+  border-color: #1b3c33;
+  box-shadow: 0 0 0 3px rgba(27,60,51,0.06);
+}
+.benefitsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+}
+.reviewGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.stepLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+@media (max-width: 768px) {
+  .formGrid {
+    grid-template-columns: 1fr !important;
+  }
+  .docsGrid {
+    grid-template-columns: 1fr !important;
+  }
+  .formCard {
+    padding: 1.25rem !important;
+  }
+  .stepDot {
+    width: 34px;
+    height: 34px;
+    font-size: 0.75rem;
+  }
+  .stepLine {
+    max-width: 48px;
+  }
+  .heroImage {
+    display: none !important;
+  }
+  .franchiseHero {
+    min-height: auto !important;
+  }
+  .heroInner {
+    padding: 6.5rem 4% 2.5rem !important;
+  }
+  .benefitsGrid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .reviewGrid {
+    grid-template-columns: 1fr !important;
+  }
+  .stepLabels span {
+    font-size: 0.7rem !important;
+    letter-spacing: 0 !important;
+  }
+  .applySection {
+    padding: 3rem 4% !important;
+  }
+}
+@media (max-width: 420px) {
+  .benefitsGrid {
+    grid-template-columns: 1fr !important;
+  }
+  .heroInner {
+    padding: 6rem 4% 2rem !important;
+  }
+  .applySection {
+    padding: 2.5rem 4% !important;
+  }
+}

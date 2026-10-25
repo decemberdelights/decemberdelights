@@ -16,7 +16,9 @@ _local = threading.local()
 
 def _seed_terms_if_empty(conn: sqlite3.Connection):
     """Insert default terms & conditions if the table is empty."""
-    count = conn.execute("SELECT COUNT(*) FROM terms_conditions").fetchone()[0]
+    count = conn.execute(
+        "SELECT COUNT(*) FROM terms_conditions WHERE scope = 'franchise'"
+    ).fetchone()[0]
     if count > 0:
         return
 
@@ -116,9 +118,36 @@ def _seed_terms_if_empty(conn: sqlite3.Connection):
     logger.info(f"Seeded {len(terms)} default terms & conditions into SQLite")
 
 
+def _seed_shop_terms_if_empty(conn: sqlite3.Connection):
+    count = conn.execute(
+        "SELECT COUNT(*) FROM terms_conditions WHERE scope = 'shop'"
+    ).fetchone()[0]
+    if count:
+        return
+
+    terms = [
+        ("No Returns or Exchanges", "As our coffee beans are food products, all sales are final. We do not accept returns or exchanges once an order has been placed, except where the product is damaged, defective, incorrect, or otherwise eligible for a remedy under applicable law."),
+        ("Order Cancellation", "Orders cannot be cancelled once they have been processed or dispatched. Please review your order carefully before completing your purchase."),
+        ("Product Description", "We make every effort to provide accurate product descriptions, photographs, roast details, and weight specifications. However, slight variations in the appearance, colour, aroma, or taste of coffee beans may occur due to the natural characteristics of coffee."),
+        ("Damaged or Incorrect Orders", "If you receive a damaged, defective, or incorrect product, please contact us within 48 hours of delivery with your order number and clear photographs or videos of the product and packaging. We will review the issue and, where appropriate, arrange a replacement, refund, or other remedy in accordance with applicable law."),
+        ("Shipping and Delivery", "Delivery timelines are estimates and may vary depending on your location, courier services, weather, or other circumstances beyond our control. December Delights is not responsible for courier delays, but we will assist you in tracking your order."),
+        ("Freshness and Storage", "Coffee beans are best enjoyed fresh. Once delivered, store them in an airtight container in a cool, dry place away from direct sunlight, moisture, and strong odours. December Delights is not responsible for changes in quality resulting from improper storage after delivery."),
+        ("Pricing and Availability", "All prices displayed on our website are subject to change. Product availability is not guaranteed until your order is confirmed. In case of a pricing or inventory error, we reserve the right to contact you regarding the order and provide an appropriate resolution."),
+        ("Customer Support", "For order-related queries or concerns, please contact December Delights through the contact details provided on our website. Please include your order number for faster assistance."),
+    ]
+    conn.executemany(
+        """INSERT INTO terms_conditions
+           (title_en, text_en, sort_order, is_active, scope)
+           VALUES (?, ?, ?, 1, 'shop')""",
+        [(title, text, index) for index, (title, text) in enumerate(terms)],
+    )
+    conn.commit()
+    logger.info("Seeded default coffee shop terms & conditions into SQLite")
+
+
 def _get_conn() -> sqlite3.Connection:
     if not hasattr(_local, "conn") or _local.conn is None:
-        _local.conn = sqlite3.connect(_DB_PATH, timeout=5)
+        _local.conn = sqlite3.connect(_DB_PATH, timeout=15, check_same_thread=False)
         _local.conn.execute("PRAGMA journal_mode=WAL")
         _local.conn.execute("PRAGMA synchronous=NORMAL")
         _local.conn.execute("""
@@ -148,11 +177,20 @@ def _get_conn() -> sqlite3.Connection:
                 sort_order INTEGER NOT NULL DEFAULT 0,
                 is_active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                scope TEXT NOT NULL DEFAULT 'franchise'
             )
         """)
+        term_columns = {
+            row[1] for row in _local.conn.execute("PRAGMA table_info(terms_conditions)")
+        }
+        if "scope" not in term_columns:
+            _local.conn.execute(
+                "ALTER TABLE terms_conditions ADD COLUMN scope TEXT NOT NULL DEFAULT 'franchise'"
+            )
         _local.conn.commit()
         _seed_terms_if_empty(_local.conn)
+        _seed_shop_terms_if_empty(_local.conn)
     return _local.conn
 
 
@@ -160,7 +198,7 @@ def _cleanup_expired():
     conn = _get_conn()
     now = time.time()
     conn.execute("DELETE FROM kv_store WHERE expires_at < ?", (now,))
-    conn.execute("DELETE FROM rate_limits WHERE key NOT IN (SELECT key FROM rate_limits WHERE 1=1)")
+    conn.execute("DELETE FROM rate_limits WHERE json_array_length(timestamps) = 0")
     conn.commit()
 
 
@@ -176,7 +214,7 @@ class KVStore:
     def get(self, key: str) -> Optional[Any]:
         conn = _get_conn()
         now = time.time()
-        if now - self._last_cleanup > 300:
+        if now - self._last_cleanup > 600:
             self._last_cleanup = now
             conn.execute("DELETE FROM kv_store WHERE expires_at < ?", (now,))
             conn.commit()
@@ -216,7 +254,14 @@ class KVStore:
 
 
 class RateLimiter:
-    """SQLite-backed rate limiter that persists across restarts."""
+    """SQLite-backed rate limiter that persists across restarts.
+    1vCPU hardening: in-memory fast-path + fail-open on 'database is locked'
+    so traffic spikes never turn into 500s. SQLite remains source of truth
+    across restarts; memory absorbs per-second bursts.
+    """
+
+    _mem: dict = {}
+    _mem_lock = threading.Lock()
 
     def __init__(self, max_attempts: int = 5, window_seconds: int = 300):
         self.max_attempts = max_attempts
@@ -248,34 +293,73 @@ class RateLimiter:
     def check(self, key: str) -> None:
         self._cleanup()
         now = time.time()
-        conn = _get_conn()
-        row = conn.execute(
-            "SELECT timestamps FROM rate_limits WHERE key = ?", (key,)
-        ).fetchone()
-        if row:
-            try:
-                timestamps = json.loads(row[0])
-            except (json.JSONDecodeError, TypeError):
-                timestamps = []
-            timestamps = [t for t in timestamps if now - t < self.window_seconds]
-            if len(timestamps) >= self.max_attempts:
-                remaining = int(self.window_seconds - (now - timestamps[0]))
+        # --- in-memory fast path (absorbs bursts without SQLite write) ---
+        with RateLimiter._mem_lock:
+            lst = RateLimiter._mem.get(key, [])
+            lst = [t for t in lst if now - t < self.window_seconds]
+            if len(lst) >= self.max_attempts:
+                remaining = int(self.window_seconds - (now - lst[0]))
                 from fastapi import HTTPException
                 raise HTTPException(
                     status_code=429,
                     detail=f"Too many attempts. Try again in {remaining} seconds.",
                 )
-            timestamps.append(now)
-            conn.execute(
-                "INSERT OR REPLACE INTO rate_limits (key, timestamps, window_seconds) VALUES (?, ?, ?)",
-                (key, json.dumps(timestamps), self.window_seconds),
-            )
-        else:
-            conn.execute(
-                "INSERT INTO rate_limits (key, timestamps, window_seconds) VALUES (?, ?, ?)",
-                (key, json.dumps([now]), self.window_seconds),
-            )
-        conn.commit()
+            lst.append(now)
+            if key in RateLimiter._mem or len(RateLimiter._mem) <= 2000:
+                RateLimiter._mem[key] = lst
+            else:
+                # Over the 2000-key cap: evict EXPIRED buckets first. Never pop
+                # an arbitrary live key — dropping a live bucket resets its
+                # counter (fail-open for a brute-force under a key-flood attack).
+                for k, v in list(RateLimiter._mem.items()):
+                    if not v or now - v[-1] >= self.window_seconds:
+                        RateLimiter._mem.pop(k, None)
+                if key in RateLimiter._mem or len(RateLimiter._mem) <= 2000:
+                    RateLimiter._mem[key] = lst
+                else:
+                    # All buckets live: skip the memory copy for this new key.
+                    # SQLite remains the source of truth and still enforces.
+                    logger.warning(
+                        f"RateLimiter in-memory cap (2000) full of live buckets; "
+                        f"skipping memory insert for {key} (SQLite still enforces)"
+                    )
+        # --- persistent SQLite path (fail-open on lock) ---
+        try:
+            conn = _get_conn()
+            row = conn.execute(
+                "SELECT timestamps FROM rate_limits WHERE key = ?", (key,)
+            ).fetchone()
+            if row:
+                try:
+                    timestamps = json.loads(row[0])
+                except (json.JSONDecodeError, TypeError):
+                    timestamps = []
+                timestamps = [t for t in timestamps if now - t < self.window_seconds]
+                if len(timestamps) >= self.max_attempts:
+                    remaining = int(self.window_seconds - (now - timestamps[0]))
+                    from fastapi import HTTPException
+                    raise HTTPException(
+                        status_code=429,
+                        detail=f"Too many attempts. Try again in {remaining} seconds.",
+                    )
+                timestamps.append(now)
+                conn.execute(
+                    "INSERT OR REPLACE INTO rate_limits (key, timestamps, window_seconds) VALUES (?, ?, ?)",
+                    (key, json.dumps(timestamps), self.window_seconds),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO rate_limits (key, timestamps, window_seconds) VALUES (?, ?, ?)",
+                    (key, json.dumps([now]), self.window_seconds),
+                )
+            conn.commit()
+        except Exception as e:
+            # Fail-open: memory already enforced the limit; a locked SQLite
+            # must not 500 legit traffic during spikes.
+            if "locked" in str(e).lower():
+                logger.warning(f"RateLimiter SQLite locked, memory-only for {key}")
+                return
+            raise
 
     def record(self, key: str) -> None:
         now = time.time()
@@ -302,6 +386,11 @@ class RateLimiter:
         conn.commit()
 
     def reset(self, key: str) -> None:
+        # Clear BOTH stores: deleting only the SQLite row left the in-memory
+        # bucket intact, so 5 successful logins kept the account locked out
+        # for the rest of the window (memory fast-path raised 429 forever).
+        with RateLimiter._mem_lock:
+            RateLimiter._mem.pop(key, None)
         conn = _get_conn()
         conn.execute("DELETE FROM rate_limits WHERE key = ?", (key,))
         conn.commit()

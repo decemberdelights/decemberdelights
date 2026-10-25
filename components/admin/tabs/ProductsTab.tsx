@@ -56,7 +56,7 @@ export default function ProductsTab({ products, role, onAdd, onEdit, onDelete }:
       <div className="panel">
         <div className="table-wrap">
         <table>
-          <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Active</th><th>Actions</th></tr></thead>
+          <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Weight</th><th>Stock</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>
             {filteredProducts.map(p => (
               <tr key={p.id}>
@@ -64,6 +64,7 @@ export default function ProductsTab({ products, role, onAdd, onEdit, onDelete }:
                 <td>{p.name}</td>
                 <td>{p.category}</td>
                 <td>₹{p.price}</td>
+                <td>{p.weight_grams >= 1000 ? `${p.weight_grams / 1000} kg` : `${p.weight_grams} g`}</td>
                 <td>{p.stock <= 0 ? <span className="status rejected">Out of Stock</span> : p.stock <= 10 ? <span className="status pending">{p.stock} (Low)</span> : p.stock}</td>
                 <td><span className={`status ${p.is_active ? "approved" : "rejected"}`}>{p.is_active ? "Yes" : "No"}</span></td>
                 <td>

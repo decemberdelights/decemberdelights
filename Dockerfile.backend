@@ -1,15 +1,33 @@
+FROM python:3.12-slim AS builder
+
+# Build wheels/deps in a separate stage so the runtime image stays small and
+# no pip cache / build tooling ships in the final layer.
+WORKDIR /app
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
 FROM python:3.12-slim
 WORKDIR /app
 
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
+COPY --from=builder /install /usr/local
 COPY backend/ .
-RUN mkdir -p /app/.data
 
-ENV PYTHONPATH=/app
-ENV PYTHONDONTWRITEBYTECODE=1
+# Non-root runtime user; writable dirs for SQLite (.data) and hybrid uploads.
+RUN useradd --system --create-home --uid 10001 appuser \
+    && mkdir -p /app/.data /app/uploads \
+    && chown -R appuser:appuser /app/.data /app/uploads
+
+ENV PYTHONPATH=/app \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    ENV=production
+
+USER appuser
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}"]
+# /api/ready is the liveness endpoint (no DB dependency) — safe for HEALTHCHECK.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import os,urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:%s/api/ready' % os.environ.get('PORT','10000'), timeout=4).status == 200 else 1)"
+
+CMD ["sh", "-c", "python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1 --proxy-headers --forwarded-allow-ips=127.0.0.1"]

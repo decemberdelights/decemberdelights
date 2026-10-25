@@ -10,12 +10,12 @@ def generate_csrf_token() -> str:
     return secrets.token_hex(32)
 
 
-def set_csrf_cookie(response, token: str):
+def set_csrf_cookie(response, token: str, secure: bool = True):
     response.set_cookie(
         CSRF_COOKIE_NAME, token,
         httponly=False,
         samesite="lax",
-        secure=False,
+        secure=secure,
         max_age=86400,
         path="/",
     )

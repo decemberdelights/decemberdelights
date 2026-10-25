@@ -54,4 +54,5 @@ __pycache__/
 # deployment artifacts
 /deploy/
 /.data/
+/uploads/
 decemberdelights-deploy.tar.gz

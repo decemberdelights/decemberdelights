@@ -1,58 +1,65 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useScrollEffect } from "@/hooks/useScrollEffect";
+
+// False on the server, true on the client. Using useSyncExternalStore avoids
+// the extra "mount" render an effect-based `setMounted(true)` would cause.
+const emptySubscribe = () => () => {};
 
 export default function HeroSection() {
   const bgRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoReady, setVideoReady] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
+  // The <video> only mounts on the client (`mounted`), so this gate runs
+  // exactly once, right after it appears.
+  //
+  // The hero file is ~3.7 MB: reduced-motion users and data-saver / 2G
+  // connections keep the gradient poster and never fetch it at all.
+  // Everyone else gets an explicit play() (the element renders with
+  // `preload="none"` + no `autoPlay`, so nothing downloads before this runs).
   useEffect(() => {
     const v = videoRef.current;
-    if (!v) return;
+    if (!v || !mounted) return;
+
+    const conn = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+    const skipVideo =
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      conn?.saveData === true ||
+      conn?.effectiveType === "slow-2g" ||
+      conn?.effectiveType === "2g";
+
+    if (skipVideo) {
+      v.pause();
+      v.preload = "none";
+      return;
+    }
+
     const onCanPlay = () => setVideoReady(true);
     v.addEventListener("canplaythrough", onCanPlay, { once: true });
+    v.preload = "auto";
+    void v.play().catch(() => {});
     return () => v.removeEventListener("canplaythrough", onCanPlay);
-  }, []);
+  }, [mounted]);
 
-  useEffect(() => {
-    let ticking = false;
-    let rafId = 0;
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      rafId = requestAnimationFrame(() => {
-        const scrollY = window.scrollY;
-        const vh = window.innerHeight;
-        const progress = Math.min(scrollY / vh, 1);
-        if (bgRef.current) {
-          bgRef.current.style.opacity = String(Math.max(1 - progress, 0));
-        }
-        if (videoRef.current) {
-          const translateY = progress * 60;
-          videoRef.current.style.transform = `translateZ(0) translateY(${translateY}px)`;
-          if (progress >= 0.9 && !videoRef.current.paused) {
-            videoRef.current.pause();
-          } else if (progress < 0.9 && videoRef.current.paused) {
-            videoRef.current.play().catch(() => {});
-          }
-        }
-        ticking = false;
-      });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(rafId); };
-  }, []);
+  // Fade the hero out as you scroll away — driven by the shared scroll
+  // engine so it costs no extra rAF and no layout read per frame.
+  useScrollEffect((state) => {
+    const bg = bgRef.current;
+    if (!bg) return;
+    const vh = state.viewport || window.innerHeight;
+    const progress = Math.min(state.scroll / vh, 1);
+    bg.style.opacity = String(Math.max(1 - progress, 0));
+  });
 
   return (
     <>
-      <div data-bg="dark" id="hero" style={{ height: "100vh", width: "100%" }} />
-      <div data-bg="dark" ref={bgRef} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100vh", zIndex: 1, overflow: "hidden", contain: "strict" }}>
+      <div data-bg="dark" id="hero" style={{ height: "100dvh", width: "100%" }} />
+      <div data-bg="dark" ref={bgRef} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100dvh", zIndex: 1, overflow: "hidden", contain: "strict" }}>
         {/* Poster image shows instantly while video loads */}
         <div
           style={{
@@ -71,11 +78,10 @@ export default function HeroSection() {
         {mounted && (
           <video
             ref={videoRef}
-            autoPlay
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             className="hero-video"
           >
             <source src="/DDhero.mp4" type="video/mp4" />

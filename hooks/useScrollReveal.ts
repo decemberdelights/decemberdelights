@@ -1,54 +1,36 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import {
+  ANIM_MAP,
+  REVEAL_EASE,
+  applyCss,
+  scheduleRevealCheck,
+  cancelRevealCheck,
+  type RevealOptions,
+} from "@/lib/reveal-animations";
+import { prefersReducedMotion } from "@/hooks/useReducedMotion";
 
-type RevealAnimation =
-  | "fadeUp" | "fadeDown" | "fadeLeft" | "fadeRight"
-  | "scaleUp" | "scaleDown"
-  | "rotateLeft" | "rotateRight"
-  | "blurIn"
-  | "slideUp3D" | "slideDown3D" | "slideLeft3D" | "slideRight3D"
-  | "flipUp" | "flipDown";
+export type { RevealAnimation } from "@/lib/reveal-animations";
 
-interface UseScrollRevealOptions {
-  threshold?: number;
-  rootMargin?: string;
-  animation?: RevealAnimation;
-  duration?: number;
-  stagger?: number;
-}
-
-const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
-
-const ANIM_MAP: Record<RevealAnimation, { from: string; to: string }> = {
-  fadeUp:      { from: "opacity:0;transform:translateY(60px) translateZ(0)", to: "opacity:1;transform:translateY(0) translateZ(0)" },
-  fadeDown:    { from: "opacity:0;transform:translateY(-60px) translateZ(0)", to: "opacity:1;transform:translateY(0) translateZ(0)" },
-  fadeLeft:    { from: "opacity:0;transform:translateX(-70px) translateZ(0)", to: "opacity:1;transform:translateX(0) translateZ(0)" },
-  fadeRight:   { from: "opacity:0;transform:translateX(70px) translateZ(0)", to: "opacity:1;transform:translateX(0) translateZ(0)" },
-  scaleUp:     { from: "opacity:0;transform:scale(0.75) translateZ(0)", to: "opacity:1;transform:scale(1) translateZ(0)" },
-  scaleDown:   { from: "opacity:0;transform:scale(1.2) translateZ(0)", to: "opacity:1;transform:scale(1) translateZ(0)" },
-  rotateLeft:  { from: "opacity:0;transform:perspective(800px) rotateY(8deg) translateZ(-80px)", to: "opacity:1;transform:perspective(800px) rotateY(0) translateZ(0)" },
-  rotateRight: { from: "opacity:0;transform:perspective(800px) rotateY(-8deg) translateZ(-80px)", to: "opacity:1;transform:perspective(800px) rotateY(0) translateZ(0)" },
-  blurIn:      { from: "opacity:0;filter:blur(12px);transform:translateZ(0)", to: "opacity:1;filter:blur(0px);transform:translateZ(0)" },
-  slideUp3D:   { from: "opacity:0;transform:perspective(1000px) translateY(80px) rotateX(15deg)", to: "opacity:1;transform:perspective(1000px) translateY(0) rotateX(0)" },
-  slideDown3D: { from: "opacity:0;transform:perspective(1000px) translateY(-80px) rotateX(-15deg)", to: "opacity:1;transform:perspective(1000px) translateY(0) rotateX(0)" },
-  slideLeft3D: { from: "opacity:0;transform:perspective(1000px) translateX(-80px) rotateY(12deg)", to: "opacity:1;transform:perspective(1000px) translateX(0) rotateY(0)" },
-  slideRight3D:{ from: "opacity:0;transform:perspective(1000px) translateX(80px) rotateY(-12deg)", to: "opacity:1;transform:perspective(1000px) translateX(0) rotateY(0)" },
-  flipUp:      { from: "opacity:0;transform:perspective(800px) rotateX(40deg) translateZ(-60px)", to: "opacity:1;transform:perspective(800px) rotateX(0) translateZ(0)" },
-  flipDown:    { from: "opacity:0;transform:perspective(800px) rotateX(-40deg) translateZ(-60px)", to: "opacity:1;transform:perspective(800px) rotateX(0) translateZ(0)" },
-};
-
-function applyCss(el: HTMLElement, css: string) {
-  css.split(";").filter(Boolean).forEach(p => {
-    const [prop, val] = p.split(":").map(s => s.trim());
-    if (prop && val) (el.style as unknown as Record<string, string>)[prop] = val;
-  });
-}
-
+/**
+ * Reveal-on-scroll for a container (or its `[data-reveal-child]` children).
+ *
+ * Smoothness notes:
+ *  - `will-change` is applied only for the duration of the animation and
+ *    removed afterwards, so we don't keep dozens of compositor layers alive
+ *    for the whole page lifetime.
+ *  - The transform composes the `--parallax-y` custom property, so a
+ *    parallax effect on the same element no longer overwrites (and gets
+ *    overwritten by) the reveal transform.
+ *  - The animation uses `opacity` + `transform` only, both of which the
+ *    compositor can handle off the main thread. `filter` is only used by the
+ *    explicit `blurIn` variant.
+ */
 export function useScrollReveal(
-  threshold = 0.12,
-  rootMargin = "0px 0px -40px 0px",
-  options?: UseScrollRevealOptions
+  threshold = 0.02,
+  rootMargin = "0px 0px 140px 0px",
+  options?: RevealOptions
 ) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -57,71 +39,100 @@ export function useScrollReveal(
     if (!el) return;
 
     const anim = options?.animation || "fadeUp";
-    const dur = options?.duration ?? 1;
+    const dur = options?.duration ?? 0.65;
     const stagger = options?.stagger ?? 0;
     const { from, to } = ANIM_MAP[anim];
 
     const children = Array.from(el.querySelectorAll("[data-reveal-child]"));
-    const targets = children.length > 0 ? children : [el];
+    const targets = (children.length > 0 ? children : [el]) as HTMLElement[];
 
-    // Set initial hidden state
-    targets.forEach((t, i) => {
-      const html = t as HTMLElement;
+    // Reduced motion: reveal everything immediately, no animation, no
+    // observer, no timers. The final state is identical to the animated
+    // end state, so nothing downstream sees a difference.
+    if (prefersReducedMotion()) {
+      targets.forEach((html) => {
+        html.style.transition = "none";
+        applyCss(html, to);
+      });
+      return;
+    }
+
+    // Set initial hidden state. All the writes are batched first, then a
+    // SINGLE layout read (`el.offsetHeight`) flushes them for every
+    // target at once — one forced reflow per container instead of one
+    // per target.
+    targets.forEach((html) => {
       html.style.transition = "none";
       applyCss(html, from);
-      html.offsetHeight; // force reflow
-      html.style.transition = `opacity ${dur}s ${EASE} ${stagger * i}s, transform ${dur}s ${EASE} ${stagger * i}s, filter ${dur}s ${EASE} ${stagger * i}s`;
-      html.style.willChange = "opacity, transform, filter";
+    });
+    void el.offsetHeight; // force reflow so the transition actually runs
+    targets.forEach((html, i) => {
+      html.style.transition = `opacity ${dur}s ${REVEAL_EASE} ${stagger * i}s, transform ${dur}s ${REVEAL_EASE} ${stagger * i}s, filter ${dur}s ${REVEAL_EASE} ${stagger * i}s`;
     });
 
     let isVisible = false;
-    let prevScrollY = window.scrollY;
+    let cleanupTimer = 0;
+    let revealFallbackTimer = 0;
 
     const animateIn = () => {
       if (isVisible) return;
       isVisible = true;
-      targets.forEach((t, i) => {
-        const html = t as HTMLElement;
+
+      // Promote to its own layer only for the duration of the animation.
+      targets.forEach((html) => {
+        html.style.willChange = "opacity, transform";
+      });
+
+      targets.forEach((html, i) => {
         applyCss(html, to);
-        html.style.transition = `opacity ${dur}s ${EASE} ${stagger * i}s, transform ${dur}s ${EASE} ${stagger * i}s, filter ${dur}s ${EASE} ${stagger * i}s`;
+        html.style.transition = `opacity ${dur}s ${REVEAL_EASE} ${stagger * i}s, transform ${dur}s ${REVEAL_EASE} ${stagger * i}s, filter ${dur}s ${REVEAL_EASE} ${stagger * i}s`;
       });
+
+      // Release the layers once everything has settled.
+      const total = dur * 1000 + stagger * Math.max(0, targets.length - 1) * 1000 + 120;
+      cleanupTimer = window.setTimeout(() => {
+        targets.forEach((html) => {
+          html.style.willChange = "auto";
+        });
+      }, total);
     };
 
-    const animateOut = () => {
-      if (!isVisible) return;
-      isVisible = false;
-      targets.forEach((t, i) => {
-        const html = t as HTMLElement;
-        applyCss(html, from);
-        html.style.transition = `opacity ${dur * 0.6}s ${EASE} ${stagger * i * 0.3}s, transform ${dur * 0.6}s ${EASE} ${stagger * i * 0.3}s, filter ${dur * 0.6}s ${EASE} ${stagger * i * 0.3}s`;
-      });
-    };
+    // IntersectionObserver fires on scroll AND layout shifts (images/video
+    // loading, Lenis jumps, fast mobile flings) — a scroll listener alone
+    // misses those and leaves text stuck invisible. Reveal once, never re-hide.
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          animateIn();
+          io.disconnect();
+        }
+      },
+      { threshold, rootMargin }
+    );
+    io.observe(el);
 
-    // Use scroll listener for reliable direction detection
-    const onScroll = () => {
-      const currentY = window.scrollY;
-      const scrollingUp = currentY < prevScrollY;
-      prevScrollY = currentY;
-
+    // Safety net: if IO is throttled in background tabs, reveal when
+    // visible. Uses the page-wide shared timer instead of a per-target
+    // `setTimeout` + forced reflow.
+    const check = () => {
       const rect = el.getBoundingClientRect();
-      const inView = rect.top < window.innerHeight * 0.88 && rect.bottom > 0;
-
-      if (inView) {
+      if (rect.top < window.innerHeight + 150 && rect.bottom > -150) {
         animateIn();
-      } else if (scrollingUp && rect.bottom < 0) {
-        // Scrolled past element going up — reverse
-        animateOut();
-      } else if (!scrollingUp && rect.top > window.innerHeight) {
-        // Not yet reached going down — keep hidden
+        io.disconnect();
       }
     };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    // Run once on mount
-    onScroll();
+    check();
+    scheduleRevealCheck(check);
+    revealFallbackTimer = window.setTimeout(animateIn, 900);
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      io.disconnect();
+      cancelRevealCheck(check);
+      window.clearTimeout(cleanupTimer);
+      window.clearTimeout(revealFallbackTimer);
+      targets.forEach((html) => {
+        html.style.willChange = "auto";
+      });
     };
   }, [threshold, rootMargin, options?.animation, options?.duration, options?.stagger]);
 

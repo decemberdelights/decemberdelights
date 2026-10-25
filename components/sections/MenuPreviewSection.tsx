@@ -16,38 +16,38 @@ const mustTryItems = [
 ];
 
 export default function MenuPreviewSection() {
-  const revealRef = useScrollReveal(0.12, "0px 0px -40px 0px", { animation: "slideUp3D", stagger: 0.06 });
+  const revealRef = useScrollReveal(0.02, "0px 0px 240px 0px", { animation: "slideUp3D", duration: 0.4, stagger: 0.02 });
   return (
     <>
       <div data-bg="light" className="menu-section">
         <LazyVideo src="/DDespresso.mp4" className="menu-video-bg" data-parallax="0.15" />
         <div ref={revealRef} className="menu-content section-reveal" data-parallax="-0.08">
-          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>
+          <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "13px", fontWeight: 700, letterSpacing: "5px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>
             <ScrollFloat animation="slideUp3D" containerClassName="!my-0">What We Serve</ScrollFloat>
           </span>
           <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
-          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(36px, 6vw, 90px)", fontWeight: 700, color: "#074134", marginBottom: "20px", lineHeight: 1.15 }}>
-            <ScrollFloat animation="slideUp3D" containerClassName="!my-0">Must-Try Delights</ScrollFloat>
+          <h2 style={{ fontFamily: "var(--font-cormorant)", fontSize: "clamp(32px, 5vw, 64px)", fontWeight: 700, color: "#074134", marginBottom: "24px", lineHeight: 1.05, textTransform: "uppercase" }}>
+            Must-Try Delights
           </h2>
-          <p data-reveal-child style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: 400, fontStyle: "italic", lineHeight: 1.6, color: "#3d4a3e", maxWidth: "700px", marginBottom: "40px", position: "relative", paddingLeft: "24px", borderLeft: "3px solid rgba(200,169,122,0.4)" }}>
+          <p data-reveal-child style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 400, lineHeight: 1.75, color: "#3d4a3e", maxWidth: "700px", marginBottom: "40px", position: "relative", paddingLeft: "24px", borderLeft: "3px solid rgba(200,169,122,0.4)" }}>
             Carefully crafted with the finest ingredients, every dish and drink is designed to delight your senses and create unforgettable moments.
           </p>
           <div style={{ marginBottom: "40px" }}>
             <div className="menu-grid-equal">
               {mustTryItems.map((item, i) => (
                 <div key={i} className="menu-card-vert" data-reveal-child>
-                  <div style={{ width: "100%", height: "160px", position: "relative", overflow: "hidden" }}>
+                  <div className="menu-vert-img">
                     <Image src={item.image} alt={item.name} fill loading="lazy" sizes="(max-width: 768px) 50vw, 33vw" style={{ objectFit: "cover" }} />
                   </div>
-                  <div style={{ padding: "14px 16px" }}>
-                    <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18px", fontWeight: 700, color: "#c8a97a", marginBottom: "4px" }}>{item.name}</h3>
-                    <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "11px", fontWeight: 400, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>{item.description}</p>
+                  <div className="menu-card-vert-body" style={{ padding: "14px 16px" }}>
+                    <h3 className="menu-vert-title" style={{ fontFamily: "var(--font-cormorant)", fontSize: "18px", fontWeight: 700, color: "#c8a97a", marginBottom: "4px" }}>{item.name}</h3>
+                    <p className="menu-vert-desc" style={{ fontFamily: "var(--font-montserrat)", fontSize: "11px", fontWeight: 400, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>{item.description}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <Link href="/menu" style={{ padding: "14px 40px", fontFamily: "'Montserrat', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#fff", background: "#074134", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", display: "inline-block" }}>
+          <Link href="/menu" style={{ padding: "14px 40px", fontFamily: "var(--font-montserrat)", fontSize: "12px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#fff", background: "#074134", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", display: "inline-block" }}>
             View Full Menu
           </Link>
         </div>

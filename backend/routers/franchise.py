@@ -11,10 +11,14 @@ from pydantic import BaseModel
 from typing import Optional
 from supabase_client import supabase
 from schemas import FranchiseLogin, FranchiseOut
-from auth import create_token, decode_token
-from security import franchise_limiter, get_client_ip, validate_email, validate_phone, sanitize_input
-from csrf import generate_csrf_token, set_csrf_cookie
+from auth import create_token, decode_token, SESSION_COOKIE_MAX_AGE
+from security import (
+    franchise_limiter, get_client_ip, validate_email, validate_phone,
+    sanitize_input, is_settings_not_configured,
+)
+from csrf import generate_csrf_token, set_csrf_cookie, validate_csrf
 from email_service import send_franchise_confirmation, send_franchise_admin_notification
+from local_storage import STORAGE_MODE, save_private_doc as save_private_doc_local, delete_local_file, is_local_url
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -68,6 +72,15 @@ async def _upload_file(file: Optional[UploadFile], name: str, field: str) -> str
         raise HTTPException(400, f"{field}: file too large (max 5MB)")
     if file.content_type and file.content_type not in ALLOWED_DOC_MIME:
         raise HTTPException(400, f"{field}: content type not allowed")
+    # Hybrid: sensitive docs go to private local vault (no Supabase bandwidth, not public).
+    # Served only via GET /api/files/franchise/{filename} (admin auth).
+    if STORAGE_MODE in ("hybrid", "local"):
+        try:
+            return save_private_doc_local(content, file.filename, "franchise")
+        except Exception as e:
+            logger.warning(f"Local private save failed, Supabase fallback: {e}")
+            if STORAGE_MODE == "local":
+                raise
     filename = f"{_safe_name(name)}_{field}_{uuid.uuid4().hex[:8]}{ext}"
     return await asyncio.to_thread(_upload_sync, filename, content, file.content_type or "application/octet-stream")
 
@@ -75,11 +88,15 @@ async def _upload_file(file: Optional[UploadFile], name: str, field: str) -> str
 def delete_app_files(app: dict):
     for field in ["aadhaar", "pan", "bank_statement", "address_proof", "other_docs", "tc_video"]:
         url = app.get(field, "")
-        if url and "/franchise-docs/" in url:
+        if not url:
+            continue
+        if is_local_url(url):
+            delete_local_file(url)
+        elif url and "/franchise-docs/" in url:
             try:
                 supabase.storage.from_("franchise-docs").remove([url.split("/")[-1]])
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to delete franchise doc {url.split('/')[-1]} from storage: {e}")
 
 
 class CreateOrderReq(BaseModel):
@@ -112,7 +129,8 @@ def _check_payment_used(payment_id: str, order_id: str) -> bool:
 @router.post("/api/franchise/create-order")
 async def create_order(body: CreateOrderReq, request: Request):
     ip = get_client_ip(request)
-    franchise_limiter.check(f"franchise_order:{ip}")
+    # Blocking SQLite limiter — keep off the event loop (workers=1).
+    await asyncio.to_thread(franchise_limiter.check, f"franchise_order:{ip}")
 
     email = sanitize_input(body.email, 200)
     phone = sanitize_input(body.phone, 20)
@@ -147,7 +165,7 @@ async def submit_application(
     dob: str = Form(""),
     business_experience: str = Form(""),
     preferred_location: str = Form(""),
-    investment_capability: str = Form(""),
+    franchise_type: str = Form(""),
     message: str = Form(""),
     tc_accepted: str = Form("false"),
     tc_language: str = Form("en"),
@@ -161,17 +179,25 @@ async def submit_application(
     other_docs: Optional[UploadFile] = File(None),
     tc_video: Optional[UploadFile] = File(None),
 ):
-    # Check if franchise applications are enabled
+    # Check if franchise applications are enabled. Fail CLOSED on unexpected
+    # errors — the old `except Exception: pass` re-opened a closed franchise
+    # form on any transient DB error.
     try:
-        setting = supabase.table("site_settings").select("value").eq("key", "franchise_enabled").execute()
+        setting = await asyncio.to_thread(
+            lambda: supabase.table("site_settings").select("value").eq("key", "franchise_enabled").execute()
+        )
         if setting.data and setting.data[0]["value"] == "false":
             raise HTTPException(status_code=403, detail="Franchise applications are currently closed")
     except HTTPException:
         raise
-    except Exception:
-        pass  # If settings table doesn't exist yet, allow submission
+    except Exception as e:
+        if is_settings_not_configured(e):
+            logger.warning(f"site_settings unavailable ({e}); allowing submission (flag not configured)")
+        else:
+            logger.error(f"Failed to read franchise_enabled flag, failing closed: {e}")
+            raise HTTPException(status_code=503, detail="Franchise applications are temporarily unavailable. Please try again shortly.")
     ip = get_client_ip(request)
-    franchise_limiter.check(f"franchise:{ip}")
+    await asyncio.to_thread(franchise_limiter.check, f"franchise:{ip}")
 
     full_name = sanitize_input(full_name, 200)
     email = sanitize_input(email, 200)
@@ -183,11 +209,21 @@ async def submit_application(
         raise HTTPException(400, "Invalid email")
     if not validate_phone(phone):
         raise HTTPException(400, "Invalid phone")
+    normalized_franchise_type = sanitize_input(franchise_type, 50).strip().lower()
+    if normalized_franchise_type in ("highway", "highway edition"):
+        normalized_franchise_type = "highway"
+        investment_capability = "₹1.5 Cr – ₹3 Cr"
+    elif normalized_franchise_type in ("city", "city edition"):
+        normalized_franchise_type = "city"
+        investment_capability = "₹70 Lakh – ₹1 Cr"
+    else:
+        raise HTTPException(400, "Please choose a valid franchise edition")
     if not razorpay_order_id or not razorpay_payment_id:
         raise HTTPException(400, "Payment is required")
-    if _check_payment_used(razorpay_payment_id, razorpay_order_id):
+    # Blocking Supabase lookups in an async handler — run in a worker thread.
+    if await asyncio.to_thread(_check_payment_used, razorpay_payment_id, razorpay_order_id):
         raise HTTPException(400, "This payment has already been used")
-    if not _verify_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature):
+    if not await asyncio.to_thread(_verify_signature, razorpay_order_id, razorpay_payment_id, razorpay_signature):
         raise HTTPException(400, "Payment verification failed")
 
     try:
@@ -222,8 +258,19 @@ async def submit_application(
         if ext in ALLOWED_VIDEO_EXT:
             content = await tc_video.read()
             if len(content) <= MAX_VIDEO_SIZE:
-                filename = f"{_safe_name(full_name)}_tc_video_{uuid.uuid4().hex[:8]}{ext}"
-                tc_video_url = await asyncio.to_thread(_upload_sync, filename, content, tc_video.content_type or "video/mp4")
+                if STORAGE_MODE in ("hybrid", "local"):
+                    try:
+                        # Blocking disk write — keep off the event loop.
+                        tc_video_url = await asyncio.to_thread(
+                            save_private_doc_local, content, tc_video.filename, "franchise"
+                        )
+                    except Exception as e:
+                        logger.warning(f"Local video save failed: {e}")
+                        if STORAGE_MODE == "local":
+                            raise
+                if not tc_video_url:
+                    filename = f"{_safe_name(full_name)}_tc_video_{uuid.uuid4().hex[:8]}{ext}"
+                    tc_video_url = await asyncio.to_thread(_upload_sync, filename, content, tc_video.content_type or "video/mp4")
 
     login_id = f"DD-{uuid.uuid4().hex[:12].upper()}"
 
@@ -234,7 +281,8 @@ async def submit_application(
         "dob": sanitize_input(dob, 20),
         "business_experience": sanitize_input(business_experience, 2000),
         "preferred_location": sanitize_input(preferred_location, 200),
-        "investment_capability": sanitize_input(investment_capability, 200),
+        "franchise_type": normalized_franchise_type,
+        "investment_capability": investment_capability,
         "message": sanitize_input(message, 2000),
         "tc_accepted": tc_accepted == "true",
         "tc_language": sanitize_input(tc_language, 10),
@@ -263,6 +311,18 @@ async def submit_application(
             app_id = result.data[0]["id"]
     except Exception as e:
         logger.error(f"DB insert failed: {e}")
+        # Spillover: Supabase full/down but payment already captured + files already on Hostinger disk.
+        # Keep accepting locally so 200k spike never loses a paid user. Sync later via POST /api/admin/queue/sync.
+        try:
+            from local_queue import queue_push, _is_quota_error
+            if _is_quota_error(e):
+                qid = queue_push(data)
+                logger.warning(f"Supabase full, queued franchise {login_id} as {qid}")
+                background_tasks.add_task(send_franchise_confirmation, email, full_name, login_id, phone)
+                return {"ok": True, "id": 0, "login_id": login_id, "queued": True, "queue_id": qid,
+                        "note": "Saved locally — will sync when database space is freed."}
+        except Exception as qe:
+            logger.error(f"Queue fallback also failed: {qe}")
         raise HTTPException(500, "Failed to save application")
 
     background_tasks.add_task(
@@ -280,31 +340,34 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response)
     ip = get_client_ip(request)
     key = f"franchise:{ip}"
     franchise_limiter.check(key)
+    # Per-ACCOUNT attempt limit (keyed by phone, not IP): DOB guessing stays
+    # throttled even when the attacker rotates or spoofs IPs. Digits-only key
+    # so "+91 98765-43210" and "9876543210" share one bucket.
+    account_key = f"franchise_acc:{re.sub(r'[^0-9]', '', creds.phone or '')}"
+    franchise_limiter.check(account_key)
 
     result = supabase.table("franchise_applications").select("*").eq("phone", creds.phone).execute()
     if not result.data:
-        franchise_limiter.record(key)
         raise HTTPException(401, "Invalid credentials")
     app = result.data[0]
     stored_dob = (app.get("dob") or "").strip()
     if not stored_dob or stored_dob != creds.dob.strip():
-        franchise_limiter.record(key)
         raise HTTPException(401, "Invalid credentials")
 
-    token = create_token({"sub": str(app["id"]), "type": "franchise"})
-    response.set_cookie("franchise_session", token, httponly=True, samesite="lax", max_age=86400, secure=False, path="/")
-    csrf_token = generate_csrf_token()
-    set_csrf_cookie(response, csrf_token)
+    # Successful login clears the per-account counter (same pattern as admin
+    # login): only someone who knows the correct DOB can reset it.
+    franchise_limiter.reset(account_key)
 
-    from auth import _franchise_cache
-    _franchise_cache.set(str(app["id"]), app)
+    token = create_token({"sub": str(app["id"]), "type": "franchise"})
+    response.set_cookie("franchise_session", token, httponly=True, samesite="lax", max_age=SESSION_COOKIE_MAX_AGE, secure=True, path="/")
+    csrf_token = generate_csrf_token()
+    set_csrf_cookie(response, csrf_token, secure=True)
 
     return {"application": FranchiseOut(**app).model_dump()}
 
 
 @router.get("/api/franchise/status")
 def franchise_status(franchise_session: Optional[str] = Cookie(None)):
-    from auth import _franchise_cache
     if not franchise_session:
         raise HTTPException(401, "Not authenticated")
     payload = decode_token(franchise_session)
@@ -315,20 +378,16 @@ def franchise_status(franchise_session: Optional[str] = Cookie(None)):
     except (ValueError, TypeError):
         raise HTTPException(401, "Invalid token")
 
-    cached = _franchise_cache.get(str(app_id))
-    if cached:
-        return {"application": FranchiseOut(**cached).model_dump()}
-
     result = supabase.table("franchise_applications").select("*").eq("id", app_id).execute()
     if not result.data:
         raise HTTPException(404, "Application not found")
     app = result.data[0]
-    _franchise_cache.set(str(app_id), app)
     return {"application": FranchiseOut(**app).model_dump()}
 
 
 @router.post("/api/franchise/logout")
-def franchise_logout(response: Response):
-    response.delete_cookie("franchise_session", samesite="lax", secure=False, path="/")
-    response.delete_cookie("csrf_token", samesite="lax", secure=False, path="/")
+def franchise_logout(request: Request, response: Response):
+    validate_csrf(request)
+    response.delete_cookie("franchise_session", samesite="lax", secure=True, path="/")
+    response.delete_cookie("csrf_token", samesite="lax", secure=True, path="/")
     return {"ok": True}

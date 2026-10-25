@@ -35,7 +35,7 @@ interface ApiTerm {
 
 export default function TermsPage() {
   const [terms, setTerms] = useState(FALLBACK_TERMS);
-  const [lastUpdated, setLastUpdated] = useState("August 2026");
+  const lastUpdated = "August 2026";
 
   useEffect(() => {
     fetch("/api/terms")

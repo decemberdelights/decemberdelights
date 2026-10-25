@@ -1,0 +1,66 @@
+-- Apply to existing installations after complete_supabase_setup.sql.
+-- The partial unique index leaves admin/cash orders (empty payment IDs) unchanged.
+CREATE UNIQUE INDEX IF NOT EXISTS orders_razorpay_payment_id_unique
+  ON public.orders (razorpay_payment_id)
+  WHERE razorpay_payment_id <> '';
+
+CREATE OR REPLACE FUNCTION public.create_paid_order(p_order JSONB, p_items JSONB)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+AS $$
+DECLARE
+  v_payment_id TEXT;
+  v_order_id BIGINT;
+  v_status TEXT;
+BEGIN
+  v_payment_id := p_order->>'razorpay_payment_id';
+  IF v_payment_id IS NULL OR v_payment_id = '' THEN
+    RAISE EXCEPTION 'payment ID is required';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_payment_id, 0));
+
+  SELECT id, status INTO v_order_id, v_status
+    FROM public.orders
+    WHERE razorpay_payment_id = v_payment_id
+    LIMIT 1;
+  IF FOUND THEN
+    RETURN jsonb_build_object(
+      'created', false,
+      'order', jsonb_build_object('id', v_order_id, 'status', v_status)
+    );
+  END IF;
+
+  IF NOT public.reserve_order_stock(p_items) THEN
+    RETURN jsonb_build_object('created', false, 'stock_reserved', false);
+  END IF;
+
+  INSERT INTO public.orders (
+    customer_name, customer_email, customer_phone, customer_address,
+    customer_district, customer_pincode, customer_state, items, total,
+    subtotal, gst_amount, delivery_charge, status, payment_method,
+    payment_status, notes, razorpay_order_id, razorpay_payment_id
+  ) VALUES (
+    p_order->>'customer_name', COALESCE(p_order->>'customer_email', ''),
+    p_order->>'customer_phone', p_order->>'customer_address',
+    COALESCE(p_order->>'customer_district', ''), COALESCE(p_order->>'customer_pincode', ''),
+    COALESCE(p_order->>'customer_state', ''), p_order->'items',
+    (p_order->>'total')::DOUBLE PRECISION, (p_order->>'subtotal')::DOUBLE PRECISION,
+    (p_order->>'gst_amount')::DOUBLE PRECISION, (p_order->>'delivery_charge')::DOUBLE PRECISION,
+    COALESCE(p_order->>'status', 'pending'), p_order->>'payment_method',
+    p_order->>'payment_status', COALESCE(p_order->>'notes', ''),
+    p_order->>'razorpay_order_id', v_payment_id
+  )
+  RETURNING id, status INTO v_order_id, v_status;
+
+  RETURN jsonb_build_object(
+    'created', true,
+    'order', jsonb_build_object('id', v_order_id, 'status', v_status)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.create_paid_order(JSONB, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_paid_order(JSONB, JSONB) TO service_role;

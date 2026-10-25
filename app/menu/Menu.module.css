@@ -1,0 +1,126 @@
+.menuCard {
+  transition: transform 0.3s var(--ease-smooth), box-shadow 0.3s var(--ease-smooth);
+}
+.menuCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+.menuCardImg {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 24px 24px 0 0;
+  transition: transform 0.5s var(--ease-smooth);
+}
+.menuCard:hover .menuCardImg {
+  transform: scale(1.05);
+}
+.menuImgWrapper {
+  overflow: hidden;
+  border-radius: 24px 24px 0 0;
+  height: 200px;
+}
+.menuLayout {
+  display: flex;
+  max-width: 1400px;
+  margin: 0 auto;
+  gap: 4rem;
+  padding: 4rem 2rem;
+}
+.menuSidebar {
+  width: 300px;
+  position: sticky;
+  top: 100px;
+  flex-shrink: 0;
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+}
+.menuSidebarList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 8px;
+}
+.menuSidebarCat {
+  text-align: left;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  padding: 1rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-smooth);
+  width: 100%;
+  min-height: 44px;
+}
+.menuSidebarCat.active {
+  color: #1b3c33;
+  border-color: #e4e1d6;
+  background: #fff;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+}
+.menuSidebarCat:not(.active) {
+  color: #6b6f6a;
+}
+.menuContent {
+  flex: 1;
+}
+@media (max-width: 768px) {
+  .menuLayout {
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.25rem 1rem;
+  }
+  .menuSidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+  .menuSidebarList {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .menuSidebarList::-webkit-scrollbar {
+    display: none;
+  }
+  .menuSidebarCat {
+    white-space: nowrap;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    min-height: 44px;
+  }
+  .menuCardImg {
+    height: 160px;
+  }
+  .menuImgWrapper {
+    height: 160px;
+  }
+}
+@media (max-width: 480px) {
+  .menuLayout {
+    padding: 1rem 0.75rem;
+  }
+  .menuSidebarCat {
+    padding: 0.6rem 0.85rem;
+    font-size: 0.85rem;
+  }
+  .menuCardImg {
+    height: 140px;
+  }
+  .menuImgWrapper {
+    height: 140px;
+  }
+}

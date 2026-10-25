@@ -1,48 +1,56 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import Lenis from "lenis";
+import { getScrollEngine } from "@/lib/scroll-engine";
 
+/**
+ * Boots the shared scroll engine (Lenis) and wires up hash navigation.
+ *
+ * Smoothness note: Lenis is configured with `lerp` only — never `duration` +
+ * `easing`. Lenis prefers the duration/easing branch whenever both are
+ * present, and that branch restarts the easing curve on every wheel tick,
+ * which makes the page feel like it is lagging behind the cursor. `lerp`
+ * damping is frame-rate independent and stays perfectly smooth on 60Hz,
+ * 120Hz and 144Hz displays.
+ */
 export default function SmoothScrollProvider({ children }: { children: React.ReactNode }) {
-  const lenisRef = useRef<Lenis | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobile) return;
     if (pathname.startsWith("/admin")) return;
 
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      touchMultiplier: 2,
-      infinite: false,
-      smoothWheel: true,
-      wheelMultiplier: 1,
-      autoResize: true,
+    const engine = getScrollEngine();
+    let active = true;
+    void engine.init().then(() => {
+      if (active) engine.resync();
     });
 
-    lenisRef.current = lenis;
+    const handlePageShow = () => {
+      void engine.init().then(() => {
+        if (active) engine.resync();
+      });
+    };
+    window.addEventListener("pageshow", handlePageShow);
 
-    function raf(time: number) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-    const rafId = requestAnimationFrame(raf);
+    // Expose for debugging / other modules.
+    (window as unknown as Record<string, unknown>).__lenis = engine;
 
     const handleClick = (e: MouseEvent) => {
-      const target = (e.target as HTMLElement).closest("a[href]");
+      // Ignore clicks on modified links (new tab, download, etc).
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (e.defaultPrevented) return;
+
+      const target = (e.target as HTMLElement | null)?.closest?.("a[href]");
       if (!target) return;
-      const href = (target as HTMLAnchorElement).getAttribute("href") || "";
+      const href = target.getAttribute("href") || "";
 
       if (href.startsWith("#")) {
-        e.preventDefault();
         const id = href.slice(1);
-        if (id) {
-          const el = document.getElementById(id);
-          if (el) lenis.scrollTo(el, { offset: -80, duration: 1.6 });
-        }
+        if (!id) return;
+        e.preventDefault();
+        const el = document.getElementById(id);
+        if (el) engine.scrollTo(el, -80);
         return;
       }
 
@@ -51,11 +59,8 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
         if (window.location.pathname === "/" || window.location.pathname === "") {
           e.preventDefault();
           const el = document.getElementById(id);
-          if (el) {
-            lenis.scrollTo(el, { offset: -80, duration: 1.6 });
-          } else {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }
+          if (el) engine.scrollTo(el, -80);
+          else engine.scrollTo(0);
         } else {
           sessionStorage.setItem("scrollToHash", id);
         }
@@ -65,27 +70,42 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
     document.addEventListener("click", handleClick, true);
 
     return () => {
-      cancelAnimationFrame(rafId);
-      lenis.destroy();
-      lenisRef.current = null;
+      active = false;
+      window.removeEventListener("pageshow", handlePageShow);
       document.removeEventListener("click", handleClick, true);
+      delete (window as unknown as Record<string, unknown>).__lenis;
     };
   }, [pathname]);
 
+  // Handle a hash navigation that happened on a different route, and keep
+  // Lenis in sync with the scroll position the router just set.
   useEffect(() => {
     if (pathname.startsWith("/admin")) return;
+    const engine = getScrollEngine();
     const stored = sessionStorage.getItem("scrollToHash");
-    if (stored && lenisRef.current) {
-      sessionStorage.removeItem("scrollToHash");
-      setTimeout(() => {
-        const el = document.getElementById(stored);
-        if (el) {
-          lenisRef.current?.scrollTo(el, { offset: -80, duration: 1.6 });
-        } else {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
-      }, 500);
+
+    // The router resets the scroll on navigation — tell Lenis about it.
+    const sync = window.setTimeout(() => engine.resync(), 60);
+
+    if (!stored) {
+      return () => window.clearTimeout(sync);
     }
+    sessionStorage.removeItem("scrollToHash");
+
+    const run = () => {
+      const el = document.getElementById(stored);
+      if (el) engine.scrollTo(el, -80);
+      else engine.scrollTo(0);
+    };
+
+    // Wait for the target route to paint before scrolling to it.
+    const t1 = window.setTimeout(run, 150);
+    const t2 = window.setTimeout(run, 700);
+    return () => {
+      window.clearTimeout(sync);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [pathname]);
 
   return <>{children}</>;

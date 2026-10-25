@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { API } from "@/lib/api";
 
 interface TermItem {
   id: number;
@@ -13,6 +12,7 @@ interface TermItem {
   text_hi: string;
   sort_order: number;
   is_active: boolean;
+  scope: "franchise" | "shop";
   created_at: string;
   updated_at: string;
 }
@@ -26,6 +26,7 @@ const emptyTerm: Omit<TermItem, "id" | "created_at" | "updated_at"> = {
   text_hi: "",
   sort_order: 0,
   is_active: true,
+  scope: "franchise",
 };
 
 export default function TermsTab({ api, role }: { api: (path: string, opts?: RequestInit) => Promise<Response>; role: string }) {
@@ -39,9 +40,9 @@ export default function TermsTab({ api, role }: { api: (path: string, opts?: Req
   const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
   const [error, setError] = useState("");
   const [editLang, setEditLang] = useState<"en" | "te" | "hi">("en");
+  const [scopeFilter, setScopeFilter] = useState<"franchise" | "shop">("franchise");
 
-  const loadTerms = useCallback(async () => {
-    setLoading(true);
+  const fetchTerms = useCallback(async () => {
     try {
       const r = await api("/api/admin/terms");
       if (r.ok) setTerms(await r.json());
@@ -49,9 +50,23 @@ export default function TermsTab({ api, role }: { api: (path: string, opts?: Req
     setLoading(false);
   }, [api]);
 
-  useEffect(() => { loadTerms(); }, [loadTerms]);
+  const loadTerms = useCallback(() => {
+    setLoading(true);
+    void fetchTerms();
+  }, [fetchTerms]);
+
+  useEffect(() => {
+    let active = true;
+    api("/api/admin/terms")
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((data) => { if (active && data) setTerms(data); })
+      .catch(() => {})
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [api]);
 
   const filtered = terms.filter(t => {
+    if (t.scope !== scopeFilter) return false;
     const matchSearch = !search ||
       t.title_en.toLowerCase().includes(search.toLowerCase()) ||
       t.title_te.toLowerCase().includes(search.toLowerCase()) ||
@@ -64,7 +79,7 @@ export default function TermsTab({ api, role }: { api: (path: string, opts?: Req
   });
 
   const startAdd = () => {
-    setForm({ ...emptyTerm, sort_order: terms.length });
+    setForm({ ...emptyTerm, scope: scopeFilter, sort_order: terms.filter((term) => term.scope === scopeFilter).length });
     setEditingId(null);
     setIsNew(true);
     setEditLang("en");
@@ -81,6 +96,7 @@ export default function TermsTab({ api, role }: { api: (path: string, opts?: Req
       text_hi: term.text_hi,
       sort_order: term.sort_order,
       is_active: term.is_active,
+      scope: term.scope,
     });
     setEditingId(term.id);
     setIsNew(false);
@@ -147,7 +163,7 @@ export default function TermsTab({ api, role }: { api: (path: string, opts?: Req
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => { setEditingId(null); setIsNew(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#666", fontSize: 14, fontFamily: "inherit" }}>&larr; Back</button>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 700, color: "#1b3c33", margin: 0 }}>{isNew ? "Add New Term" : `Edit Term #${editingId}`}</h2>
+          <h2 style={{ fontFamily: "var(--font-cormorant)", fontSize: 22, fontWeight: 700, color: "#1b3c33", margin: 0 }}>{isNew ? "Add New Term" : `Edit Term #${editingId}`}</h2>
         </div>
 
         {error && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", marginBottom: 16, color: "#a32d2d", fontSize: 13 }}>{error}</div>}
@@ -213,12 +229,31 @@ export default function TermsTab({ api, role }: { api: (path: string, opts?: Req
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 700, color: "#1b3c33", margin: 0 }}>Terms & Conditions</h2>
-          <p style={{ fontSize: 12, color: "#888", margin: "4px 0 0" }}>Manage franchise terms displayed on the /terms page and application modal</p>
+          <h2 style={{ fontFamily: "var(--font-cormorant)", fontSize: 22, fontWeight: 700, color: "#1b3c33", margin: 0 }}>Terms & Conditions</h2>
+          <p style={{ fontSize: 12, color: "#888", margin: "4px 0 0" }}>Manage franchise and coffee shop terms displayed to customers</p>
         </div>
         {role === "super_admin" && (
           <button onClick={startAdd} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#1b3c33", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>+ Add Term</button>
         )}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {([
+          ["franchise", "Franchise Terms"],
+          ["shop", "Shop Terms"],
+        ] as const).map(([scope, label]) => (
+          <button
+            key={scope}
+            onClick={() => { setScopeFilter(scope); setFilterActive("all"); setSearch(""); }}
+            style={{
+              padding: "8px 14px", borderRadius: 8,
+              border: `1px solid ${scopeFilter === scope ? "#1b3c33" : "#e0ddd8"}`,
+              background: scopeFilter === scope ? "#1b3c33" : "#fff",
+              color: scopeFilter === scope ? "#fff" : "#555",
+              fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+            }}
+          >{label} ({terms.filter((term) => term.scope === scope).length})</button>
+        ))}
       </div>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
@@ -226,9 +261,9 @@ export default function TermsTab({ api, role }: { api: (path: string, opts?: Req
           style={{ flex: 1, minWidth: 200, padding: "8px 12px", border: "1px solid #e0ddd8", borderRadius: 8, fontSize: 13, fontFamily: "inherit" }} />
         <select value={filterActive} onChange={e => setFilterActive(e.target.value as "all" | "active" | "inactive")}
           style={{ padding: "8px 12px", border: "1px solid #e0ddd8", borderRadius: 8, fontSize: 13, fontFamily: "inherit", background: "#fff" }}>
-          <option value="all">All ({terms.length})</option>
-          <option value="active">Active ({terms.filter(t => t.is_active).length})</option>
-          <option value="inactive">Inactive ({terms.filter(t => !t.is_active).length})</option>
+          <option value="all">All ({terms.filter((term) => term.scope === scopeFilter).length})</option>
+          <option value="active">Active ({terms.filter(t => t.scope === scopeFilter && t.is_active).length})</option>
+          <option value="inactive">Inactive ({terms.filter(t => t.scope === scopeFilter && !t.is_active).length})</option>
         </select>
       </div>
 
@@ -236,7 +271,7 @@ export default function TermsTab({ api, role }: { api: (path: string, opts?: Req
         <div style={{ textAlign: "center", padding: "3rem", color: "#999", fontSize: 13 }}>Loading terms...</div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "3rem", color: "#999", fontSize: 13 }}>
-          {terms.length === 0 ? "No terms yet. Click \"Add Term\" to create your first term." : "No terms match your search."}
+          {terms.filter((term) => term.scope === scopeFilter).length === 0 ? "No terms yet. Click \"Add Term\" to create your first term." : "No terms match your search."}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -245,7 +280,7 @@ export default function TermsTab({ api, role }: { api: (path: string, opts?: Req
               background: "#fff", border: "1px solid #e8e5e0", borderRadius: 10, padding: "14px 16px",
               display: "flex", alignItems: "center", gap: 14, transition: "box-shadow 0.15s",
             }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: "#c8a97e", minWidth: 28, textAlign: "right" }}>
+              <span style={{ fontFamily: "var(--font-bebas-neue)", fontSize: 16, color: "#c8a97e", minWidth: 28, textAlign: "right" }}>
                 {String(term.sort_order + 1).padStart(2, "0")}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>

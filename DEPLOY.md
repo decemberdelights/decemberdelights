@@ -1,114 +1,202 @@
 # December Delights — Hostinger Deployment Guide
 
-## Step 1: Build the tar file (on YOUR computer)
+## Before deployment
 
-Open terminal in your project folder and run:
+This guide targets a **Hostinger VPS** with sudo access. Shared Web Hosting
+does not provide the systemd/Nginx/root access used by this deployment.
+You need the SSH username, server IP, and password from hPanel, plus:
 
-```bash
-bash deploy.sh
+- Node.js 20+, Python 3 with `venv`, and sudo on the VPS.
+- Your domain A records pointed to the VPS IP and access to manage DNS.
+- Supabase access to apply the SQL migrations below.
+- Supabase service-role and anon keys, Razorpay credentials, and (if you want
+  transactional email) Gmail app-password credentials.
+
+Never share your SSH password or application secrets in chat. Type the SSH
+password only at the secure prompt.
+
+## Step 1: Build the package on Windows
+
+Open PowerShell in the repository folder:
+
+```powershell
+.\build.ps1
 ```
 
-This creates `decemberdelights-deploy.tar.gz` in your project folder.
+This runs a production build and creates `decemberdelights-deploy.tar.gz`.
+Do not upload `.env.local` or other secret files.
 
----
+## Step 2: Upload the package and setup script
 
-## Step 2: Upload to Hostinger
+Replace `SSH_USER` and `SERVER_IP` with the values from Hostinger hPanel.
+Run from PowerShell in the repository folder; SCP will prompt for the SSH
+password without placing it in the command:
 
-1. Login to Hostinger → **hPanel**
-2. Go to **Files** → **File Manager**
-3. Navigate to `/tmp/` (or upload to home directory)
-4. Upload `decemberdelights-deploy.tar.gz`
-
----
-
-## Step 3: SSH into your server
-
-1. In hPanel → **Advanced** → **SSH Terminal**
-2. Enable SSH if not already enabled
-3. Connect using the terminal
-
----
-
-## Step 4: Run the setup script
-
-```bash
-cd /tmp
-bash setup-server.sh
+```powershell
+scp .\decemberdelights-deploy.tar.gz SSH_USER@SERVER_IP:/tmp/
+scp .\setup-server.sh SSH_USER@SERVER_IP:/tmp/
 ```
 
-This will:
-- Create `/var/www/decemberdelights/`
-- Extract all files
-- Setup Python virtual environment
-- Install all dependencies
-- Create `.env` file (you need to edit this!)
-- Create systemd services
-- Start backend and frontend
+If `scp` is not recognized, enable/install the Windows OpenSSH Client optional
+feature.
+
+## Step 3: Run first-time server setup
+
+Connect from PowerShell:
+
+```powershell
+ssh SSH_USER@SERVER_IP
+```
+
+Then run on the VPS:
+
+```bash
+sudo bash /tmp/setup-server.sh
+```
+
+This extracts the package, sets up the Python virtual environment, creates
+systemd services, and generates a random bootstrap admin password. Save the
+password privately from the setup output and change it after your first admin
+login. The generated `.env` has placeholders; the site is not ready for live
+traffic until you configure them below.
 
 ---
 
-## Step 5: Edit the .env file
+## Step 4: Apply Supabase database migrations
+
+Open `backend/migrations/complete_supabase_setup.sql` from this repository,
+copy its entire contents into Supabase Dashboard -> SQL Editor -> New query,
+then run it. This is the single current SQL script for both fresh and existing
+installations. It creates/updates the schema, backfills package weights,
+records Shop Terms acceptance on orders, sets up indexes and atomic stock/order
+functions, and enables row-level security without exposing customer data to the
+browser anon key. The backend's service-role key bypasses RLS. It is safe to
+re-run and does not insert demo records or create a default admin account.
+
+For an existing database, the script creates a unique index on Razorpay payment
+IDs. If that statement reports duplicate payment IDs, resolve those records
+before retrying the script. The numbered migration files are retained as
+upgrade history; do not run migrations 006, 007, or 008 separately if you have
+already run the complete setup script.
+
+The complete SQL script stores product package weights in Supabase and
+backfills recognizable catalog weights, using 250 g where no weight is found.
+Confirm or correct product weights in Admin → Products. Shop-specific terms
+text is stored by the backend in its existing SQLite terms database and is
+seeded on backend startup; the accepted terms version and timestamp are stored
+in Supabase with each order.
+
+Do not run `002_seed_data.sql` on production: it contains fake customer records
+and an insecure demo admin account. Do not accept live payments until the SQL
+query completes successfully. The deployment uses `STORAGE_MODE=hybrid`, so
+new uploads go to VPS disk and Supabase Storage buckets are not required.
+
+---
+
+## Step 5: Configure backend secrets before going live
 
 ```bash
 nano /var/www/decemberdelights/backend/.env
 ```
 
-**Fill in these values:**
+Replace all `PASTE_...` placeholders and verify the generated values. Required
+settings include:
 
 | Variable | Where to find it |
 |----------|-----------------|
-| `JWT_SECRET` | Generate random: `python3 -c "import secrets; print(secrets.token_hex(32))"` |
-| `SUPABASE_SERVICE_ROLE_KEY` | From your Supabase dashboard → Settings → API |
-| `RAZORPAY_KEY_SECRET` | From Razorpay dashboard → Settings → API Keys |
-| `GMAIL_APP_PASSWORD` | Your 16-char app password (no spaces) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | From Supabase dashboard → Settings → API |
+| `JWT_SECRET` | Generate: `python3 -c "import secrets; print(secrets.token_hex(32))"` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Razorpay Dashboard → API Keys |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Project Settings → API |
+| `GMAIL_USER`, `GMAIL_APP_PASSWORD` | Gmail account and its App Password (optional; required for email) |
+| `ADMIN_EMAIL` | Inbox for franchise/admin notifications |
 
-Save: `Ctrl+X`, then `Y`, then `Enter`
-
----
-
-## Step 6: Setup Nginx
+Keep `SUPABASE_URL` and `FRONTEND_URL` correct for your project/domain.
+Save: Ctrl+O, Enter, then Ctrl+X. The file should remain mode 600. Restart:
 
 ```bash
-# Install nginx (if not installed)
-sudo apt update && sudo apt install nginx -y
+sudo systemctl restart dd-backend dd-frontend
+sudo systemctl status dd-backend dd-frontend --no-pager
+```
 
-# Copy nginx config
-sudo cp /var/www/decemberdelights/nginx.conf /etc/nginx/sites-available/decemberdelights
+## Step 6: Setup Nginx and HTTPS
 
-# Enable the site
-sudo ln -s /etc/nginx/sites-available/decemberdelights /etc/nginx/sites-enabled/
-
-# Remove default site (optional)
-sudo rm /etc/nginx/sites-enabled/default
-
-# Test and reload
+```bash
+sudo apt update
+sudo apt install -y nginx certbot
+sudo mkdir -p /var/www/certbot
+sudo cp /var/www/decemberdelights/nginx.bootstrap.conf /etc/nginx/sites-available/decemberdelights
+sudo ln -sfn /etc/nginx/sites-available/decemberdelights /etc/nginx/sites-enabled/decemberdelights
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
----
-
-## Step 7: Setup SSL (HTTPS)
+First ensure both `decemberdelights.in` and `www.decemberdelights.in` resolve
+to the VPS IP and ports 80/443 are allowed through the firewall. Obtain the
+certificate using the temporary HTTP challenge-only configuration:
 
 ```bash
-# Install certbot
-sudo apt install certbot python3-certbot-nginx -y
-
-# Get SSL certificate
-sudo certbot --nginx -d decemberdelights.in -d www.decemberdelights.in
-
-# Auto-renewal is set up automatically
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d decemberdelights.in -d www.decemberdelights.in
 ```
 
----
+Only after Certbot reports success, install the final configuration. It has an
+active HTTPS virtual host and redirects all normal HTTP requests to HTTPS while
+leaving the ACME challenge path available for automatic renewal:
 
-## Step 8: Test everything
+```bash
+sudo cp /var/www/decemberdelights/nginx.conf /etc/nginx/sites-available/decemberdelights
+sudo nginx -t
+sudo systemctl reload nginx
+sudo certbot renew --dry-run
+```
 
-1. Visit `https://decemberdelights.in` — should show your site
-2. Visit `https://decemberdelights.in/api/health` — should return JSON
-3. Test the contact form — check your email
-4. Test franchise application — check confirmation email
+Do not start live traffic if certificate issuance or `nginx -t` fails.
+
+## Step 7: Smoke-test before launch
+
+On the VPS:
+
+```bash
+curl -fsS http://127.0.0.1:10000/api/ready
+curl -I https://www.decemberdelights.in
+curl -fsS https://www.decemberdelights.in/api/health
+```
+
+Also test checkout using Razorpay test mode, a franchise application, admin
+login, transactional email (if configured), and order tracking. Do not enable
+live payments until all required Supabase migrations have succeeded.
+
+## Updating an existing installation
+
+Do **not** rerun `setup-server.sh` for updates; it regenerates the bootstrap
+password and writes a new placeholder `.env`. Back up `uploads/`, `.data/`, and
+`backend/.env`. Build a single fresh archive on Windows with `.\build.ps1`, then
+upload it:
+
+```powershell
+scp .\decemberdelights-deploy.tar.gz SSH_USER@SERVER_IP:/tmp/
+```
+
+On the VPS, pause the frontend while replacing its build files so requests
+cannot receive server-rendered HTML and JavaScript from different releases:
+
+```bash
+sudo systemctl stop dd-frontend
+sudo tar -xzf /tmp/decemberdelights-deploy.tar.gz -C /var/www/decemberdelights
+sudo chown -R www-data:www-data /var/www/decemberdelights/frontend
+sudo systemctl start dd-frontend
+sudo systemctl --no-pager --full status dd-frontend
+curl -I http://127.0.0.1:3000/
+```
+
+If extraction fails after stopping the service, run
+`sudo systemctl start dd-frontend` to bring the existing installation back up,
+then inspect the error before retrying. The archive updates application files;
+it does not contain or replace `backend/.env`, `.data/`, or `uploads/`. Apply
+any new database migration separately. After the service is healthy, hard
+refresh the site (`Ctrl+Shift+R`) to discard any page or JavaScript cached from
+the previous release.
 
 ---
 

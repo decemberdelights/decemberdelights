@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useEffect, useState, ReactNode } from "react";
+import { useRef, useEffect, ReactNode } from "react";
+import { scheduleRevealCheck, cancelRevealCheck } from "@/lib/reveal-animations";
+import { prefersReducedMotion } from "@/hooks/useReducedMotion";
 
 type FloatAnimation =
   | "default"
@@ -51,12 +53,11 @@ export default function ScrollFloat({
   containerClassName = "",
   textClassName = "",
   delay = 0,
-  duration = 900,
-  threshold = 0.15,
+  duration = 400,
+  threshold = 0.05,
   animation = "default",
 }: ScrollFloatProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [revealed, setRevealed] = useState(false);
   const isVisibleRef = useRef(false);
 
   useEffect(() => {
@@ -69,58 +70,92 @@ export default function ScrollFloat({
     const { from, to } = FLOAT_ANIM[animation];
     const d = duration / 1000;
 
-    // Set initial hidden state
+    // Reduced motion: reveal immediately and leave the element at its
+    // natural (final) position — no hidden state, no observer, no timers.
+    if (prefersReducedMotion()) {
+      return;
+    }
+
+    // Set initial hidden state. The transition is enabled on the NEXT
+    // frame via rAF instead of forcing a synchronous layout read
+    // (`void inner.offsetHeight`): the browser computes the pending
+    // `from` styles in the same rendering step that runs the rAF
+    // callback, so no reflow is needed — and a page full of ScrollFloats
+    // costs zero forced reflows at mount.
     inner.style.transition = "none";
     applyStyles(inner, from);
-    inner.offsetHeight;
-    inner.style.transition = `opacity ${d}s ${EASE} ${delay}ms, transform ${d}s ${EASE} ${delay}ms, filter ${d}s ${EASE} ${delay}ms`;
-    inner.style.willChange = "opacity, transform, filter";
+    let disposed = false;
+    const armRaf = requestAnimationFrame(() => {
+      if (disposed) return;
+      inner.style.transition = `opacity ${d}s ${EASE} ${delay}ms, transform ${d}s ${EASE} ${delay}ms, filter ${d}s ${EASE} ${delay}ms`;
+    });
 
-    let prevScrollY = window.scrollY;
+    let cleanupTimer = 0;
+    let revealFallbackTimer = 0;
 
     const animateIn = () => {
       if (isVisibleRef.current) return;
       isVisibleRef.current = true;
-      setRevealed(true);
+      // Promote to its own layer only while the animation runs — a permanent
+      // `will-change` keeps every animated heading on the GPU forever.
+      inner.style.willChange = "opacity, transform";
       applyStyles(inner, to);
       inner.style.transition = `opacity ${d}s ${EASE} ${delay}ms, transform ${d}s ${EASE} ${delay}ms, filter ${d}s ${EASE} ${delay}ms`;
+      cleanupTimer = window.setTimeout(() => {
+        inner.style.willChange = "auto";
+      }, d * 1000 + delay + 120);
     };
 
-    const animateOut = () => {
-      if (!isVisibleRef.current) return;
-      isVisibleRef.current = false;
-      setRevealed(false);
-      applyStyles(inner, from);
-      inner.style.transition = `opacity ${d * 0.6}s ${EASE}, transform ${d * 0.6}s ${EASE}, filter ${d * 0.6}s ${EASE}`;
-    };
+    // IntersectionObserver fires on scroll AND layout shifts (images loading,
+    // Lenis jumps, fast mobile flings) — a scroll listener alone misses those
+    // and leaves headings stuck invisible. Reveal once, never re-hide.
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          animateIn();
+          io.disconnect();
+        }
+      },
+      { threshold, rootMargin: "0px 0px 120px 0px" }
+    );
+    io.observe(el);
 
-    const onScroll = () => {
-      const currentY = window.scrollY;
-      const scrollingUp = currentY < prevScrollY;
-      prevScrollY = currentY;
-
+    // Safety net: if IO is throttled in background tabs, reveal when
+    // visible. Joins the page-wide shared timer instead of scheduling a
+    // per-heading `setTimeout` + forced reflow.
+    const check = () => {
       const rect = el.getBoundingClientRect();
-      const inView = rect.top < window.innerHeight * 0.88 && rect.bottom > 0;
-
-      if (inView) {
+      if (rect.top < window.innerHeight + 150 && rect.bottom > -150) {
         animateIn();
-      } else if (scrollingUp && rect.bottom < 0) {
-        animateOut();
+        io.disconnect();
       }
     };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
+    check();
+    scheduleRevealCheck(check);
+    revealFallbackTimer = window.setTimeout(animateIn, 900);
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      disposed = true;
+      cancelAnimationFrame(armRaf);
+      io.disconnect();
+      cancelRevealCheck(check);
+      window.clearTimeout(cleanupTimer);
+      window.clearTimeout(revealFallbackTimer);
+      // Never leave the text stuck invisible: if cleanup runs before the
+      // reveal fired (StrictMode double-invoke, Fast Refresh, unmount races),
+      // snap it straight to its final visible state.
+      if (!isVisibleRef.current) {
+        inner.style.transition = "none";
+        applyStyles(inner, to);
+      }
+      inner.style.willChange = "auto";
     };
   }, [delay, duration, threshold, animation]);
 
   return (
     <span
       ref={ref}
-      className={`sf-wrap ${revealed ? "sf-revealed" : ""} ${containerClassName}`}
+      className={`sf-wrap ${containerClassName}`}
       style={{
         ["--sf-delay" as string]: `${delay}ms`,
         ["--sf-dur" as string]: `${duration}ms`,

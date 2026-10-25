@@ -39,3 +39,21 @@ class FranchiseOut(BaseModel):
 class AdminLogin(BaseModel):
     username: str
     password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    """POST /api/auth/forgot-password — field name must match the admin UI."""
+    username: str = ""
+
+
+class VerifyOtpRequest(BaseModel):
+    """POST /api/auth/verify-otp."""
+    username: str = ""
+    otp: str = ""
+
+
+class ResetPasswordRequest(BaseModel):
+    """POST /api/auth/reset-password."""
+    username: str = ""
+    reset_token: str = ""
+    new_password: str = ""

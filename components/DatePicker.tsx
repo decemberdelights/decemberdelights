@@ -34,7 +34,10 @@ function CustomDropdown({ value, options, onChange, style }: { value: number; op
 
   return (
     <div ref={ref} style={{ ...style, position: "relative" }}>
-      <div
+      <button
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={open}
         onClick={() => setOpen(!open)}
         style={{
           padding: "8px 12px",
@@ -51,13 +54,14 @@ function CustomDropdown({ value, options, onChange, style }: { value: number; op
           justifyContent: "space-between",
           gap: "6px",
           userSelect: "none" as const,
+          textAlign: "left",
         }}
       >
         <span>{selected?.label}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#074134" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9" /></svg>
-      </div>
+      </button>
       {open && (
-        <div onWheel={(e) => e.stopPropagation()} style={{
+        <div aria-label="Choose a date value" onWheel={(e) => e.stopPropagation()} style={{
           position: "absolute",
           top: "calc(100% + 4px)",
           left: 0,
@@ -73,7 +77,9 @@ function CustomDropdown({ value, options, onChange, style }: { value: number; op
           padding: "4px",
         }}>
           {options.map(o => (
-            <div
+            <button
+              type="button"
+              aria-pressed={o.value === value}
               key={o.value}
               onClick={() => { onChange(o.value); setOpen(false); }}
               style={{
@@ -86,12 +92,15 @@ function CustomDropdown({ value, options, onChange, style }: { value: number; op
                 background: o.value === value ? "linear-gradient(135deg, #074134, #1b3c33)" : "transparent",
                 cursor: "pointer",
                 transition: "background 0.15s",
+                width: "100%",
+                border: 0,
+                textAlign: "left",
               }}
               onMouseEnter={(e) => { if (o.value !== value) e.currentTarget.style.background = "rgba(234,185,106,0.12)"; }}
               onMouseLeave={(e) => { if (o.value !== value) e.currentTarget.style.background = "transparent"; }}
             >
               {o.label}
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -105,16 +114,12 @@ export default function DatePicker({ value, onChange, max }: DatePickerProps) {
   const [viewMonth, setViewMonth] = useState(() => value ? new Date(value + "T00:00:00").getMonth() : 0);
   const ref = useRef<HTMLDivElement>(null);
 
-  const selectedDate = value ? new Date(value + "T00:00:00") : null;
   const maxDate = max ? new Date(max + "T00:00:00") : null;
   const currentYear = new Date().getFullYear();
-
-  const [displayText, setDisplayText] = useState("");
-
-  useEffect(() => {
-    const d = value ? new Date(value + "T00:00:00") : null;
-    setDisplayText(d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "");
-  }, [value]);
+  const selectedDate = value ? new Date(value + "T00:00:00") : null;
+  const displayText = selectedDate
+    ? selectedDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
+    : "";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -123,6 +128,20 @@ export default function DatePicker({ value, onChange, max }: DatePickerProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, [open]);
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
@@ -140,7 +159,11 @@ export default function DatePicker({ value, onChange, max }: DatePickerProps) {
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <div
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={displayText ? `Selected date: ${displayText}` : "Select date"}
         onClick={() => setOpen(!open)}
         style={{
           width: "100%",
@@ -157,26 +180,29 @@ export default function DatePicker({ value, onChange, max }: DatePickerProps) {
           justifyContent: "space-between",
           boxSizing: "border-box" as const,
           userSelect: "none" as const,
+          textAlign: "left",
         }}
       >
         <span suppressHydrationWarning>{displayText || "Select date"}</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /></svg>
-      </div>
+      </button>
 
       {open && (
         <>
-          <div style={{
+          <div role="dialog" aria-modal="true" aria-label="Choose a date" style={{
             position: "fixed",
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            zIndex: 99999,
+            zIndex: 1200,
             background: "#fff",
             borderRadius: "20px",
             boxShadow: "0 12px 48px rgba(7,65,52,0.25)",
             border: "1px solid rgba(7,65,52,0.1)",
             padding: "1.25rem",
             width: "min(320px, 90vw)",
+            maxHeight: "90dvh",
+            overflowY: "auto",
           }}>
             {/* Custom Month/Year dropdowns */}
             <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
@@ -245,9 +271,11 @@ export default function DatePicker({ value, onChange, max }: DatePickerProps) {
               })}
             </div>
           </div>
-          <div
+          <button
+            type="button"
+            aria-label="Close date picker"
             onClick={() => setOpen(false)}
-            style={{ position: "fixed", inset: 0, zIndex: 99998, background: "rgba(0,0,0,0.3)" }}
+            style={{ position: "fixed", inset: 0, zIndex: 1199, background: "rgba(0,0,0,0.3)", border: 0, padding: 0 }}
           />
         </>
       )}

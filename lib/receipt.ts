@@ -114,6 +114,9 @@ export interface OrderReceiptData {
   customerPhone: string;
   customerEmail?: string;
   customerAddress: string;
+  customerDistrict?: string;
+  customerState?: string;
+  customerPincode?: string;
   items: OrderReceiptItem[];
   total: number;
   paymentMethod: string;
@@ -123,42 +126,20 @@ export interface OrderReceiptData {
   orderDate: string;
 }
 
-export function generateOrderReceipt(data: OrderReceiptData) {
-  const isOnline = data.paymentMethod === "razorpay";
+export function generateOrderReceipt(data: OrderReceiptData, opts?: { logoUrl?: string; artUrl?: string }) {
+  // NOTE: the receipt opens in a blob: window, so relative "/..." URLs won't
+  // resolve there — callers pass absolute URLs built from window.location.origin.
+  const logoUrl = opts?.logoUrl || "https://www.decemberdelights.in/logo.png";
+  const artUrl = opts?.artUrl || "https://www.decemberdelights.in/DDprintpaper-art.png";
+  // Printed sheet shows ONLY item name + quantity — no payment, price or total.
+  // Full delivery address: street + district + state + pincode.
+  const fullAddress = [data.customerAddress, data.customerDistrict, data.customerState].filter((p) => p && p.trim()).join(", ") + (data.customerPincode && data.customerPincode.trim() ? ` - ${data.customerPincode.trim()}` : "");
   const itemsHtml = data.items.map(item => `
     <tr>
-      <td style="padding:10px 12px;border-bottom:1px solid #f0ede8;font-size:13px;color:#1b3c33;">${item.name}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #f0ede8;font-size:13px;color:#1b3c33;text-align:center;">${item.quantity}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #f0ede8;font-size:13px;color:#1b3c33;text-align:right;">₹${(item.price * item.quantity).toFixed(2)}</td>
+      <td style="padding:12px 10px;border-bottom:1px solid #f0ede8;font-size:13px;color:#1b3c33;">${esc(item.name)}</td>
+      <td style="padding:12px 10px;border-bottom:1px solid #f0ede8;font-size:13px;color:#1b3c33;text-align:center;">${item.quantity}</td>
     </tr>
   `).join("");
-
-  const paymentDetails = isOnline ? `
-    <div style="background:#f0faf4;border:1px solid #c3e8d4;border-radius:10px;padding:16px;margin:20px 0;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:36px;height:36px;border-radius:50%;background:#27ae60;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        </div>
-        <div>
-          <div style="font-size:14px;font-weight:700;color:#1b3c33;">Online Payment — &#8377;${data.total.toFixed(2)}</div>
-          ${data.razorpayPaymentId ? `<div style="font-size:12px;color:#586159;margin-top:2px;">Razorpay Payment ID: <span style="font-family:monospace;font-size:11px;">${data.razorpayPaymentId}</span></div>` : ""}
-          ${data.razorpayOrderId ? `<div style="font-size:12px;color:#586159;">Razorpay Order ID: <span style="font-family:monospace;font-size:11px;">${data.razorpayOrderId}</span></div>` : ""}
-        </div>
-      </div>
-    </div>
-  ` : `
-    <div style="background:#fff8f0;border:1px solid #f0d9b5;border-radius:10px;padding:16px;margin:20px 0;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:36px;height:36px;border-radius:50%;background:#e67e22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-        </div>
-        <div>
-          <div style="font-size:14px;font-weight:700;color:#1b3c33;">Cash on Delivery — &#8377;${data.total.toFixed(2)}</div>
-          <div style="font-size:12px;color:#586159;margin-top:2px;">Pay when you receive your order</div>
-        </div>
-      </div>
-    </div>
-  `;
 
   const receiptHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -174,7 +155,7 @@ export function generateOrderReceipt(data: OrderReceiptData) {
   .header img { height: 60px; margin-bottom: 12px; filter: brightness(0) invert(1); }
   .header h1 { font-size: 22px; letter-spacing: 2px; margin-bottom: 4px; }
   .header p { font-size: 11px; opacity: 0.7; letter-spacing: 1px; text-transform: uppercase; }
-  .badge { display: inline-block; background: ${isOnline ? "#27ae60" : "#e67e22"}; color: #fff; padding: 4px 16px; border-radius: 100px; font-size: 11px; font-weight: 700; letter-spacing: 1px; margin-top: 10px; text-transform: uppercase; }
+  .badge { display: inline-block; background: #27ae60; color: #fff; padding: 4px 16px; border-radius: 100px; font-size: 11px; font-weight: 700; letter-spacing: 1px; margin-top: 10px; text-transform: uppercase; }
   .body { padding: 28px 32px; }
   .section-title { font-size: 11px; font-weight: 700; color: #999; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f0ede8; }
   .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f7f3ee; }
@@ -184,47 +165,48 @@ export function generateOrderReceipt(data: OrderReceiptData) {
   table { width: 100%; border-collapse: collapse; margin: 16px 0; }
   th { background: #1b3c33; color: #fff; padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; text-align: left; }
   th:nth-child(2) { text-align: center; }
-  th:nth-child(3) { text-align: right; }
-  .total-row { display: flex; justify-content: space-between; padding: 12px 0; border-top: 2px solid #1b3c33; margin-top: 8px; }
+  .brand-art { margin: 8px 0 4px; text-align: center; }
+  .brand-art img { width: 100%; max-width: 280px; height: auto; display: inline-block; }
   .footer { border-top: 1px solid #f0ede8; padding: 16px 32px; text-align: center; }
   .footer p { font-size: 11px; color: #999; }
   .footer a { color: #1b3c33; text-decoration: none; font-weight: 600; }
-  @media print { body { background: none; padding: 0; } .receipt { border: none; } }
+  @media print {
+    body { background: none; padding: 0; }
+    .receipt { border: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 </head>
 <body>
 <div class="receipt">
   <div class="header">
-    <img src="https://www.decemberdelights.in/logo.png" alt="December Delights" />
+    <img src="${logoUrl}" alt="December Delights" />
     <h1>DECEMBER DELIGHTS</h1>
     <p>Order Receipt</p>
     <div class="badge">Order #${data.orderId}</div>
   </div>
   <div class="body">
     <div class="section-title">Customer Details</div>
-    <div class="row"><span class="label">Name</span><span class="value">${data.customerName}</span></div>
-    <div class="row"><span class="label">Phone</span><span class="value">${data.customerPhone}</span></div>
-    ${data.customerEmail ? `<div class="row"><span class="label">Email</span><span class="value">${data.customerEmail}</span></div>` : ""}
-    <div class="row"><span class="label">Delivery Address</span><span class="value">${data.customerAddress}</span></div>
-    <div class="row"><span class="label">Order Date</span><span class="value">${data.orderDate}</span></div>
-
-    <div class="section-title" style="margin-top:20px;">Payment</div>
-    ${paymentDetails}
+    <div class="row"><span class="label">Name</span><span class="value">${esc(data.customerName)}</span></div>
+    <div class="row"><span class="label">Phone</span><span class="value">${esc(data.customerPhone)}</span></div>
+    ${data.customerEmail ? `<div class="row"><span class="label">Email</span><span class="value">${esc(data.customerEmail)}</span></div>` : ""}
+    <div class="row"><span class="label">Delivery Address</span><span class="value">${esc(fullAddress)}</span></div>
+    <div class="row"><span class="label">Order Date</span><span class="value">${esc(data.orderDate)}</span></div>
 
     <div class="section-title" style="margin-top:20px;">Items Ordered</div>
     <table>
-      <thead><tr><th>Item</th><th>Qty</th><th style="text-align:right;">Price</th></tr></thead>
+      <thead><tr><th>Item</th><th>Qty</th></tr></thead>
       <tbody>${itemsHtml}</tbody>
     </table>
-    <div class="total-row">
-      <span style="font-size:15px;font-weight:700;color:#1b3c33;">Total</span>
-      <span style="font-size:15px;font-weight:700;color:#c8a97a;">&#8377;${data.total.toFixed(2)}</span>
+    <div class="brand-art">
+      <img src="${artUrl}" alt="December Delights — From the hills of the Western Ghats, to your cup" />
     </div>
   </div>
   <div class="footer">
     <p>December Delights &copy; ${new Date().getFullYear()} &mdash; <a href="https://www.decemberdelights.in">www.decemberdelights.in</a></p>
   </div>
 </div>
+<script>window.onload = function() { window.print(); }</script>
 </body>
 </html>`;
 

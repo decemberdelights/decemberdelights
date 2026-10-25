@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { Stats, App, Order } from "./types";
+import { useMemo, useCallback, useSyncExternalStore } from "react";
+import { App, Order } from "./types";
 
 interface NotificationSidebarProps {
-  stats: Stats;
   franchises: App[];
   orders: Order[];
   setTab: (tab: string) => void;
@@ -13,62 +12,87 @@ interface NotificationSidebarProps {
 }
 
 const DISMISSED_KEY = "dd_dismissed_notifs";
+const EMPTY_DISMISSED: string[] = [];
+let dismissedSnapshot: string[] | null = null;
+
+function readDismissed(): string[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]");
+    return Array.isArray(value) && value.every((item) => typeof item === "string")
+      ? value
+      : EMPTY_DISMISSED;
+  } catch {
+    return EMPTY_DISMISSED;
+  }
+}
 
 function loadDismissed(): string[] {
+  if (typeof window === "undefined") return EMPTY_DISMISSED;
+  dismissedSnapshot ??= readDismissed();
+  return dismissedSnapshot;
+}
+
+function saveDismissed(ids: string[]) {
+  localStorage.setItem(DISMISSED_KEY, JSON.stringify(ids));
+  dismissedSnapshot = ids;
+  window.dispatchEvent(new Event("dd-dismissed-notifs-change"));
+}
+
+function subscribeToDismissed(onChange: () => void) {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === DISMISSED_KEY || event.key === null) {
+      dismissedSnapshot = readDismissed();
+      onChange();
+    }
+  };
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener("dd-dismissed-notifs-change", onChange);
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener("dd-dismissed-notifs-change", onChange);
+  };
+}
+
+// Parsed lazily inside the click handler — never during render (mirrors tabs/OrdersTab.tsx).
+function parseOrderItems(items: string): unknown[] {
   try {
-    return JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]");
+    return JSON.parse(items || "[]");
   } catch {
     return [];
   }
 }
 
-function saveDismissed(ids: string[]) {
-  localStorage.setItem(DISMISSED_KEY, JSON.stringify(ids));
-}
-
 export default function NotificationSidebar({ franchises, orders, setTab, onViewOrder, role }: NotificationSidebarProps) {
   const isSuperAdmin = role === "super_admin";
-  const [dismissed, setDismissed] = useState<string[]>([]);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    setDismissed(loadDismissed());
-  }, []);
+  const dismissed = useSyncExternalStore(subscribeToDismissed, loadDismissed, () => EMPTY_DISMISSED);
 
   const pendingFranchises = useMemo(() => {
     const items = franchises.filter((f) => f.status === "pending" || f.status === "submitted" || f.status === "under_process");
-    if (!mounted) return items.slice(0, 8);
     return items.filter((f) => !dismissed.includes(`fr-${f.id}`)).slice(0, 8);
-  }, [franchises, dismissed, mounted]);
+  }, [franchises, dismissed]);
 
   const pendingOrders = useMemo(() => {
     const items = orders.filter((o) => o.status === "pending");
-    if (!mounted) return items.slice(0, 8);
     return items.filter((o) => !dismissed.includes(`ord-${o.id}`)).slice(0, 8);
-  }, [orders, dismissed, mounted]);
+  }, [orders, dismissed]);
 
   const totalNotifs = pendingFranchises.length + pendingOrders.length;
 
+  const handleViewOrder = useCallback((o: Order) => {
+    onViewOrder({ ...o, parsedItems: parseOrderItems(o.items) });
+  }, [onViewOrder]);
+
   const dismiss = useCallback((id: string) => {
-    setDismissed((prev) => {
-      const next = [...prev, id];
-      saveDismissed(next);
-      return next;
-    });
-  }, []);
+    if (!dismissed.includes(id)) saveDismissed([...dismissed, id]);
+  }, [dismissed]);
 
   const clearAll = useCallback(() => {
     const allIds = [
       ...pendingFranchises.map((f) => `fr-${f.id}`),
       ...pendingOrders.map((o) => `ord-${o.id}`),
     ];
-    setDismissed((prev) => {
-      const next = [...prev, ...allIds];
-      saveDismissed(next);
-      return next;
-    });
-  }, [pendingFranchises, pendingOrders]);
+    saveDismissed([...new Set([...dismissed, ...allIds])]);
+  }, [dismissed, pendingFranchises, pendingOrders]);
 
   return (
     <>
@@ -97,7 +121,7 @@ export default function NotificationSidebar({ franchises, orders, setTab, onView
             {pendingOrders.length > 0 ? (
               <div className="notif-list">
                 {pendingOrders.map((o) => (
-                  <div key={`ord-${o.id}`} className="notif-item" onClick={() => onViewOrder({ ...o, parsedItems: (() => { try { return JSON.parse(o.items || "[]"); } catch { return []; } })() })}>
+                  <div key={`ord-${o.id}`} className="notif-item" onClick={() => handleViewOrder(o)}>
                     <div className="info">
                       <div className="name">{o.customer_name}</div>
                       <div className="meta">#{o.id} • ₹{o.total}</div>

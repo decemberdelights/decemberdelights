@@ -1,29 +1,36 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { API } from "@/lib/api";
 import { Tab, Stats, App, MenuItem, Product, Job, Order, AdminUser, OrderStats } from "@/components/admin/types";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import OverviewTab from "@/components/admin/tabs/OverviewTab";
-import ApplicationsTab from "@/components/admin/tabs/ApplicationsTab";
-import OrdersTab from "@/components/admin/tabs/OrdersTab";
-import MenuTab from "@/components/admin/tabs/MenuTab";
-import ProductsTab from "@/components/admin/tabs/ProductsTab";
-import JobsTab from "@/components/admin/tabs/JobsTab";
-import AdminsTab from "@/components/admin/tabs/AdminsTab";
-import LogsTab from "@/components/admin/tabs/LogsTab";
-import SettingsTab from "@/components/admin/tabs/SettingsTab";
-import TermsTab from "@/components/admin/tabs/TermsTab";
-import EditModal from "@/components/admin/EditModal";
-import NotificationSidebar from "@/components/admin/NotificationSidebar";
-import { RejectModal, ViewOrderModal, CancelModal, ViewDocsModal } from "@/components/admin/Modals";
 import Pagination from "@/components/admin/Pagination";
+import LazyVideo from "@/components/LazyVideo";
 import { OverviewSkeleton, OrdersSkeleton, ChartsSkeleton, AdminTableSkeleton, ApplicationsSkeleton, AdminsSkeleton, LogsSkeleton } from "@/components/Skeleton";
 import { supabase } from "@/lib/supabase";
 
+// Tabs are mutually exclusive — each gets its own lazy chunk so the admin entry bundle only ships the shell.
+const OverviewTab = dynamic(() => import("@/components/admin/tabs/OverviewTab"), { loading: () => <OverviewSkeleton /> });
+const ApplicationsTab = dynamic(() => import("@/components/admin/tabs/ApplicationsTab"), { loading: () => <ApplicationsSkeleton /> });
+const OrdersTab = dynamic(() => import("@/components/admin/tabs/OrdersTab"), { loading: () => <OrdersSkeleton /> });
+const MenuTab = dynamic(() => import("@/components/admin/tabs/MenuTab"), { loading: () => <AdminTableSkeleton rows={8} cols={6} /> });
+const ProductsTab = dynamic(() => import("@/components/admin/tabs/ProductsTab"), { loading: () => <AdminTableSkeleton rows={8} cols={7} /> });
+const JobsTab = dynamic(() => import("@/components/admin/tabs/JobsTab"), { loading: () => <AdminTableSkeleton rows={5} cols={7} /> });
+const AdminsTab = dynamic(() => import("@/components/admin/tabs/AdminsTab"), { loading: () => <AdminsSkeleton /> });
+const LogsTab = dynamic(() => import("@/components/admin/tabs/LogsTab"), { loading: () => <LogsSkeleton /> });
+const SettingsTab = dynamic(() => import("@/components/admin/tabs/SettingsTab"), { loading: () => <AdminsSkeleton /> });
+const TermsTab = dynamic(() => import("@/components/admin/tabs/TermsTab"), { loading: () => <AdminTableSkeleton rows={5} cols={4} /> });
 const ChartsTab = dynamic(() => import("@/components/admin/tabs/ChartsTab"), { loading: () => <ChartsSkeleton /> });
+
+// Heavy modals load on demand (first open), not in the entry chunk.
+const EditModal = dynamic(() => import("@/components/admin/EditModal"), { loading: () => <div className="modal" style={{ width: "min(520px, 95vw)" }}><p style={{ fontSize: 13, color: "#6b6f6a", margin: 0 }}>Loading…</p></div> });
+const NotificationSidebar = dynamic(() => import("@/components/admin/NotificationSidebar"), { loading: () => null });
+const RejectModal = dynamic(() => import("@/components/admin/Modals").then((m) => m.RejectModal), { loading: () => null });
+const ViewOrderModal = dynamic(() => import("@/components/admin/Modals").then((m) => m.ViewOrderModal), { loading: () => null });
+const CancelModal = dynamic(() => import("@/components/admin/Modals").then((m) => m.CancelModal), { loading: () => null });
+const ViewDocsModal = dynamic(() => import("@/components/admin/Modals").then((m) => m.ViewDocsModal), { loading: () => null });
 
 
 
@@ -51,13 +58,14 @@ export default function AdminPage() {
   const [contactsTotal, setContactsTotal] = useState(0);
   const perPage = 20;
 
-  const [rejectTarget, setRejectTarget] = useState<{ type: string; id: number } | null>(null);
-  const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
-  const [editType, setEditType] = useState<"add" | "edit" | null>(null);
-  const [viewingDocs, setViewingDocs] = useState<App | null>(null);
-  const [viewingOrder, setViewingOrder] = useState<(Order & { parsedItems: unknown[] }) | null>(null);
-  const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
+  const [savingItem, setSavingItem] = useState(false);
+  const [editType, setEditType] = useState<"add" | "edit" | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ type: string; id: number } | null>(null);
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+  const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
+  const [viewingDocs, setViewingDocs] = useState<App | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tabError, setTabError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -89,16 +97,19 @@ export default function AdminPage() {
   }, [apiWithTimeout]);
 
   useEffect(() => {
+    let cancelled = false;
     fetch(`${API}/api/auth/check`, { credentials: "include" })
       .then(r => r.json())
-      .then(d => { setAuthed(d.authenticated); setRole(d.role || ""); })
-      .catch(() => { setAuthed(false); });
+      .then(d => { if (!cancelled) { setAuthed(d.authenticated); setRole(d.role || ""); } })
+      .catch(() => { if (!cancelled) setAuthed(false); });
+    return () => { cancelled = true; };
   }, []);
 
   const loadAll = useCallback(async (retries = 4) => {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const [statsR, appsR] = await Promise.all([api("/api/admin/stats", { cache: "no-store" }), api("/api/admin/applications", { cache: "no-store" })]);
+        // Overview only feeds the notification sidebar peek + stats — bound the page so realtime refreshes don't refetch every application ever submitted.
+        const [statsR, appsR] = await Promise.all([api("/api/admin/stats", { cache: "no-store" }), api("/api/admin/applications?offset=0&limit=100", { cache: "no-store" })]);
         if (statsR.ok) setStats(await statsR.json());
         if (appsR.ok) { const d = await appsR.json(); setFranchises(d.franchise || []); setCareers(d.careers || []); setContacts(d.contacts || []); }
         return;
@@ -109,7 +120,6 @@ export default function AdminPage() {
         }
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
   useEffect(() => {
@@ -160,7 +170,20 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, tab, api, role, refreshKey, page]);
 
-  const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
+  const refreshTimer = useRef<NodeJS.Timeout | null>(null);
+  const refresh = useCallback(() => {
+    // Debounced (500ms trailing): bursts of realtime postgres changes collapse into one refetch.
+    if (refreshTimer.current) return;
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      setRefreshKey(k => k + 1);
+    }, 500);
+  }, []);
+
+  // Cleanup the pending debounce timer on unmount.
+  useEffect(() => () => {
+    if (refreshTimer.current) { clearTimeout(refreshTimer.current); refreshTimer.current = null; }
+  }, []);
 
   const handleTabChange = useCallback((newTab: Tab) => {
     setTab(newTab);
@@ -185,17 +208,46 @@ export default function AdminPage() {
   };
 
   const saveItem = async (endpoint: string, data: Record<string, unknown>, isNew: boolean) => {
-    const { _imageFile, ...rest } = data;
+    if (savingItem) return;
+    setSavingItem(true);
+    try {
+    const { _imageFile, _extraFiles, _keepExtra, ...rest } = data;
     const fd = new FormData();
     for (const [k, v] of Object.entries(rest)) {
       if (v !== undefined && v !== null) fd.append(k, String(v));
     }
     if (_imageFile) fd.append("image", _imageFile as File);
+    if (Array.isArray(_extraFiles)) {
+      for (const f of _extraFiles) fd.append("images", f as File);
+    }
+    if (Array.isArray(_keepExtra)) fd.append("keep_images", JSON.stringify(_keepExtra));
     let r;
     if (isNew) { r = await api(`/api/${endpoint}`, { method: "POST", body: fd, cache: "no-store" }); }
     else { r = await api(`/api/${endpoint}/${rest.id}`, { method: "PUT", body: fd, cache: "no-store" }); }
-    if (r && r.ok) { setEditingItem(null); setEditType(null); refresh(); }
+    if (r && r.ok) {
+      const saved = await r.json();
+      setEditingItem(null);
+      setEditType(null);
+      if (endpoint === "admin/products" && saved && saved.id) {
+        setProducts(prev => {
+          const exists = prev.findIndex((p: Product) => p.id === saved.id);
+          if (exists >= 0) { const next = [...prev]; next[exists] = saved; return next; }
+          return [...prev, saved];
+        });
+      } else if (endpoint === "admin/menu" && saved && saved.id) {
+        setMenuItems(prev => {
+          const exists = prev.findIndex((m: MenuItem) => m.id === saved.id);
+          if (exists >= 0) { const next = [...prev]; next[exists] = saved; return next; }
+          return [...prev, saved];
+        });
+      } else {
+        refresh();
+      }
+    }
     else { alert("Failed to save. Please try again."); }
+    } finally {
+      setSavingItem(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -205,12 +257,23 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!authed) return;
-    let timer: NodeJS.Timeout;
-    const reset = () => { clearTimeout(timer); timer = setTimeout(() => { setAuthed(false); }, 30 * 60 * 1000); };
+    let timer: NodeJS.Timeout | undefined;
+    let lastArm = 0;
+    const IDLE_MS = 30 * 60 * 1000;
+    const REARM_MIN_MS = 60 * 1000;
+    // Throttled: only re-arm at most once per minute, so constant mousemove/scroll/keydown
+    // events don't churn setTimeout on every event. The 30-minute idle timeout is preserved.
+    const reset = () => {
+      const now = Date.now();
+      if (timer !== undefined && now - lastArm < REARM_MIN_MS) return;
+      if (timer !== undefined) clearTimeout(timer);
+      lastArm = now;
+      timer = setTimeout(() => { setAuthed(false); }, IDLE_MS);
+    };
     const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
     events.forEach((e) => document.addEventListener(e, reset, { passive: true }));
     reset();
-    return () => { clearTimeout(timer); events.forEach((e) => document.removeEventListener(e, reset)); };
+    return () => { if (timer !== undefined) clearTimeout(timer); events.forEach((e) => document.removeEventListener(e, reset)); };
   }, [authed]);
 
   useEffect(() => {
@@ -253,7 +316,7 @@ export default function AdminPage() {
   if (!authed) {
     return (
       <><div className="admin-page"><div className="app" style={{ alignItems: "center", justifyContent: "center", position: "relative" }}>
-        <video style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }} autoPlay muted loop playsInline src="/DDhero.mp4" />
+        <LazyVideo src="/DDhero.mp4" style={{ position: "absolute", inset: 0, zIndex: 0 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(9,75,61,0.85), rgba(12,26,20,0.92) 50%, rgba(9,75,61,0.88))", zIndex: 1 }} />
         <AdminLogin onLogin={(r) => { setAuthed(true); setRole(r); }} />
       </div></div></>
@@ -312,7 +375,31 @@ export default function AdminPage() {
       if (loading && !orderStats) return <OrdersSkeleton />;
       if (tabError && !orderStats) return errorFallback;
       return <>
-        <OrdersTab orders={orders} orderStats={orderStats} api={api} onRefresh={refresh} onViewOrder={(o) => setViewingOrder(o)} onCancelOrder={(id) => setCancelOrderId(id)} />
+        <OrdersTab
+          orders={orders}
+          orderStats={orderStats}
+          api={api}
+          onRefresh={refresh}
+          onViewOrder={(o) => setViewingOrder(o)}
+          onCancelOrder={(id) => setCancelOrderId(id)}
+          onRefundOrder={async (id) => {
+            if (!window.confirm(`Issue a refund for order #${id}? This refunds the remaining amount to the original payment method.`)) return;
+            try {
+              const response = await api(`/api/admin/orders/${id}/refund`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason: "Refund issued by admin" }),
+              });
+              const result = await response.json().catch(() => ({}));
+              if (!response.ok) throw new Error(result.detail || "Refund could not be confirmed.");
+              window.alert(`Refund issued for order #${id}. Refund reference: ${result.refund_id || "check Razorpay dashboard"}`);
+              refresh();
+            } catch (error) {
+              window.alert(error instanceof Error ? error.message : "Refund could not be confirmed. Check Razorpay before retrying.");
+              refresh();
+            }
+          }}
+        />
         <Pagination page={page} total={ordersTotal} perPage={perPage} onChange={setPage} />
       </>;
     }
@@ -330,7 +417,7 @@ export default function AdminPage() {
 
     if (tab === "products") {
       if (loading && products.length === 0) return <AdminTableSkeleton rows={8} cols={7} />;
-      return <ProductsTab products={products} role={role} onAdd={() => { setEditingItem({ name: "", description: "", price: 0, original_price: 0, category: "", image_url: "", stock: 0, is_active: true, offer: "", sort_order: 0 }); setEditType("add"); }} onEdit={(p) => { setEditingItem({ ...p }); setEditType("edit"); }} onDelete={(id) => deleteItem("products", id)} />;
+      return <ProductsTab products={products} role={role} onAdd={() => { setEditingItem({ name: "", description: "", price: 0, original_price: 0, weight_grams: 250, category: "", image_url: "", stock: 0, is_active: true, offer: "", sort_order: 0 }); setEditType("add"); }} onEdit={(p) => { setEditingItem({ ...p, weight_grams: p.weight_grams || 250 }); setEditType("edit"); }} onDelete={(id) => deleteItem("products", id)} />;
     }
 
     if (tab === "jobs") {
@@ -377,13 +464,12 @@ export default function AdminPage() {
           <AdminSidebar tab={tab} setTab={handleTabChange} role={role} onLogout={handleLogout} />
         </div>
         <div className="main">
-          {loading && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: "#3b6d11", zIndex: 9999, animation: "loading-progress 2s ease-in-out infinite" }} />}
+          {loading && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: "#3b6d11", zIndex: 9050, animation: "loading-progress 2s ease-in-out infinite" }} />}
           {renderTab()}
         </div>
 
         {stats && tab !== "orders" && tab !== "charts" && (
           <NotificationSidebar
-            stats={stats}
             franchises={franchises}
             orders={orders}
             setTab={(t) => setTab(t as Tab)}
@@ -393,28 +479,32 @@ export default function AdminPage() {
         )}
       </div>
 
-      <RejectModal
-        open={!!rejectTarget}
-        onReject={(reason) => { if (rejectTarget) updateStatus(rejectTarget.type, rejectTarget.id, "rejected", reason); setRejectTarget(null); }}
-        onCancel={() => setRejectTarget(null)}
-      />
+      {rejectTarget && (
+        <RejectModal
+          open={!!rejectTarget}
+          onReject={(reason) => { if (rejectTarget) updateStatus(rejectTarget.type, rejectTarget.id, "rejected", reason); setRejectTarget(null); }}
+          onCancel={() => setRejectTarget(null)}
+        />
+      )}
 
-      <ViewOrderModal order={viewingOrder} onClose={() => setViewingOrder(null)} />
+      {viewingOrder && <ViewOrderModal order={viewingOrder} onClose={() => setViewingOrder(null)} />}
 
-      <CancelModal
-        orderId={cancelOrderId}
-        onConfirm={async (reason) => {
-          if (!cancelOrderId) return;
-          await api(`/api/admin/orders/${cancelOrderId}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "cancelled", admin_notes: reason }) });
-          setCancelOrderId(null);
-          refresh();
-        }}
-        onCancel={() => setCancelOrderId(null)}
-      />
+      {cancelOrderId !== null && (
+        <CancelModal
+          orderId={cancelOrderId}
+          onConfirm={async (reason) => {
+            if (!cancelOrderId) return;
+            await api(`/api/admin/orders/${cancelOrderId}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "cancelled", admin_notes: reason }) });
+            setCancelOrderId(null);
+            refresh();
+          }}
+          onCancel={() => setCancelOrderId(null)}
+        />
+      )}
 
       {editingItem && editType && (
-        <div className="overlay show" onClick={e => { if (e.target === e.currentTarget) { setEditingItem(null); setEditType(null); } }}>
-          <EditModal item={editingItem} isNew={editType === "add"} onSave={(data) => {
+        <div className="overlay show" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget && !savingItem) { setEditingItem(null); setEditType(null); } }}>
+          <EditModal item={editingItem} isNew={editType === "add"} saving={savingItem} onSave={(data) => {
             if ("category" in data && "price" in data && typeof data.price === "string") saveItem("admin/menu", data, editType === "add");
             else if ("stock" in data) saveItem("admin/products", data, editType === "add");
             else if ("department" in data) saveItem("admin/jobs", data, editType === "add");
@@ -422,7 +512,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      <ViewDocsModal docs={viewingDocs} onClose={() => setViewingDocs(null)} />
+      {viewingDocs && <ViewDocsModal docs={viewingDocs} onClose={() => setViewingDocs(null)} />}
       </div>
     </>
   );

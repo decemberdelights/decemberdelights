@@ -2,7 +2,22 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --include=dev
-COPY . .
+# Explicit allowlist instead of `COPY . .`: the build context also contains
+# backend/, deploy/, uploads/, .data/, tarballs and .env.local — none of that
+# belongs inside the frontend image (secrets + runtime data leak risk).
+COPY next.config.ts tsconfig.json next-env.d.ts postcss.config.mjs eslint.config.mjs ./
+COPY app ./app
+COPY components ./components
+COPY hooks ./hooks
+COPY lib ./lib
+COPY public ./public
+COPY types ./types
+# NEXT_PUBLIC_* are inlined into the JS bundle at build time; BACKEND_URL is
+# read by next.config.ts rewrites at build time. Pass both as build args.
+ARG NEXT_PUBLIC_API_URL
+ARG BACKEND_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV BACKEND_URL=$BACKEND_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 

@@ -62,6 +62,7 @@ export default function MenuPage() {
           border-radius: 24px 24px 0 0;
           height: 200px;
         }
+        .menu-card-body { padding: 1.25rem 1.5rem 1.5rem; }
         .menu-layout { display: flex; max-width: 1400px; margin: 0 auto; gap: 4rem; padding: 4rem 2rem; }
         .menu-sidebar { width: 300px; position: sticky; top: 100px; flex-shrink: 0; maxHeight: calc(100vh - 120px); display: flex; flex-direction: column; }
         .menu-sidebar-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; overflowY: auto; flex: 1; paddingRight: 8px; }
@@ -75,14 +76,21 @@ export default function MenuPage() {
           .menu-sidebar-list { flex-direction: row; overflow-x: auto; overflow-y: hidden; gap: 0.5rem; padding-bottom: 0.5rem; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
           .menu-sidebar-list::-webkit-scrollbar { display: none; }
           .menu-sidebar-cat { white-space: nowrap; padding: 0.75rem 1rem; font-size: 0.9rem; flex-shrink: 0; min-height: 44px; }
-          .menu-card-img { height: 160px; }
-          .menu-img-wrapper { height: 160px; }
+          .menu-card-img { height: 140px; }
+          .menu-img-wrapper { height: 140px; }
+          .menu-card-body { padding: 0.9rem 1.1rem 1.1rem; }
+          .menu-grid { gap: 1rem; }
         }
         @media (max-width: 480px) {
           .menu-layout { padding: 1rem 0.75rem; }
           .menu-sidebar-cat { padding: 0.6rem 0.85rem; font-size: 0.85rem; }
-          .menu-card-img { height: 140px; }
-          .menu-img-wrapper { height: 140px; }
+          .menu-card-img { height: 110px; }
+          .menu-img-wrapper { height: 110px; }
+          .menu-card-body { padding: 0.75rem 0.9rem 0.9rem; }
+          .menu-card-title { font-size: 1rem !important; margin-bottom: 0.15rem !important; }
+          .menu-card-desc { font-size: 0.82rem !important; }
+          .menu-grid { gap: 0.85rem; }
+          .menu-section { margin-bottom: 2.5rem !important; }
         }
       `}</style>
 
@@ -183,6 +191,7 @@ export default function MenuPage() {
               <div
                 key={cat}
                 id={cat.replace(/[^a-zA-Z]/g, "-")}
+                className="menu-section"
                 style={{ marginBottom: "4rem", scrollMarginTop: "100px" }}
               >
                 <div
@@ -209,6 +218,7 @@ export default function MenuPage() {
                 </div>
 
                 <div
+                  className="menu-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fill, minmax(min(300px, 100%), 1fr))",
@@ -241,9 +251,10 @@ export default function MenuPage() {
                           />
                         </div>
                       )}
-                      <div style={{ padding: "1.25rem 1.5rem 1.5rem" }}>
+                      <div className="menu-card-body">
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.25rem" }}>
                           <h3
+                            className="menu-card-title"
                             style={{
                               color: "#1b3c33",
                               letterSpacing: "0.05em",
@@ -272,6 +283,7 @@ export default function MenuPage() {
                         </div>
                         {item.description && (
                           <p
+                            className="menu-card-desc"
                             style={{
                               color: "#6b6f6a",
                               fontSize: "0.9rem",

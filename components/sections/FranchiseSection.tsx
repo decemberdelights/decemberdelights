@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function FranchiseSection() {
-  const revealRef = useScrollReveal(0.12, "0px 0px -40px 0px", { animation: "slideUp3D", stagger: 0.1 });
+  const revealRef = useScrollReveal(0.02, "0px 0px 240px 0px", { animation: "slideUp3D", duration: 0.4, stagger: 0.02 });
   return (
     <>
       <div data-bg="dark" className="franchise-section">
@@ -22,12 +22,12 @@ export default function FranchiseSection() {
             />
           </div>
           <div className="franchise-text" data-parallax="-0.1">
-            <span data-reveal-child style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Franchise With Us</span>
+            <span data-reveal-child style={{ fontFamily: "var(--font-montserrat)", fontSize: "13px", fontWeight: 700, letterSpacing: "5px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Franchise With Us</span>
             <div data-reveal-child style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
             <h2 className="franchise-heading">
               <ScrollFloat animation="slideUp3D" containerClassName="!my-0">Grow With</ScrollFloat><br /><ScrollFloat animation="slideUp3D" delay={100} containerClassName="!my-0">December Delights</ScrollFloat>
             </h2>
-            <p data-reveal-child style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 400, lineHeight: 1.8, color: "rgba(255,255,255,0.85)", marginBottom: "36px", maxWidth: "520px" }}>
+            <p data-reveal-child style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 400, lineHeight: 1.75, color: "rgba(255,255,255,0.85)", marginBottom: "36px", maxWidth: "520px" }}>
               Born from international culinary expertise and a love for exceptional coffee, December Delights is more than a caf&eacute; — it&apos;s an experience your community will love. We provide the proven systems, training, and support you need to build a thriving business — while you bring the passion to your city.
             </p>
             <div data-reveal-child className="franchise-cta-row">

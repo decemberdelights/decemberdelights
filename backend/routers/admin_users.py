@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from supabase_client import supabase
 from auth import require_super_admin, hash_password, _user_cache
 from activity import log_activity
-from security import sanitize_input
+from csrf import validate_csrf
+from security import sanitize_input, validate_password_policy
 from pydantic import BaseModel
 from typing import Optional
 import logging
@@ -45,18 +46,13 @@ def get_admin_users(_=Depends(require_super_admin)):
 
 
 @router.post("/api/admin/users")
-def create_admin_user(data: AdminUserCreate, admin=Depends(require_super_admin)):
+def create_admin_user(data: AdminUserCreate, request: Request, admin=Depends(require_super_admin)):
+    validate_csrf(request)
     try:
         data.username = sanitize_input(data.username, 100)
         if not data.username or len(data.username) < 3:
             raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
-        if not data.password or len(data.password) < 8:
-            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-        if not any(c.isupper() for c in data.password):
-            raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
-        if not any(c.isdigit() for c in data.password):
-            raise HTTPException(status_code=400, detail="Password must contain at least one digit")
-
+        validate_password_policy(data.password)
         existing = supabase.table("admin_users").select("*").eq("username", data.username).execute()
         if existing.data:
             raise HTTPException(status_code=400, detail="Username already exists")
@@ -84,7 +80,8 @@ def create_admin_user(data: AdminUserCreate, admin=Depends(require_super_admin))
 
 
 @router.put("/api/admin/users/{user_id}")
-def update_admin_user(user_id: int, data: AdminUserUpdate, admin=Depends(require_super_admin)):
+def update_admin_user(user_id: int, data: AdminUserUpdate, request: Request, admin=Depends(require_super_admin)):
+    validate_csrf(request)
     try:
         existing = supabase.table("admin_users").select("*").eq("id", user_id).execute()
         if not existing.data:
@@ -102,10 +99,7 @@ def update_admin_user(user_id: int, data: AdminUserUpdate, admin=Depends(require
             update_data["username"] = data.username
 
         if data.password:
-            if len(data.password) < 8:
-                raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-            if len(data.password) > 72:
-                raise HTTPException(status_code=400, detail="Password must not exceed 72 characters")
+            validate_password_policy(data.password)
             update_data["password_hash"] = hash_password(data.password)
 
         if data.role and data.role in ("admin", "super_admin"):
@@ -134,7 +128,8 @@ def update_admin_user(user_id: int, data: AdminUserUpdate, admin=Depends(require
 
 
 @router.delete("/api/admin/users/{user_id}")
-def delete_admin_user(user_id: int, admin=Depends(require_super_admin)):
+def delete_admin_user(user_id: int, request: Request, admin=Depends(require_super_admin)):
+    validate_csrf(request)
     try:
         existing = supabase.table("admin_users").select("*").eq("id", user_id).execute()
         if not existing.data:

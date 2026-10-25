@@ -4,9 +4,10 @@ import { useState, FormEvent, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@/lib/api";
 import { inputStyle, labelStyle, selectBackgroundImage } from "@/lib/styles";
-import { User, Mail, Phone, Briefcase, FileText, ArrowRight, Upload, MapPin, Clock } from "@/components/icons";
+import { User, Mail, Phone, Briefcase, FileText, ArrowRight, Upload, MapPin, Clock, KeyRound } from "@/components/icons";
 import { JobCardSkeleton } from "@/components/Skeleton";
 import SuccessState from "@/components/SuccessState";
+import { trackEvent } from "@/components/Analytics";
 
 const darkLabelStyle = { ...labelStyle, color: "#1b3c33" };
 const darkInputStyle = { ...inputStyle, borderColor: "#e0ddd8", background: "#fff", color: "#1b3c33" };
@@ -57,6 +58,7 @@ export default function CareersPage() {
 
   const [trackName, setTrackName] = useState("");
   const [trackPhone, setTrackPhone] = useState("");
+  const [trackCode, setTrackCode] = useState("");
   const [trackResults, setTrackResults] = useState<{ id: number; full_name: string; position: string; status: string; admin_notes: string; created_at: string }[]>([]);
   const [trackLoading, setTrackLoading] = useState(false);
   const [trackSearched, setTrackSearched] = useState(false);
@@ -72,6 +74,16 @@ export default function CareersPage() {
       .then(setJobs)
       .catch(() => {})
       .finally(() => setLoadingJobs(false));
+  }, []);
+
+  // Prefill the private tracking code issued at submit time.
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      try {
+        const saved = window.localStorage.getItem("dd_career_tracking");
+        if (saved) setTrackCode(saved);
+      } catch { /* storage unavailable */ }
+    });
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -98,13 +110,25 @@ export default function CareersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Submission failed");
       setStatus("success");
+      // Issue a private tracking code; never expose applications by phone alone.
+      if (data.tracking_code) {
+        setTrackCode(data.tracking_code);
+        try { localStorage.setItem("dd_career_tracking", data.tracking_code); } catch { /* ignore */ }
+      }
+      trackEvent("career_application", { position: form.position });
     } catch (err: unknown) { setStatus("error"); setErrorMsg(err instanceof Error ? err.message : "Submission failed"); }
   };
 
   const handleTrack = async () => {
-    if (trackName.length < 2 || trackPhone.length < 5) return;
+    if (!trackCode.trim() || trackName.trim().length < 2 || trackPhone.trim().length < 5) return;
     setTrackLoading(true);
-    try { const r = await fetch(`${API}/api/careers/track?name=${encodeURIComponent(trackName)}&phone=${encodeURIComponent(trackPhone)}`); const data = await r.json(); setTrackResults(data); setTrackSearched(true); } catch { setTrackResults([]); setTrackSearched(true); }
+    try {
+      const r = await fetch(`${API}/api/careers/track?tracking_code=${encodeURIComponent(trackCode.trim())}&phone=${encodeURIComponent(trackPhone.trim())}`);
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || "Failed to fetch applications");
+      setTrackResults(Array.isArray(data) ? data : []);
+      setTrackSearched(true);
+    } catch { setTrackResults([]); setTrackSearched(true); }
     setTrackLoading(false);
   };
 
@@ -376,17 +400,18 @@ export default function CareersPage() {
               </div>
               <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase" }}>Application Status</span>
               <h2 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "clamp(2.5rem, 5vw, 4rem)", letterSpacing: "0.03em", marginTop: "0.5rem" }}>Track Your Application</h2>
-              <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.95rem", marginTop: "0.75rem" }}>Enter your name and phone number to check your application status.</p>
+              <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#586159", fontSize: "0.95rem", marginTop: "0.75rem" }}>Enter your tracking code, name, and phone number to check your application status.</p>
             </div>
           </AnimateIn>
 
           <AnimateIn delay={0.1}>
             <div style={{ background: "#fff", borderRadius: "24px", padding: "2.5rem", boxShadow: "0 2px 24px rgba(27,60,51,0.04)", border: "1px solid #f0ede8" }}>
               <div className="careers-track-grid">
+                <div><label style={darkLabelStyle}><KeyRound size={16} /> Tracking Code *</label><input value={trackCode} onChange={(e) => setTrackCode(e.target.value)} style={darkInputStyle} placeholder="Enter your tracking code" /></div>
                 <div><label style={darkLabelStyle}><User size={16} /> Your Name</label><input value={trackName} onChange={(e) => setTrackName(e.target.value)} style={darkInputStyle} placeholder="Enter your name" onKeyDown={(e) => e.key === "Enter" && handleTrack()} /></div>
                 <div><label style={darkLabelStyle}><Phone size={16} /> Phone Number</label><input value={trackPhone} onChange={(e) => setTrackPhone(e.target.value)} style={darkInputStyle} placeholder="Enter your phone" onKeyDown={(e) => e.key === "Enter" && handleTrack()} /></div>
-                <button onClick={handleTrack} disabled={trackName.length < 2 || trackPhone.length < 5 || trackLoading} style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "none", background: trackName.length < 2 || trackPhone.length < 5 ? "#ccc" : "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: trackName.length < 2 || trackPhone.length < 5 ? "not-allowed" : "pointer", whiteSpace: "nowrap", height: "fit-content", transition: "all 0.2s" }}
-                  onMouseEnter={(e) => { if (trackName.length >= 2 && trackPhone.length >= 5) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.15)"; } }}
+                <button onClick={handleTrack} disabled={!trackCode.trim() || trackName.trim().length < 2 || trackPhone.trim().length < 5 || trackLoading} style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "none", background: !trackCode.trim() || trackName.trim().length < 2 || trackPhone.trim().length < 5 ? "#ccc" : "#1b3c33", color: "#fff", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: !trackCode.trim() || trackName.trim().length < 2 || trackPhone.trim().length < 5 ? "not-allowed" : "pointer", whiteSpace: "nowrap", height: "fit-content", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { if (trackCode.trim() && trackName.trim().length >= 2 && trackPhone.trim().length >= 5) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.15)"; } }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
                   {trackLoading ? "Searching..." : "Track"}
                 </button>

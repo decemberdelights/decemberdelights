@@ -5,21 +5,20 @@ import LazyVideo from "@/components/LazyVideo";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function CareerSection() {
-  const revealRef = useScrollReveal(0.12, "0px 0px -40px 0px", { animation: "slideUp3D", stagger: 0.1 });
+  const revealRef = useScrollReveal(0.02, "0px 0px 240px 0px", { animation: "slideUp3D", duration: 0.4, stagger: 0.02 });
   return (
     <>
       <div data-bg="dark" className="career-section" data-parallax="0.05">
         <div ref={revealRef} className="career-text section-reveal" data-parallax="-0.1">
-          <span data-reveal-child style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Career</span>
+          <span data-reveal-child style={{ fontFamily: "var(--font-montserrat)", fontSize: "13px", fontWeight: 700, letterSpacing: "5px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Career</span>
           <div data-reveal-child style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
           <h2 className="career-heading">
-            <ScrollFloat animation="slideUp3D" containerClassName="!my-0">Brew Your</ScrollFloat><br />
-            <ScrollFloat animation="slideUp3D" delay={100} containerClassName="!my-0">Career</ScrollFloat>
+            <ScrollFloat animation="slideUp3D" containerClassName="!my-0">Brew Your Career</ScrollFloat>
           </h2>
-          <p data-reveal-child style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 400, lineHeight: 1.8, color: "rgba(255,255,255,0.85)", marginBottom: "40px", maxWidth: "540px" }}>
+          <p data-reveal-child style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 400, lineHeight: 1.75, color: "rgba(255,255,255,0.85)", marginBottom: "40px", maxWidth: "540px" }}>
             Join the December Delights team. We&apos;re always looking for passionate people who love coffee, great food, and making every customer feel at home.
           </p>
-          <a data-reveal-child href="/careers" style={{ display: "inline-flex", alignItems: "center", gap: "12px", padding: "16px 40px", marginTop: "20px", fontFamily: "'Montserrat', sans-serif", fontSize: "14px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#074134", background: "#fdf9f4", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s cubic-bezier(0.22,1,0.36,1)" }}
+          <a data-reveal-child href="/careers" style={{ display: "inline-flex", alignItems: "center", gap: "12px", padding: "16px 40px", marginTop: "20px", fontFamily: "var(--font-montserrat)", fontSize: "14px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "#074134", background: "#fdf9f4", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s cubic-bezier(0.22,1,0.36,1)" }}
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.2)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
           >

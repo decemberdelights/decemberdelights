@@ -1,35 +1,94 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { m, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
+/**
+ * Brand loading screen.
+ *
+ * Two changes for perceived speed:
+ *  - It uses the `m.*` API (from `LazyMotion`) instead of `motion.*`, so only
+ *    the small animation bundle is loaded rather than framer-motion's full
+ *    runtime.
+ *  - It no longer holds the page hostage for a fixed 1.6s. It waits for the
+ *    page to actually be ready (fonts + hero media) and leaves as soon as it
+ *    can, with a short minimum so the animation still reads as intentional.
+ */
 export default function LoadingScreen() {
   const [show, setShow] = useState(true);
   const [step, setStep] = useState(0);
 
+  const dismiss = useCallback(() => setShow(false), []);
+
   useEffect(() => {
+    // Only show the intro once per session — returning visitors (and
+    // internal navigations) should get straight to the content.
+    if (window.sessionStorage.getItem("dd_intro_seen")) {
+      const skip = requestAnimationFrame(() => {
+        setShow(false);
+        setStep(3);
+      });
+      return () => cancelAnimationFrame(skip);
+    }
+
+    const started = Date.now();
+    // Keep the overlay visible until the full logo, tagline, and progress
+    // choreography has completed, with a hard cap for slow page loads.
+    const MIN_VISIBLE = 3000;
+    const MAX_VISIBLE = 4500;
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      const elapsed = Date.now() - started;
+      const wait = Math.max(0, MIN_VISIBLE - elapsed);
+      window.setTimeout(() => {
+        window.sessionStorage.setItem("dd_intro_seen", "1");
+        dismiss();
+      }, wait);
+    };
+
+    // Exit as soon as the browser says it is ready.
+    if (document.readyState === "complete") {
+      finish();
+    } else {
+      window.addEventListener("load", finish, { once: true });
+    }
+
+    // Hard cap so a slow third-party never traps the user behind the splash.
+    const cap = window.setTimeout(finish, MAX_VISIBLE);
+
+    return () => {
+      done = true;
+      window.removeEventListener("load", finish);
+      window.clearTimeout(cap);
+    };
+  }, [dismiss]);
+
+  // The staged choreography (logo lands → tagline appears → logo flies out).
+  useEffect(() => {
+    if (!show) return;
     const t1 = setTimeout(() => setStep(1), 100);
-    const t2 = setTimeout(() => setStep(2), 2000);
-    const t3 = setTimeout(() => setStep(3), 3000);
-    const t4 = setTimeout(() => setShow(false), 3800);
+    const t2 = setTimeout(() => setStep(2), 1250);
+    const t3 = setTimeout(() => setStep(3), 2100);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
-      clearTimeout(t4);
     };
-  }, []);
+  }, [show]);
 
   return (
     <AnimatePresence>
       {show && (
-        <motion.div
+        <m.div
           key="loader"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-          onClick={() => setShow(false)}
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          onClick={dismiss}
           style={{
             position: "fixed",
             inset: 0,
@@ -53,7 +112,7 @@ export default function LoadingScreen() {
           />
 
           {/* Logo — 3D fly towards user */}
-          <motion.div
+          <m.div
             initial={{
               opacity: 0,
               scale: 0.2,
@@ -88,7 +147,7 @@ export default function LoadingScreen() {
                     }
             }
             transition={{
-              duration: step === 3 ? 0.7 : 1.4,
+              duration: step === 3 ? 0.7 : 1.1,
               ease: [0.16, 1, 0.3, 1],
             }}
             style={{
@@ -104,7 +163,12 @@ export default function LoadingScreen() {
               alt="December Delights"
               width={140}
               height={140}
-              priority
+              // NOT `priority`: the loader is a transient overlay — a
+              // prioritized full-size download would compete with the
+              // hero video/LCP for bandwidth. The displayed size is
+              // clamp(90px, 22vw, 140px), so `sizes` keeps the chosen
+              // srcset candidate small on phones.
+              sizes="(max-width: 636px) 22vw, 140px"
               style={{
                 width: "clamp(90px, 22vw, 140px)",
                 height: "auto",
@@ -112,10 +176,10 @@ export default function LoadingScreen() {
                 filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.3))",
               }}
             />
-          </motion.div>
+          </m.div>
 
           {/* Tagline — fades in after logo lands */}
-          <motion.p
+          <m.p
             initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
             animate={
               step === 3
@@ -131,7 +195,7 @@ export default function LoadingScreen() {
             style={{
               position: "absolute",
               bottom: "38%",
-              fontFamily: "'Montserrat', sans-serif",
+              fontFamily: "var(--font-montserrat)",
               fontSize: "clamp(18px, 4vw, 28px)",
               color: "#fdf9f4",
               textTransform: "uppercase",
@@ -142,13 +206,13 @@ export default function LoadingScreen() {
             }}
           >
             Not Just A Cafe
-          </motion.p>
+          </m.p>
 
           {/* Progress bar */}
-          <motion.div
+          <m.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: step >= 1 ? 1 : 0 }}
-            transition={{ duration: 2.8, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 2.7, ease: [0.22, 1, 0.36, 1] }}
             style={{
               position: "absolute",
               bottom: 0,
@@ -159,7 +223,7 @@ export default function LoadingScreen() {
               transformOrigin: "left",
             }}
           />
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

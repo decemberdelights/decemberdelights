@@ -2,10 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
-from security import validate_order_status, sanitize_input, RateLimiter, validate_email, get_client_ip
-from store import KVStore
+from security import (
+    validate_order_status, sanitize_input, RateLimiter, validate_email,
+    get_client_ip, is_settings_not_configured,
+)
+from csrf import validate_csrf
+from store import KVStore, _get_conn
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import asyncio
+import math
 import os
 import json
 import uuid
@@ -22,6 +28,8 @@ contact_limiter = RateLimiter(max_attempts=3, window_seconds=60)
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
 
+from order_pricing import calculate_order_totals, cart_fingerprint, normalize_cart_items, product_weight_grams
+
 
 def _get_razorpay_client():
     if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
@@ -30,25 +38,36 @@ def _get_razorpay_client():
 
 
 class RazorpayOrderRequest(BaseModel):
-    amount: int
+    items: list[dict]
     customer_phone: str
+    terms_accepted: bool = False
+    terms_version: str = ""
 
 
 class DeleteRequest(BaseModel):
     reason: str = ""
 
 
+class RefundRequest(BaseModel):
+    reason: str = "Refund requested by admin"
+
+
 class CreateOrderRequest(BaseModel):
     customer_name: str
-    customer_email: str = ""
+    customer_email: str
     customer_phone: str
     customer_address: str
+    customer_district: str = ""
+    customer_pincode: str = ""
+    customer_state: str = ""
     items: str
     notes: str = ""
-    payment_method: str = "cash"
+    payment_method: str = "razorpay"
     razorpay_order_id: str = ""
     razorpay_payment_id: str = ""
     razorpay_signature: str = ""
+    terms_accepted: bool = False
+    terms_version: str = ""
 
 
 class UpdateOrderRequest(BaseModel):
@@ -104,6 +123,42 @@ class OrderStatsCache:
 _order_cache = OrderStatsCache(ttl_seconds=60)
 
 
+def _validate_shop_terms_acceptance(accepted: bool, version: str) -> str:
+    if not accepted:
+        raise HTTPException(status_code=400, detail="Please accept the shop terms and conditions")
+    try:
+        terms_result = _current_shop_terms_version()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to validate shop terms acceptance: {e}")
+        raise HTTPException(status_code=503, detail="Shop terms could not be verified") from e
+    if not version or version != terms_result:
+        raise HTTPException(
+            status_code=409,
+            detail="The shop terms have changed. Review and accept the current terms before continuing.",
+        )
+    return terms_result
+
+
+def _current_shop_terms_version() -> str:
+    import hashlib
+
+    rows = _get_conn().execute(
+        """SELECT id, title_en, text_en FROM terms_conditions
+           WHERE scope = 'shop' AND is_active = 1
+           ORDER BY sort_order ASC, id ASC"""
+    ).fetchall()
+    if not rows:
+        raise HTTPException(status_code=503, detail="Shop terms are not available")
+    canonical = json.dumps(
+        [{"id": row[0], "title": row[1], "text": row[2]} for row in rows],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def _normalize_phone(phone: str) -> str:
     return phone.replace(" ", "").replace("-", "").replace("+", "")
 
@@ -121,16 +176,105 @@ def _verify_razorpay_signature(order_id: str, payment_id: str, signature: str) -
         return False
 
 
+def _price_order_items(items: list[dict]) -> tuple[list[dict], float, float, float, float]:
+    try:
+        cart_items = normalize_cart_items(items)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    product_ids = [item["id"] for item in cart_items]
+    try:
+        products_result = supabase.table("products").select("*").in_("id", product_ids).execute()
+    except Exception as e:
+        logger.error(f"Failed to load products for checkout: {e}")
+        raise HTTPException(status_code=503, detail="Products are temporarily unavailable") from e
+    products_map = {int(product["id"]): product for product in (products_result.data or [])}
+
+    sanitized_items = []
+    subtotal = 0.0
+    total_weight_grams = 0
+    for item in cart_items:
+        product = products_map.get(item["id"])
+        if not product or not product.get("is_active", True):
+            raise HTTPException(status_code=400, detail="One or more products are unavailable")
+        quantity = item["quantity"]
+        if int(product.get("stock") or 0) < quantity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient stock for {product.get('name', 'item')}",
+            )
+        try:
+            price = float(product.get("price", 0))
+        except (TypeError, ValueError):
+            logger.error(f"Invalid catalog price for product {item['id']}")
+            raise HTTPException(status_code=503, detail="Product pricing is temporarily unavailable") from None
+        if not math.isfinite(price) or price < 0:
+            logger.error(f"Negative catalog price for product {item['id']}")
+            raise HTTPException(status_code=503, detail="Product pricing is temporarily unavailable")
+        subtotal += price * quantity
+        total_weight_grams += product_weight_grams(product.get("weight_grams")) * quantity
+        sanitized_items.append({
+            "id": item["id"],
+            "name": product.get("name", ""),
+            "price": price,
+            "quantity": quantity,
+        })
+
+    return sanitized_items, *calculate_order_totals(subtotal, total_weight_grams)
+
+
+def _refund_payment(payment_id: str, order_id: str, reason: str) -> str:
+    client = _get_razorpay_client()
+    if not client:
+        raise RuntimeError("Razorpay client is unavailable")
+    payment = client.payment.fetch(payment_id)
+    remaining_amount = int(payment.get("amount", 0)) - int(payment.get("amount_refunded", 0))
+    if remaining_amount <= 0:
+        logger.info("Payment %s is already fully refunded", payment_id)
+        return ""
+    refund = client.payment.refund(payment_id, {
+        "amount": remaining_amount,
+        "notes": {
+            "reason": sanitize_input(reason, 200),
+            "razorpay_order_id": order_id,
+        },
+    })
+    if isinstance(refund, dict) and refund.get("error"):
+        raise RuntimeError(str(refund["error"]))
+    return refund.get("id", "") if isinstance(refund, dict) else ""
+
+
+def _ensure_shop_enabled() -> None:
+    try:
+        setting = supabase.table("site_settings").select("value").eq("key", "shop_enabled").execute()
+        if setting.data and setting.data[0]["value"] == "false":
+            raise HTTPException(status_code=403, detail="Shop is currently unavailable")
+    except HTTPException:
+        raise
+    except Exception as e:
+        if is_settings_not_configured(e):
+            logger.warning(f"site_settings unavailable ({e}); allowing order (flag not configured)")
+        else:
+            logger.error(f"Failed to read shop_enabled flag, failing closed: {e}")
+            raise HTTPException(status_code=503, detail="Shop is temporarily unavailable. Please try again shortly.") from e
+
+
 from activity import log_activity
-from email_service import send_contact_notification
+from email_service import send_contact_notification, send_order_confirmation, send_order_admin_notification
 
 
 @router.post("/api/orders/create-order")
 async def create_shop_razorpay_order(body: RazorpayOrderRequest, request: Request):
     client_ip = get_client_ip(request)
     rate_key = f"shop_order:{client_ip}"
-    order_limiter.check(rate_key)
-    order_limiter.record(rate_key)
+    # SQLite-backed limiter is blocking — keep it off the event loop (workers=1).
+    await asyncio.to_thread(order_limiter.check, rate_key)
+    await asyncio.to_thread(_ensure_shop_enabled)
+    terms_version = await asyncio.to_thread(
+        _validate_shop_terms_acceptance,
+        body.terms_accepted,
+        body.terms_version,
+    )
 
     client = _get_razorpay_client()
     if not client:
@@ -141,42 +285,47 @@ async def create_shop_razorpay_order(body: RazorpayOrderRequest, request: Reques
     if not cleaned.isdigit() or len(cleaned) < 7 or len(cleaned) > 15:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    if body.amount < 100:
+    sanitized_items, subtotal, gst_amount, delivery_charge, grand_total = await asyncio.to_thread(
+        _price_order_items, body.items
+    )
+    amount_paise = int(round(grand_total * 100))
+    if amount_paise < 1000:
         raise HTTPException(status_code=400, detail="Minimum order amount is ₹10")
 
     try:
-        import asyncio as _asyncio
-        order = await _asyncio.to_thread(
+        order = await asyncio.to_thread(
             lambda: client.order.create({
-                "amount": body.amount,
+                "amount": amount_paise,
                 "currency": "INR",
                 "receipt": f"shop_{cleaned}_{uuid.uuid4().hex[:8]}",
-                "notes": {"phone": cleaned, "purpose": "shop_order"},
+                "notes": {
+                    "phone": cleaned,
+                    "purpose": "shop_order",
+                    "terms_version": terms_version,
+                    "cart_hash": cart_fingerprint([
+                        {"id": item["id"], "quantity": item["quantity"]}
+                        for item in sanitized_items
+                    ]),
+                },
             })
         )
         logger.info(f"Shop Razorpay order created: {order['id']} for phone={cleaned}")
-        return {"order_id": order["id"], "amount": body.amount, "currency": "INR", "key_id": RAZORPAY_KEY_ID}
+        return {"order_id": order["id"], "amount": amount_paise, "currency": "INR", "key_id": RAZORPAY_KEY_ID}
     except Exception as e:
         logger.error(f"Shop Razorpay order creation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to create payment order. Please try again.")
 
 
 @router.post("/api/orders")
-def create_public_order(body: CreateOrderRequest, request: Request):
-    # Check if shop is enabled
-    try:
-        setting = supabase.table("site_settings").select("value").eq("key", "shop_enabled").execute()
-        if setting.data and setting.data[0]["value"] == "false":
-            raise HTTPException(status_code=403, detail="Shop is currently unavailable")
-    except HTTPException:
-        raise
-    except Exception:
-        pass  # If settings table doesn't exist yet, allow orders
+def create_public_order(body: CreateOrderRequest, request: Request, background_tasks: BackgroundTasks = BackgroundTasks()):
+    _ensure_shop_enabled()
+    if not body.terms_accepted or not body.terms_version:
+        raise HTTPException(status_code=400, detail="Shop terms acceptance is required")
+    terms_version = body.terms_version
 
     client_ip = get_client_ip(request)
     rate_key = f"order:{client_ip}"
     order_limiter.check(rate_key)
-    order_limiter.record(rate_key)
 
     data = body.model_dump()
     data["customer_name"] = sanitize_input(data["customer_name"], 200)
@@ -188,155 +337,192 @@ def create_public_order(body: CreateOrderRequest, request: Request):
     if not data.get("customer_name") or not data.get("customer_phone") or not data.get("customer_address"):
         raise HTTPException(status_code=400, detail="Name, phone, and address are required")
 
+    if data.get("customer_email") and not validate_email(data["customer_email"]):
+        raise HTTPException(status_code=400, detail="A valid email address is required")
+
     phone = data["customer_phone"]
     cleaned = _normalize_phone(phone)
     if not cleaned.isdigit() or len(cleaned) < 7 or len(cleaned) > 15:
         raise HTTPException(status_code=400, detail="Invalid phone number format")
 
-    if data.get("customer_email") and not validate_email(data["customer_email"]):
-        raise HTTPException(status_code=400, detail="Invalid email address")
-
-    if not data.get("items"):
-        raise HTTPException(status_code=400, detail="Order must contain at least one item")
-
     try:
         items = json.loads(data["items"]) if isinstance(data["items"], str) else data["items"]
-        if not isinstance(items, list) or len(items) == 0:
-            raise ValueError("Items must be a non-empty array")
-    except (json.JSONDecodeError, ValueError):
+        if not isinstance(items, list):
+            raise ValueError("Items must be an array")
+    except (json.JSONDecodeError, ValueError, TypeError):
         raise HTTPException(status_code=400, detail="Invalid items format")
+    sanitized_items, subtotal, gst_amount, delivery_charge, grand_total = _price_order_items(items)
 
-    for item in items:
-        if not isinstance(item, dict) or not item.get("id") or not item.get("quantity"):
-            raise HTTPException(status_code=400, detail="Each item must have id and quantity")
-        try:
-            qty = int(item["quantity"])
-        except (ValueError, TypeError):
-            raise HTTPException(status_code=400, detail="Invalid quantity value")
-        if qty <= 0:
-            raise HTTPException(status_code=400, detail="Item quantity must be at least 1")
-        if qty > 100:
-            raise HTTPException(status_code=400, detail="Maximum 100 per item")
-
-    product_ids = []
-    for item in items:
-        try:
-            product_ids.append(int(item["id"]))
-        except (ValueError, TypeError):
-            raise HTTPException(status_code=400, detail="Invalid product ID")
-
-    products_result = supabase.table("products").select("*").in_("id", product_ids).execute()
-    products_map = {str(p["id"]): p for p in (products_result.data or [])}
-
-    calculated_total = 0.0
-    sanitized_items = []
-    for item in items:
-        pid = str(item["id"])
-        if pid not in products_map:
-            raise HTTPException(status_code=400, detail="One or more products are unavailable")
-        product = products_map[pid]
-        qty = int(item["quantity"])
-        if product.get("stock", 0) < qty:
-            raise HTTPException(status_code=400, detail=f"Insufficient stock for {product.get('name', 'item')}")
-        price = float(product.get("price", 0))
-        calculated_total += price * qty
-        sanitized_items.append({"id": int(pid), "name": product.get("name", ""), "price": price, "quantity": qty})
-
-    payment_method = data.get("payment_method", "cash")
+    payment_method = data.get("payment_method", "razorpay")
     payment_status = "unpaid"
 
-    if payment_method == "razorpay":
-        rp_order_id = data.get("razorpay_order_id", "")
-        rp_payment_id = data.get("razorpay_payment_id", "")
-        rp_signature = data.get("razorpay_signature", "")
-        if not rp_order_id or not rp_payment_id or not rp_signature:
-            raise HTTPException(status_code=400, detail="Missing payment details for online payment")
-        if not _verify_razorpay_signature(rp_order_id, rp_payment_id, rp_signature):
-            raise HTTPException(status_code=400, detail="Payment verification failed")
-        client = _get_razorpay_client()
-        if client:
-            try:
-                payment = client.payment.fetch(rp_payment_id)
-                if payment.get("status") != "captured":
-                    raise HTTPException(status_code=400, detail=f"Payment not captured (status: {payment.get('status')})")
-                paid_paise = int(payment.get("amount", 0))
-                if paid_paise != int(calculated_total * 100):
-                    raise HTTPException(status_code=400, detail="Payment amount mismatch")
-            except HTTPException:
-                raise
-            except Exception as e:
-                logger.warning(f"Could not verify Razorpay payment details: {e}")
-        payment_status = "paid"
+    if payment_method != "razorpay":
+        raise HTTPException(status_code=400, detail="Online payment is required")
 
-    # Atomic stock decrement: read all stocks first, validate, then batch update
-    product_ids = [item["id"] for item in sanitized_items]
+    rp_order_id = data.get("razorpay_order_id", "")
+    rp_payment_id = data.get("razorpay_payment_id", "")
+    rp_signature = data.get("razorpay_signature", "")
+    if not rp_order_id or not rp_payment_id or not rp_signature:
+        raise HTTPException(status_code=400, detail="Missing payment details for online payment")
+    if not _verify_razorpay_signature(rp_order_id, rp_payment_id, rp_signature):
+        raise HTTPException(status_code=400, detail="Payment verification failed")
+    client = _get_razorpay_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Payment gateway verification is unavailable")
+    expected_hash = cart_fingerprint([
+        {"id": item["id"], "quantity": item["quantity"]}
+        for item in sanitized_items
+    ])
     try:
-        stock_result = supabase.table("products").select("id,stock").in_("id", product_ids).execute()
-        stock_map = {p["id"]: p["stock"] for p in (stock_result.data or [])}
+        rp_order = client.order.fetch(rp_order_id)
+        rp_notes = rp_order.get("notes") or {}
+        expected_paise = int(round(grand_total * 100))
+        if (
+            rp_order.get("amount") != expected_paise
+            or rp_order.get("currency") != "INR"
+            or rp_notes.get("purpose") != "shop_order"
+            or rp_notes.get("terms_version") != terms_version
+            or rp_notes.get("cart_hash") != expected_hash
+            or rp_notes.get("phone") != _normalize_phone(data["customer_phone"])
+        ):
+            raise HTTPException(status_code=400, detail="Payment order does not match this cart")
+        payment = client.payment.fetch(rp_payment_id)
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed to read product stocks: {e}")
-        raise HTTPException(status_code=500, detail="Failed to verify stock")
+        logger.error(f"Razorpay payment verification lookup failed: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Payment could not be verified. Please contact support before retrying.",
+        ) from e
+    if (
+        payment.get("status") != "captured"
+        or payment.get("order_id") != rp_order_id
+        or payment.get("currency") != "INR"
+        or int(payment.get("amount", 0)) != expected_paise
+    ):
+        logger.warning(f"Razorpay payment {rp_payment_id} failed order/amount/capture checks")
+        raise HTTPException(status_code=400, detail="Payment verification failed")
+    payment_status = "paid"
 
-    # Validate all stock BEFORE making any updates
-    for item in sanitized_items:
-        current_stock = stock_map.get(item["id"], 0)
-        if current_stock < item["quantity"]:
-            raise HTTPException(status_code=400, detail=f"Insufficient stock for {item.get('name', 'item')}")
-
-    # All stock is sufficient — perform batch update
-    decremented = []
-    for item in sanitized_items:
-        current_stock = stock_map.get(item["id"], 0)
-        new_stock = current_stock - item["quantity"]
-        result = supabase.table("products").update(
-            {"stock": new_stock}
-        ).eq("id", item["id"]).gte("stock", item["quantity"]).execute()
-
-        if not result.data:
-            # Rollback all previous decrements
-            for prev in decremented:
-                try:
-                    fresh = supabase.table("products").select("stock").eq("id", prev["id"]).execute()
-                    current = fresh.data[0]["stock"] if fresh.data else 0
-                    supabase.table("products").update({"stock": current + prev["quantity"]}).eq("id", prev["id"]).execute()
-                except Exception as rollback_err:
-                    logger.error(f"Stock rollback failed for product {prev['id']}: {rollback_err}")
-            raise HTTPException(status_code=400, detail="Insufficient stock — item was just purchased by someone else")
-        decremented.append({"id": item["id"], "quantity": item["quantity"]})
-
-    # Insert order AFTER stock is decremented
+    stock_items = [
+        {"id": item["id"], "quantity": item["quantity"]}
+        for item in sanitized_items
+    ]
     order_data = {
         "customer_name": data["customer_name"],
-        "customer_email": data.get("customer_email", ""),
+        "customer_email": data["customer_email"],
         "customer_phone": data["customer_phone"],
         "customer_address": data["customer_address"],
+        "customer_district": sanitize_input(data.get("customer_district", ""), 100),
+        "customer_pincode": sanitize_input(data.get("customer_pincode", ""), 10),
+        "customer_state": sanitize_input(data.get("customer_state", ""), 100),
         "items": json.dumps(sanitized_items),
-        "total": calculated_total,
+        "total": grand_total,
+        "subtotal": subtotal,
+        "gst_amount": gst_amount,
+        "delivery_charge": delivery_charge,
         "status": "pending",
         "payment_method": payment_method,
         "payment_status": payment_status,
         "notes": data.get("notes", ""),
+        "razorpay_order_id": sanitize_input(rp_order_id, 100),
+        "razorpay_payment_id": sanitize_input(rp_payment_id, 100),
+        "terms_accepted": True,
+        "terms_version": terms_version,
     }
-    if payment_method == "razorpay" and data.get("razorpay_order_id"):
-        order_data["razorpay_order_id"] = sanitize_input(data.get("razorpay_order_id", ""), 100)
-        order_data["razorpay_payment_id"] = sanitize_input(data.get("razorpay_payment_id", ""), 100)
 
     try:
-        result = supabase.table("orders").insert(order_data).execute()
+        order_result = supabase.rpc(
+            "create_paid_order",
+            {"p_order": order_data, "p_items": stock_items},
+        ).execute()
     except Exception as order_err:
-        logger.error(f"Order insert failed, rolling back stock: {order_err}")
-        for prev in decremented:
-            try:
-                fresh = supabase.table("products").select("stock").eq("id", prev["id"]).execute()
-                current = fresh.data[0]["stock"] if fresh.data else 0
-                supabase.table("products").update({"stock": current + prev["quantity"]}).eq("id", prev["id"]).execute()
-            except Exception as rollback_err:
-                logger.error(f"Stock rollback failed for product {prev['id']}: {rollback_err}")
-        raise HTTPException(status_code=500, detail="Failed to create order")
+        logger.critical(
+            "Paid order creation result is unknown for payment %s: %s",
+            rp_payment_id,
+            order_err,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Payment was received, but order status could not be confirmed. "
+                f"Retry safely or contact support with payment reference {rp_payment_id}."
+            ),
+        ) from order_err
+
+    order_result_data = order_result.data
+    if not isinstance(order_result_data, dict):
+        logger.error("Paid order RPC returned an invalid result for payment %s", rp_payment_id)
+        raise HTTPException(
+            status_code=503,
+            detail=f"Payment was received, but order status could not be confirmed. Contact support with payment reference {rp_payment_id}.",
+        )
+
+    if order_result_data.get("stock_reserved") is False:
+        try:
+            _refund_payment(
+                rp_payment_id,
+                rp_order_id,
+                "Order could not be fulfilled because stock reservation failed",
+            )
+        except Exception as refund_err:
+            logger.critical(
+                "Payment %s was captured but stock reservation failed and refund "
+                "could not be initiated: %s",
+                rp_payment_id,
+                refund_err,
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Payment was received, but the order could not be placed and "
+                    f"the refund needs support follow-up. Payment reference: {rp_payment_id}"
+                ),
+            ) from refund_err
+        logger.warning(
+            "Payment %s captured but stock reservation failed; refund initiated",
+            rp_payment_id,
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="Payment was received, but the item is no longer available. A refund has been initiated.",
+        )
+
+    result_data = order_result_data.get("order")
+    if not isinstance(result_data, dict) or "id" not in result_data:
+        logger.error("Paid order RPC omitted order details for payment %s", rp_payment_id)
+        raise HTTPException(
+            status_code=503,
+            detail=f"Payment was received, but order status could not be confirmed. Contact support with payment reference {rp_payment_id}.",
+        )
 
     _order_cache.invalidate()
 
-    return {"id": result.data[0]["id"], "status": result.data[0]["status"]}
+    # Send order confirmation email in background
+    try:
+        customer_email = data["customer_email"]
+        full_address = f"{data['customer_address']}, {data.get('customer_district', '')}, {data.get('customer_state', '')} - {data.get('customer_pincode', '')}"
+        if order_result_data.get("created") is True:
+            # 1. Confirmation to the customer
+            if customer_email:
+                background_tasks.add_task(
+                    send_order_confirmation,
+                    customer_email, data["customer_name"], result_data["id"],
+                    sanitized_items, grand_total, payment_method, full_address,
+                    subtotal, gst_amount, delivery_charge
+                )
+            # 2. Notification to the shop inbox (info@decemberdelights.in)
+            background_tasks.add_task(
+                send_order_admin_notification,
+                result_data["id"], data["customer_name"], customer_email,
+                data["customer_phone"], sanitized_items, grand_total,
+                payment_method, full_address, subtotal, gst_amount, delivery_charge
+            )
+    except Exception as e:
+        logger.warning(f"Failed to queue order confirmation email: {e}")
+
+    return {"id": result_data["id"], "status": result_data["status"]}
 
 
 @router.get("/api/orders/track/{phone}")
@@ -344,13 +530,14 @@ def track_order(phone: str, request: Request):
     client_ip = get_client_ip(request)
     rate_key = f"track:{client_ip}"
     track_limiter.check(rate_key)
-    track_limiter.record(rate_key)
 
     cleaned = _normalize_phone(phone)
     if not cleaned.isdigit() or len(cleaned) < 7:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    safe_cols = "id,customer_name,customer_phone,items,total,status,payment_method,created_at"
+    # Public endpoint: NO internal columns (admin_notes, razorpay ids, notes,
+    # payment_status stay admin-only).
+    safe_cols = "id,customer_name,customer_phone,customer_address,customer_district,customer_pincode,customer_state,items,total,status,payment_method,created_at"
 
     try:
         result = supabase.table("orders").select(safe_cols).eq("customer_phone", cleaned).order("created_at", desc=True).limit(5).execute()
@@ -365,7 +552,6 @@ def submit_contact(data: ContactRequest, request: Request, background_tasks: Bac
     client_ip = get_client_ip(request)
     rate_key = f"contact:{client_ip}"
     contact_limiter.check(rate_key)
-    contact_limiter.record(rate_key)
 
     name = sanitize_input(data.name, 200)
     email = sanitize_input(data.email, 200)
@@ -398,7 +584,9 @@ def submit_contact(data: ContactRequest, request: Request, background_tasks: Bac
 def get_orders(limit: int = 100, offset: int = 0, _=Depends(get_current_admin)):
     limit = min(limit, 200)
     result = supabase.table("orders").select("*").order("created_at", desc=True).range(offset, offset + limit - 1).execute()
-    total = supabase.table("orders").select("id", count="exact").execute()
+    # count="exact" + tiny limit: PostgREST still returns the TOTAL count in the
+    # Content-Range header without shipping every order id to the app.
+    total = supabase.table("orders").select("id", count="exact").limit(1).execute()
     return {"orders": result.data or [], "total": total.count or 0}
 
 
@@ -457,13 +645,15 @@ def get_order_stats(_=Depends(get_current_admin)):
             month_q = supabase.table("orders").select("total,status").gte("created_at", month_start).execute()
             month_orders = month_q.data or []
 
-        # All orders for daily/monthly charts — only select needed columns, limit to recent 90 days
+        # All orders for daily/monthly charts — only select needed columns, limit to recent 90 days.
+        # Safety cap keeps a 90-day spike from shipping an unbounded row set;
+        # values are unchanged for any realistic volume (shape identical).
         ninety_days_ago = (today - timedelta(days=90)).isoformat()
-        chart_q = supabase.table("orders").select("total,status,created_at").gte("created_at", ninety_days_ago).order("created_at", desc=True).execute()
+        chart_q = supabase.table("orders").select("total,status,created_at").gte("created_at", ninety_days_ago).order("created_at", desc=True).limit(10000).execute()
         chart_orders = chart_q.data or []
 
-        # Total count
-        total_count = supabase.table("orders").select("id", count="exact").execute().count or 0
+        # Total count (limit(1): count header only, no row payload)
+        total_count = supabase.table("orders").select("id", count="exact").limit(1).execute().count or 0
 
     except Exception as e:
         logger.error(f"Failed to fetch orders for stats: {e}")
@@ -523,7 +713,8 @@ def get_order_stats(_=Depends(get_current_admin)):
 
 
 @router.post("/api/admin/orders")
-def create_order(data: CreateAdminOrderRequest, _=Depends(get_current_admin)):
+def create_order(data: CreateAdminOrderRequest, request: Request, _=Depends(get_current_admin)):
+    validate_csrf(request)
     try:
         order_data = {
             "customer_name": sanitize_input(data.customer_name, 200),
@@ -560,7 +751,8 @@ def get_order(order_id: int, _=Depends(get_current_admin)):
 
 
 @router.put("/api/admin/orders/{order_id}")
-def update_order(order_id: int, data: UpdateOrderRequest, _=Depends(get_current_admin)):
+def update_order(order_id: int, data: UpdateOrderRequest, request: Request, _=Depends(get_current_admin)):
+    validate_csrf(request)
     try:
         existing = supabase.table("orders").select("*").eq("id", order_id).execute()
         if not existing.data:
@@ -590,11 +782,88 @@ def update_order(order_id: int, data: UpdateOrderRequest, _=Depends(get_current_
         raise HTTPException(status_code=500, detail="Failed to update order")
 
 
+@router.post("/api/admin/orders/{order_id}/refund")
+def refund_order(
+    order_id: int,
+    data: RefundRequest,
+    request: Request,
+    admin=Depends(get_current_admin),
+):
+    validate_csrf(request)
+    try:
+        result = supabase.table("orders").select("*").eq("id", order_id).limit(1).execute()
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Order not found")
+        order = result.data[0]
+        if order.get("payment_method") != "razorpay" or not order.get("razorpay_payment_id"):
+            raise HTTPException(status_code=400, detail="This order has no refundable online payment")
+        if order.get("payment_status") == "refunded":
+            raise HTTPException(status_code=409, detail="This order has already been refunded")
+        if order.get("payment_status") != "paid":
+            raise HTTPException(status_code=409, detail="Only paid orders can be refunded")
+
+        claim = (
+            supabase.table("orders")
+            .update({"payment_status": "refund_pending"})
+            .eq("id", order_id)
+            .eq("payment_status", "paid")
+            .select("id")
+            .execute()
+        )
+        if not claim.data:
+            raise HTTPException(
+                status_code=409,
+                detail="A refund is already being processed. Verify its status in Razorpay before retrying.",
+            )
+
+        refund_id = _refund_payment(
+            order["razorpay_payment_id"],
+            str(order.get("razorpay_order_id", "")),
+            data.reason or "Refund requested by admin",
+        )
+        update_result = (
+            supabase.table("orders")
+            .update({"payment_status": "refunded"})
+            .eq("id", order_id)
+            .eq("payment_status", "refund_pending")
+            .select("id,payment_status")
+            .execute()
+        )
+        if not update_result.data:
+            logger.critical(
+                "Refund for order %s succeeded (refund %s), but order status could not be updated",
+                order_id,
+                refund_id,
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=f"Refund was issued but order status update failed. Refresh and verify order #{order_id}.",
+            )
+        log_activity(
+            admin["username"],
+            "refund",
+            "order",
+            order_id,
+            f"Refunded order #{order_id}. Refund ID: {refund_id or 'already refunded'}",
+        )
+        _order_cache.invalidate()
+        return {"id": order_id, "payment_status": "refunded", "refund_id": refund_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Refund failed for order %s", order_id)
+        raise HTTPException(
+            status_code=502,
+            detail="Refund could not be confirmed. Check the Razorpay dashboard before retrying.",
+        ) from e
+
+
 @router.put("/api/admin/orders/{order_id}/status")
-def update_order_status(order_id: int, data: UpdateStatusRequest, admin=Depends(get_current_admin)):
+def update_order_status(order_id: int, data: UpdateStatusRequest, request: Request, admin=Depends(get_current_admin)):
+    validate_csrf(request)
     status_val = data.status
     if not validate_order_status(status_val):
-        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: pending, confirmed, preparing, packed, ready, delivered, cancelled")
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: pending, confirmed, preparing, packed, ready, dispatched, delivered, cancelled")
     existing = supabase.table("orders").select("*").eq("id", order_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -606,20 +875,95 @@ def update_order_status(order_id: int, data: UpdateStatusRequest, admin=Depends(
         update_data["admin_notes"] = sanitize_input(data.admin_notes, 1000)
 
     if status_val == "cancelled" and old_status != "cancelled":
-        try:
-            items_list = json.loads(order.get("items", "[]")) if isinstance(order.get("items", ""), str) else order.get("items", [])
-            restore_ids = [item.get("id") for item in items_list if item.get("id") and item.get("quantity", 0) > 0]
-            if restore_ids:
-                stock_result = supabase.table("products").select("id,stock").in_("id", restore_ids).execute()
-                stock_map = {p["id"]: p["stock"] for p in (stock_result.data or [])}
-                for item in items_list:
-                    pid = item.get("id")
-                    qty = item.get("quantity", 0)
-                    if pid and qty > 0:
-                        new_stock = stock_map.get(pid, 0) + qty
-                        supabase.table("products").update({"stock": new_stock}).eq("id", pid).execute()
-        except Exception as e:
-            logger.error(f"Failed to restore stock for order {order_id}: {e}")
+        # Refund if order was paid online via Razorpay.
+        # This handler is sync (FastAPI runs it in the threadpool), so the
+        # refund must be a plain blocking call. The old code used
+        # asyncio.get_running_loop().run_in_executor(...) which raises
+        # RuntimeError (no running loop in a worker thread) — silently caught
+        # below — so NO refund was ever created, yet the order could still be
+        # marked refunded. A customer is now only marked refunded when the
+        # refund call actually succeeded.
+        if order.get("payment_method") == "razorpay" and order.get("payment_status") == "refund_pending":
+            raise HTTPException(
+                status_code=409,
+                detail="A refund is already being processed. Verify its status in Razorpay before cancelling.",
+            )
+        if order.get("payment_method") == "razorpay" and order.get("payment_status") == "paid":
+            rp_payment_id = order.get("razorpay_payment_id", "")
+            if not rp_payment_id:
+                logger.error(
+                    f"Order {order_id} is marked paid via Razorpay but has no "
+                    f"razorpay_payment_id — cannot issue refund; cancelling WITHOUT refund mark"
+                )
+            elif not _get_razorpay_client():
+                logger.error(f"Razorpay not configured; cannot refund order {order_id}")
+                raise HTTPException(
+                    status_code=502,
+                    detail="Refund could not be issued (payment gateway not configured). "
+                           "The order was NOT cancelled — please retry later.",
+                )
+            else:
+                claim = (
+                    supabase.table("orders")
+                    .update({"payment_status": "refund_pending"})
+                    .eq("id", order_id)
+                    .eq("payment_status", "paid")
+                    .select("id")
+                    .execute()
+                )
+                if not claim.data:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="A refund is already being processed. Verify its status in Razorpay before cancelling.",
+                    )
+                refund_ok = False
+                try:
+                    refund_id = _refund_payment(
+                        rp_payment_id,
+                        str(order.get("razorpay_order_id", "")),
+                        "Order cancelled by admin",
+                    )
+                    refund_ok = True
+                    logger.info(f"Refund created for order {order_id}, payment {rp_payment_id} ({refund_id})")
+                except Exception as refund_err:
+                    err_text = str(refund_err).lower()
+                    if "refund" in err_text and "already" in err_text:
+                        logger.warning(
+                            f"Refund already exists for order {order_id} payment {rp_payment_id}: {refund_err}"
+                        )
+                        raise HTTPException(
+                            status_code=502,
+                            detail="Refund status is uncertain. Check Razorpay before retrying cancellation.",
+                        ) from refund_err
+                    else:
+                        logger.error(f"Refund FAILED for order {order_id} (payment {rp_payment_id}): {refund_err}")
+                        raise HTTPException(
+                            status_code=502,
+                            detail="Refund could not be confirmed, so the order was NOT cancelled. "
+                                   "Check Razorpay before retrying.",
+                        )
+                if refund_ok:
+                    update_data["payment_status"] = "refunded"
+
+        # Stock was atomically reserved via the reserve_order_stock RPC when the
+        # order was created — releasing it back uses the atomic release_order_stock
+        # RPC (no read-then-write race on the stock counter). Only paid online
+        # orders held a reservation, so only those release stock here.
+        if (
+            status_val == "cancelled"
+            and old_status != "cancelled"
+            and order.get("payment_method") == "razorpay"
+            and order.get("payment_status") in ("paid", "refunded")
+        ):
+            items = order.get("items", "[]")
+            items_list = json.loads(items) if isinstance(items, str) else (items or [])
+            stock_items = [
+                {"id": item.get("id"), "quantity": item.get("quantity", 0)}
+                for item in items_list
+                if item.get("id") and item.get("quantity", 0) > 0
+            ]
+            if stock_items:
+                _release_order_stock(stock_items)
 
     supabase.table("orders").update(update_data).eq("id", order_id).execute()
     log_activity(admin["username"], f"status:{status_val}", "order", order_id, f"Order #{order_id} ({order.get('customer_name', '')}) → {status_val}")
@@ -628,7 +972,8 @@ def update_order_status(order_id: int, data: UpdateStatusRequest, admin=Depends(
 
 
 @router.delete("/api/admin/orders/{order_id}")
-def delete_order(order_id: int, data: Optional[DeleteRequest] = None, admin=Depends(require_super_admin)):
+def delete_order(order_id: int, request: Request, data: Optional[DeleteRequest] = None, admin=Depends(require_super_admin)):
+    validate_csrf(request)
     existing = supabase.table("orders").select("*").eq("id", order_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Order not found")

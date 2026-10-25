@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel
 from supabase_client import supabase
 from auth import get_current_admin, require_super_admin
@@ -8,7 +8,7 @@ from routers.careers import delete_career_files
 from store import KVStore
 from typing import Optional
 from datetime import datetime, timezone, timedelta
-from email_service import send_franchise_approved, send_franchise_rejected
+from email_service import send_franchise_approved, send_franchise_rejected, send_career_approved, send_career_rejected
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ class UpdateStatusRequest(BaseModel):
 
 
 from activity import log_activity
+from csrf import validate_csrf
 
 
 _stats_cache = KVStore(namespace="admin_stats", default_ttl=60)
@@ -54,6 +55,23 @@ def _safe_query(table, select="*", filters=None, order=None, limit=None, offset=
         return [] if not count_only else 0
 
 
+def _count_rows(table: str, filters=None) -> int:
+    """COUNT pushed down to PostgREST: count='exact' + limit(1) returns the
+    TOTAL in the Content-Range header without shipping any rows — fixes the
+    O(n) stats queries that fetched every row of 8 tables just to count them.
+    Raises on failure (stats must 500 rather than report zeros)."""
+    q = supabase.table(table).select("id", count="exact").limit(1)
+    for col, val, op in (filters or []):
+        if op == "eq":
+            q = q.eq(col, val)
+        elif op == "gte":
+            q = q.gte(col, val)
+        elif op == "neq":
+            q = q.neq(col, val)
+    result = q.execute()
+    return result.count or 0
+
+
 @router.get("/api/admin/stats")
 def get_stats(_=Depends(get_current_admin)):
     cached = _stats_cache.get("admin_stats")
@@ -62,50 +80,52 @@ def get_stats(_=Depends(get_current_admin)):
 
     today = datetime.now(timezone.utc).date()
     month_start = today.replace(day=1)
-
-    # Use count="exact" with filters instead of fetching all rows
-    franchise_count = supabase.table("franchise_applications").select("id", count="exact").execute().count or 0
-    career_count = supabase.table("career_applications").select("id", count="exact").execute().count or 0
-    contact_count = supabase.table("contact_messages").select("id", count="exact").execute().count or 0
-    menu_count = supabase.table("menu_items").select("id", count="exact").execute().count or 0
-    product_count = supabase.table("products").select("id", count="exact").execute().count or 0
-    job_count = supabase.table("jobs").select("id", count="exact").eq("is_active", True).execute().count or 0
-    admin_count = supabase.table("admin_users").select("id", count="exact").execute().count or 0
-
-    # Franchise status counts using DB-level filtering
-    pending_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "pending").execute().count or 0
-    submitted_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "submitted").execute().count or 0
-    under_process_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "under_process").execute().count or 0
-    approved_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "approved").execute().count or 0
-    rejected_franchise = supabase.table("franchise_applications").select("id", count="exact").eq("status", "rejected").execute().count or 0
-
-    # Career status counts using DB-level filtering
-    pending_careers = supabase.table("career_applications").select("id", count="exact").eq("status", "pending").execute().count or 0
-    approved_careers = supabase.table("career_applications").select("id", count="exact").eq("status", "approved").execute().count or 0
-    rejected_careers = supabase.table("career_applications").select("id", count="exact").eq("status", "rejected").execute().count or 0
-
-    # Contact pending count using DB-level filtering
-    pending_contacts = supabase.table("contact_messages").select("id", count="exact").eq("status", "pending").execute().count or 0
-
-    # Orders — use date-filtered queries instead of loading all orders
     today_str = today.isoformat()
-    today_orders_data = supabase.table("orders").select("total,status").gte("created_at", today_str).execute()
-    today_orders_list = today_orders_data.data or []
-    total_orders_count = supabase.table("orders").select("id", count="exact").execute().count or 0
+    month_str = today.strftime("%Y-%m-01")
 
+    # Counts are pushed down to the DB (count="exact" + limit(1)) instead of
+    # fetching ALL rows of 8 tables just to count them in Python. JSON shape
+    # and values are identical.
+    try:
+        franchise_count = _count_rows("franchise_applications")
+        pending_franchise = _count_rows("franchise_applications", [("status", "pending", "eq")])
+        submitted_franchise = _count_rows("franchise_applications", [("status", "submitted", "eq")])
+        under_process_franchise = _count_rows("franchise_applications", [("status", "under_process", "eq")])
+        approved_franchise = _count_rows("franchise_applications", [("status", "approved", "eq")])
+        rejected_franchise = _count_rows("franchise_applications", [("status", "rejected", "eq")])
+        month_count = _count_rows("franchise_applications", [("created_at", month_str, "gte")])
+
+        career_count = _count_rows("career_applications")
+        pending_careers = _count_rows("career_applications", [("status", "pending", "eq")])
+        approved_careers = _count_rows("career_applications", [("status", "approved", "eq")])
+        rejected_careers = _count_rows("career_applications", [("status", "rejected", "eq")])
+
+        contact_count = _count_rows("contact_messages")
+        pending_contacts = _count_rows("contact_messages", [("status", "pending", "eq")])
+
+        product_count = _count_rows("products")
+        online_count = _count_rows("products", [("is_active", True, "eq")])
+
+        menu_count = _count_rows("menu_items")
+        job_count = _count_rows("jobs", [("is_active", True, "eq")])
+        admin_count = _count_rows("admin_users")
+        total_orders_count = _count_rows("orders")
+
+        # Only today's orders are needed for revenue + status counters —
+        # bounded window instead of the entire orders table.
+        today_q = supabase.table("orders").select("total,status").gte("created_at", today_str).execute()
+        today_orders_list = today_q.data or []
+    except Exception as e:
+        logger.error(f"Failed to fetch stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load stats")
+
+    # Status counts for today's orders
     today_orders_count = len(today_orders_list)
     today_revenue = sum(o.get("total", 0) for o in today_orders_list)
     pending_orders = sum(1 for o in today_orders_list if o.get("status") == "pending")
     preparing_orders = sum(1 for o in today_orders_list if o.get("status") == "preparing")
     delivered_orders = sum(1 for o in today_orders_list if o.get("status") == "delivered")
     cancelled_orders = sum(1 for o in today_orders_list if o.get("status") == "cancelled")
-
-    # Products online count
-    online_count = supabase.table("products").select("id", count="exact").eq("is_active", True).execute().count or 0
-
-    # Franchise month count using date filter
-    month_str = today.strftime("%Y-%m-01")
-    month_count = supabase.table("franchise_applications").select("id", count="exact").gte("created_at", month_str).execute().count or 0
 
     result = {
         "franchise_count": franchise_count,
@@ -157,7 +177,8 @@ def get_applications(offset: int = 0, limit: int = 50, _=Depends(get_current_adm
 
 
 @router.put("/api/admin/franchise/{app_id}")
-def update_franchise(app_id: int, data: UpdateStatusRequest, admin=Depends(get_current_admin)):
+def update_franchise(app_id: int, data: UpdateStatusRequest, request: Request, admin=Depends(get_current_admin), background_tasks: BackgroundTasks = BackgroundTasks()):
+    validate_csrf(request)
     if not validate_application_status(data.status):
         raise HTTPException(status_code=400, detail="Invalid status")
     if data.status == "rejected" and len(data.admin_notes.strip()) < 10:
@@ -181,20 +202,21 @@ def update_franchise(app_id: int, data: UpdateStatusRequest, admin=Depends(get_c
     notes = data.admin_notes or ""
 
     if email and data.status == "approved":
-        send_franchise_approved(email, full_name, login_id, phone, notes)
+        background_tasks.add_task(send_franchise_approved, email, full_name, login_id, phone, notes)
     elif email and data.status == "rejected":
-        send_franchise_rejected(email, full_name, login_id, phone, notes)
+        background_tasks.add_task(send_franchise_rejected, email, full_name, login_id, phone, notes)
 
     try:
         from auth import _franchise_cache
         _franchise_cache.invalidate(str(app_id))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Franchise cache invalidation failed for app {app_id}: {e}")
     return {"ok": True}
 
 
 @router.put("/api/admin/careers/{app_id}")
-def update_career(app_id: int, data: UpdateStatusRequest, admin=Depends(get_current_admin)):
+def update_career(app_id: int, data: UpdateStatusRequest, request: Request, admin=Depends(get_current_admin), background_tasks: BackgroundTasks = BackgroundTasks()):
+    validate_csrf(request)
     if not validate_application_status(data.status):
         raise HTTPException(status_code=400, detail="Invalid status")
     if data.status == "rejected" and len(data.admin_notes.strip()) < 10:
@@ -210,11 +232,19 @@ def update_career(app_id: int, data: UpdateStatusRequest, admin=Depends(get_curr
     supabase.table("career_applications").update(update_data).eq("id", app_id).execute()
     log_activity(admin["username"], data.status, "career", app_id, f"Career application of {app.get('full_name', '')} → {data.status}")
     _stats_cache.invalidate("admin_stats")
+
+    email = app.get("email", "")
+    if email and data.status == "approved":
+        background_tasks.add_task(send_career_approved, email, app.get("full_name", ""), app.get("position", ""), data.admin_notes)
+    elif email and data.status == "rejected":
+        background_tasks.add_task(send_career_rejected, email, app.get("full_name", ""), app.get("position", ""), data.admin_notes)
+
     return {"ok": True}
 
 
 @router.put("/api/admin/contacts/{app_id}")
-def update_contact(app_id: int, data: UpdateStatusRequest, admin=Depends(get_current_admin)):
+def update_contact(app_id: int, data: UpdateStatusRequest, request: Request, admin=Depends(get_current_admin)):
+    validate_csrf(request)
     if not validate_application_status(data.status):
         raise HTTPException(status_code=400, detail="Invalid status")
     if data.status == "rejected" and len(data.admin_notes.strip()) < 10:
@@ -234,7 +264,8 @@ def update_contact(app_id: int, data: UpdateStatusRequest, admin=Depends(get_cur
 
 
 @router.delete("/api/admin/franchise/{app_id}")
-def delete_franchise(app_id: int, data: Optional[DeleteRequest] = None, admin=Depends(require_super_admin)):
+def delete_franchise(app_id: int, request: Request, data: Optional[DeleteRequest] = None, admin=Depends(require_super_admin)):
+    validate_csrf(request)
     existing = supabase.table("franchise_applications").select("*").eq("id", app_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -247,13 +278,14 @@ def delete_franchise(app_id: int, data: Optional[DeleteRequest] = None, admin=De
     try:
         from auth import _franchise_cache
         _franchise_cache.invalidate(str(app_id))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Franchise cache invalidation failed for deleted app {app_id}: {e}")
     return {"ok": True}
 
 
 @router.delete("/api/admin/careers/{app_id}")
-def delete_career(app_id: int, data: Optional[DeleteRequest] = None, admin=Depends(require_super_admin)):
+def delete_career(app_id: int, request: Request, data: Optional[DeleteRequest] = None, admin=Depends(require_super_admin)):
+    validate_csrf(request)
     existing = supabase.table("career_applications").select("*").eq("id", app_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -267,7 +299,8 @@ def delete_career(app_id: int, data: Optional[DeleteRequest] = None, admin=Depen
 
 
 @router.delete("/api/admin/contacts/{app_id}")
-def delete_contact(app_id: int, data: Optional[DeleteRequest] = None, admin=Depends(require_super_admin)):
+def delete_contact(app_id: int, request: Request, data: Optional[DeleteRequest] = None, admin=Depends(require_super_admin)):
+    validate_csrf(request)
     existing = supabase.table("contact_messages").select("*").eq("id", app_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Message not found")
@@ -293,16 +326,19 @@ def get_logs(limit: int = 100, _=Depends(get_current_admin)):
 @router.get("/api/admin/franchise/cities")
 def get_franchise_cities(_=Depends(get_current_admin)):
     try:
-        result = supabase.table("franchise_applications").select("city").neq("city", "").execute()
+        # Single query with deduplication in Python; safety cap so this can
+        # never ship an unbounded row set (response shape unchanged).
+        result = supabase.table("franchise_applications").select("city", count="exact").neq("city", "").limit(5000).execute()
         cities = list(set(r["city"] for r in (result.data or []) if r.get("city")))
-        return cities
+        return sorted(cities)
     except Exception as e:
         logger.error(f"Failed to fetch franchise cities: {e}")
         return []
 
 
 @router.post("/api/admin/reset-database")
-def reset_database(admin=Depends(require_super_admin)):
+def reset_database(request: Request, admin=Depends(require_super_admin)):
+    validate_csrf(request)
     log_activity(admin["username"], "reset_database", "system", 0, "Full database reset initiated")
     tables_to_clear = [
         "orders",
@@ -347,14 +383,27 @@ class SettingsUpdate(BaseModel):
 
 def _get_settings():
     try:
+        from cache import cache_get as _cg, cache_set as _cs
+        cached = _cg("site_settings")
+        if cached is not None:
+            return cached
+    except Exception:
+        cached = None
+    try:
         result = supabase.table("site_settings").select("key, value").execute()
         settings = {}
         for row in (result.data or []):
             settings[row["key"]] = row["value"] == "true"
-        return {
+        out = {
             "shop_enabled": settings.get("shop_enabled", True),
             "franchise_enabled": settings.get("franchise_enabled", True),
         }
+        try:
+            from cache import cache_set as _cs2
+            _cs2("site_settings", out, ttl=60)
+        except Exception as e:
+            logger.warning(f"site_settings cache write failed: {e}")
+        return out
     except Exception as e:
         logger.error(f"Failed to read settings: {e}")
         return {"shop_enabled": True, "franchise_enabled": True}
@@ -366,7 +415,8 @@ def get_settings():
 
 
 @router.put("/api/admin/settings")
-def update_settings(body: SettingsUpdate, admin=Depends(get_current_admin)):
+def update_settings(body: SettingsUpdate, request: Request, admin=Depends(get_current_admin)):
+    validate_csrf(request)
     updates = {}
     if body.shop_enabled is not None:
         updates["shop_enabled"] = body.shop_enabled
@@ -383,4 +433,9 @@ def update_settings(body: SettingsUpdate, admin=Depends(get_current_admin)):
             logger.error(f"Failed to update setting {key}: {e}")
             raise HTTPException(500, f"Failed to update {key}")
     log_activity(admin["username"], "update_settings", "system", 0, str(updates))
+    try:
+        from cache import cache_invalidate as _ci
+        _ci("site_settings")
+    except Exception as e:
+        logger.warning(f"site_settings cache invalidation failed after settings update: {e}")
     return _get_settings()

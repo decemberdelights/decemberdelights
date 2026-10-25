@@ -1,9 +1,6 @@
 # Dependencies
 node_modules
 
-# Backend (separate Docker image)
-backend
-
 # Git
 .git
 .gitignore
@@ -41,14 +38,23 @@ render.yaml
 
 # TypeScript build info
 *.tsbuildinfo
-next-env.d.ts
+# NOTE: next-env.d.ts must NOT be ignored — Next.js needs it to typecheck
+# during `npm run build` in the frontend image.
 
-# Backend runtime data
+# Backend runtime data (never bake uploads/SQLite into images)
+uploads
 backend/uploads
 backend/backups
+.data
+backend/.data
 __pycache__
 *.pyc
 *.pyo
+.pytest_cache
+
+# Deploy artifacts (tarballs may contain env templates; deploy/ is generated)
+deploy
+*.tar.gz
 
 # Unused dev artifacts
 coverage

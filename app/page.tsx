@@ -5,12 +5,15 @@ import HeroSection from "@/components/sections/HeroSection";
 import { useSiteSettings } from "@/lib/useSiteSettings";
 import { useParallax } from "@/hooks/useParallax";
 
-const ShopSection = dynamic(() => import("@/components/sections/ShopSection"), { ssr: false, loading: () => <div style={{ minHeight: "600px" }} /> });
-const FranchiseSection = dynamic(() => import("@/components/sections/FranchiseSection"), { ssr: false, loading: () => <div style={{ minHeight: "400px" }} /> });
-const MenuPreviewSection = dynamic(() => import("@/components/sections/MenuPreviewSection"), { ssr: false, loading: () => <div style={{ minHeight: "400px" }} /> });
-const CareerSection = dynamic(() => import("@/components/sections/CareerSection"), { ssr: false, loading: () => <div style={{ minHeight: "400px" }} /> });
-const AboutSection = dynamic(() => import("@/components/sections/AboutSection"), { ssr: false, loading: () => <div style={{ minHeight: "400px" }} /> });
-const VisitSection = dynamic(() => import("@/components/sections/VisitSection"), { ssr: false, loading: () => <div style={{ minHeight: "400px" }} /> });
+// `dynamic()` keeps each section code-split; SSR stays ON so crawlers and
+// slow devices get real HTML below the hero instead of an empty shell.
+// The minHeight placeholders preserve layout (CLS) while chunks load.
+const ShopSection = dynamic(() => import("@/components/sections/ShopSection"), { loading: () => <div style={{ minHeight: "600px" }} /> });
+const FranchiseSection = dynamic(() => import("@/components/sections/FranchiseSection"), { loading: () => <div style={{ minHeight: "400px" }} /> });
+const MenuPreviewSection = dynamic(() => import("@/components/sections/MenuPreviewSection"), { loading: () => <div style={{ minHeight: "400px" }} /> });
+const CareerSection = dynamic(() => import("@/components/sections/CareerSection"), { loading: () => <div style={{ minHeight: "400px" }} /> });
+const AboutSection = dynamic(() => import("@/components/sections/AboutSection"), { loading: () => <div style={{ minHeight: "400px" }} /> });
+const VisitSection = dynamic(() => import("@/components/sections/VisitSection"), { loading: () => <div style={{ minHeight: "400px" }} /> });
 
 export default function Home() {
   const { shop_enabled } = useSiteSettings();

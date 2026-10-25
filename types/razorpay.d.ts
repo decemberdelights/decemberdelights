@@ -26,4 +26,6 @@ interface RazorpayCheckout {
 
 interface Window {
   Razorpay: new (options: RazorpayOptions) => RazorpayCheckout;
+  gtag: (...args: unknown[]) => void;
+  dataLayer: unknown[];
 }

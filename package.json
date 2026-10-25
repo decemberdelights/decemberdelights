@@ -8,7 +8,8 @@
     "backend:seed": "cd backend && python seed.py",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:frontend": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
@@ -26,13 +27,17 @@
     "tailwindcss": "^4"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/jszip": "^3.4.0",
-    "@types/node": "^20",
+    "@types/node": "20.19.43",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.0",
+    "jsdom": "^26.1.0",
     "sharp": "^0.35.3",
-    "typescript": ">=6.0.0 <6.1.0"
+    "typescript": "6.0.3",
+    "vitest": "^3.2.7"
   }
 }

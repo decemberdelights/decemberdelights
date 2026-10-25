@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Not source code: the deploy folder ships a standalone server bundle and
+    // stale .next build output (server.js uses require() by design).
+    "deploy/**",
   ]),
 ]);
 

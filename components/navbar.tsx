@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Building2, CircleEllipsis, House, Info, ShoppingBag } from "lucide-react";
 import { useSiteSettings } from "@/lib/useSiteSettings";
 
 export default function Navbar() {
@@ -116,7 +117,7 @@ export default function Navbar() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 10px 24px;
+          padding: 6px 20px;
           border-radius: 999px;
           will-change: transform, opacity, backdrop-filter;
           transform: translateY(-120%) scale(0.92);
@@ -184,7 +185,7 @@ export default function Navbar() {
           letter-spacing: 1.8px;
           text-transform: uppercase;
           text-decoration: none;
-          padding: 8px 14px;
+          padding: 6px 12px;
           border-radius: 999px;
           transition: color 0.4s cubic-bezier(0.22, 1, 0.36, 1),
                       background 0.35s cubic-bezier(0.22, 1, 0.36, 1),
@@ -207,7 +208,7 @@ export default function Navbar() {
           color: #074134;
         }
         .dd-nav-links a.dd-cta {
-          padding: 9px 24px;
+          padding: 7px 18px;
           font-weight: 800;
           letter-spacing: 2px;
           margin-left: auto;
@@ -242,8 +243,9 @@ export default function Navbar() {
         .dd-logo-icon {
           display: inline-block;
           flex-shrink: 0;
-          width: auto;
+          width: 40px;
           height: auto;
+          object-fit: contain;
           transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
           perspective: 600px;
         }
@@ -363,14 +365,31 @@ export default function Navbar() {
           .dd-hamburger { display: flex !important; }
           .dd-mobile-logo { display: flex !important; }
           .dd-nav > .dd-logo-icon { display: inline-block !important; }
+          .dd-nav {
+            top: 8px;
+            left: 12px;
+            right: 12px;
+            min-height: 66px;
+            padding: 6px 14px;
+          }
+          .dd-mobile-logo .dd-logo-icon {
+            width: 28px;
+            height: auto;
+          }
+          .dd-hamburger {
+            min-height: 44px;
+            min-width: 44px;
+            padding: 10px;
+          }
         }
 
         @media (max-width: 480px) {
           .dd-nav {
-            top: 8px; left: 10px; right: 10px;
-            padding: 8px 16px;
+            left: 10px;
+            right: 10px;
+            min-height: 64px;
+            padding: 6px 12px;
           }
-          .dd-nav > .dd-logo-icon { height: auto; width: auto; }
         }
       `}</style>
 
@@ -450,6 +469,27 @@ export default function Navbar() {
           Franchise →
         </Link>
       </div>
+
+      <nav className="dd-tabbar" aria-label="Mobile navigation">
+          {[
+            { label: "Home", href: "/", Icon: House },
+            { label: "Shop", href: "/shop", Icon: ShoppingBag },
+            { label: "Franchise", href: "/franchise", Icon: Building2 },
+            { label: "About Us", href: "/#our-story", Icon: Info },
+          ].map(({ label, href, Icon }) => {
+            const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
+            return (
+              <Link key={label} href={href} aria-current={active ? "page" : undefined} className={active ? "active" : ""}>
+                <Icon size={19} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+          <button type="button" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen} aria-label={menuOpen ? "Close more navigation options" : "Open more navigation options"} className={menuOpen ? "active" : ""}>
+            <CircleEllipsis size={19} strokeWidth={menuOpen ? 2.2 : 1.8} aria-hidden="true" />
+            <span>More</span>
+          </button>
+      </nav>
     </>
   );
 }

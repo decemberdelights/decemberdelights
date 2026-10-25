@@ -76,6 +76,36 @@ const TERMS_HI = [
 
 const TERMS = { en: TERMS_EN, te: TERMS_TE, hi: TERMS_HI };
 
+// Only these formatting tags may ever reach the dangerouslySetInnerHTML sink.
+// Server (backend) already allowlists, but we re-sanitize here as defense-in-depth.
+const ALLOWED_TERM_TAGS = new Set(["STRONG", "EM", "B", "I", "BR"]);
+
+function escapeHtml(s: string): string {
+  const div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function sanitizeTermsHtml(input: string): string {
+  if (typeof document === "undefined") return "";
+  const container = document.createElement("div");
+  container.innerHTML = input;
+  const clean = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) return escapeHtml(node.textContent ?? "");
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    const el = node as Element;
+    const tag = el.tagName.toUpperCase();
+    const inner = Array.from(el.childNodes).map(clean).join("");
+    if (!ALLOWED_TERM_TAGS.has(tag)) return inner;
+    if (tag === "BR") return "<br/>";
+    const name = tag.toLowerCase();
+    return `<${name}>${inner}</${name}>`;
+  };
+  const root = container;
+  const inner = Array.from(root.childNodes).map(clean).join("");
+  return inner;
+}
+
 interface ApiTerm {
   text_en: string;
   text_te: string;
@@ -98,9 +128,9 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
   const [lang, setLang] = useState<"en" | "te" | "hi">("en");
   const [accepted, setAccepted] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const [apiTerms, setApiTerms] = useState<{ en: string[]; te: string[]; hi: string[] } | null>(null);
 
   useEffect(() => {
@@ -144,28 +174,49 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
     stopSpeech();
     setLang(newLang);
     setAccepted(false);
-    setScrollProgress(0);
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    if (progressBarRef.current) progressBarRef.current.style.transform = "scaleX(0)";
   };
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    const bar = progressBarRef.current;
+    if (!el || !bar) return;
+    let ticking = false;
     const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = el;
-      const progress = scrollHeight <= clientHeight ? 1 : scrollTop / (scrollHeight - clientHeight);
-      setScrollProgress(Math.min(1, progress));
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const { scrollTop, scrollHeight, clientHeight } = el;
+        const progress = scrollHeight <= clientHeight ? 1 : scrollTop / (scrollHeight - clientHeight);
+        bar.style.transform = `scaleX(${Math.min(1, progress)})`;
+        ticking = false;
+      });
     };
     el.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
     return () => el.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
     if (!open) return;
-    setScrollProgress(0);
-    setAccepted(false);
-    stopSpeech();
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    if (progressBarRef.current) progressBarRef.current.style.transform = "scaleX(0)";
+    return () => stopSpeech();
   }, [open, stopSpeech]);
+
+  // Lock background scroll while the modal is open (same pattern as the shop modals).
+  useEffect(() => {
+    if (!open) return;
+    const prevHtml = document.documentElement.style.overflow;
+    const prevBody = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = prevHtml;
+      document.body.style.overflow = prevBody;
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -177,7 +228,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
         @keyframes tcCheckPop { 0% { transform: scale(0.8); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
         .tc-overlay {
-          position: fixed; inset: 0; z-index: 10000;
+          position: fixed; inset: 0; z-index: 1200;
           background: rgba(0,0,0,0.6);
           backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
           display: flex; align-items: center; justify-content: center;
@@ -206,12 +257,12 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
           margin-bottom: 0.75rem;
         }
         .tc-header h2 {
-          font-family: 'Cormorant Garamond', serif;
+          font-family: var(--font-cormorant);
           font-size: 1.65rem; font-weight: 700; color: #1b3c33;
           margin: 0; line-height: 1.2;
         }
         .tc-header p {
-          font-family: 'Outfit', sans-serif;
+          font-family: var(--font-outfit);
           font-size: 0.82rem; color: #999;
           margin: 0.3rem 0 0;
         }
@@ -225,7 +276,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
           border: 1.5px solid #e8e5e0;
           background: transparent;
           color: #999;
-          font-family: 'Outfit', sans-serif;
+          font-family: var(--font-outfit);
           font-size: 0.7rem; font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
@@ -252,7 +303,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
         .tc-progress-bar {
           height: 100%;
           background: linear-gradient(90deg, #1b3c33, #c8a97e);
-          transition: width 0.2s ease-out;
+          transition: transform 0.2s ease-out;
         }
 
         .tc-scroll {
@@ -277,14 +328,14 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
         .tc-item:hover { background: #faf9f7; }
 
         .tc-num {
-          font-family: 'Bebas Neue', sans-serif;
+          font-family: var(--font-bebas-neue);
           font-size: 1rem; color: #c8a97e;
           flex-shrink: 0; min-width: 1.6rem;
           text-align: right; padding-top: 2px;
           opacity: 0.85;
         }
         .tc-text {
-          font-family: 'Outfit', sans-serif;
+          font-family: var(--font-outfit);
           font-size: 0.92rem; color: #333;
           line-height: 1.7; margin: 0;
         }
@@ -295,7 +346,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
           padding: 0 2px;
         }
         .tc-section-label {
-          font-family: 'Montserrat', sans-serif;
+          font-family: var(--font-montserrat);
           font-size: 0.7rem; font-weight: 700;
           text-transform: uppercase; letter-spacing: 2.5px;
           color: #1b3c33; margin: 1.25rem 0 0.5rem;
@@ -349,7 +400,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
           animation: tcCheckPop 0.3s ease;
         }
         .tc-checkbox-text {
-          font-family: 'Outfit', sans-serif;
+          font-family: var(--font-outfit);
           font-size: 0.88rem; font-weight: 500;
           color: #999; transition: color 0.2s;
           line-height: 1.4;
@@ -358,8 +409,10 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
 
         .tc-full-link {
           display: inline-flex; align-items: center; gap: 0.3rem;
-          margin-left: 2.85rem; margin-bottom: 0.75rem;
-          font-family: 'Outfit', sans-serif;
+          /* Align with the checkbox label text: padding (1.1rem) + box (22px) + gap (0.85rem).
+             calc keeps it aligned even when the label wraps to multiple lines. */
+          margin-left: calc(1.95rem + 22px); margin-bottom: 0.75rem;
+          font-family: var(--font-outfit);
           font-size: 0.75rem; color: #999;
           text-decoration: none; transition: color 0.2s;
         }
@@ -378,7 +431,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
         .tc-btn {
           flex: 1; padding: 0.9rem;
           border-radius: 100px;
-          font-family: 'Outfit', sans-serif;
+          font-family: var(--font-outfit);
           font-size: 0.88rem; font-weight: 600;
           cursor: pointer; border: none;
           transition: all 0.2s;
@@ -435,11 +488,11 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "0.78rem", color: "#999", margin: 0 }}>
+              <p style={{ fontFamily: "var(--font-outfit)", fontSize: "0.78rem", color: "#999", margin: 0 }}>
                 {terms.length} clauses
               </p>
               <button onClick={speaking ? stopSpeech : speak}
-                style={{ padding: "0.35rem 0.8rem", borderRadius: "100px", border: "1.5px solid #e8e5e0", background: speaking ? "#f7f5f2" : "transparent", color: speaking ? "#1b3c33" : "#999", fontFamily: "'Outfit', sans-serif", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem", transition: "all 0.2s" }}
+                style={{ padding: "0.35rem 0.8rem", borderRadius: "100px", border: "1.5px solid #e8e5e0", background: speaking ? "#f7f5f2" : "transparent", color: speaking ? "#1b3c33" : "#999", fontFamily: "var(--font-outfit)", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem", transition: "all 0.2s" }}
                 onMouseEnter={(e) => { if (!speaking) { e.currentTarget.style.borderColor = "#c8a97e"; e.currentTarget.style.color = "#1b3c33"; } }}
                 onMouseLeave={(e) => { if (!speaking) { e.currentTarget.style.borderColor = "#e8e5e0"; e.currentTarget.style.color = "#999"; } }}>
                 {speaking ? (
@@ -452,7 +505,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
           </div>
 
           <div className="tc-progress-wrap">
-            <div className="tc-progress-bar" style={{ width: `${scrollProgress * 100}%` }} />
+            <div className="tc-progress-bar" ref={progressBarRef} style={{ transform: "scaleX(0)", transformOrigin: "left", willChange: "transform" }} />
           </div>
 
           <div className="tc-scroll" ref={scrollRef} data-lenis-prevent>
@@ -464,7 +517,7 @@ export default function TermsModal({ open = true, onClose, onAccept }: { open?: 
                   {showLabel && <div className="tc-section-label">{sections[i]}</div>}
                   <div className="tc-item">
                     <span className="tc-num">{String(i + 1).padStart(2, "0")}</span>
-                    <p className="tc-text" dangerouslySetInnerHTML={{ __html: term }} />
+                    <p className="tc-text" dangerouslySetInnerHTML={{ __html: sanitizeTermsHtml(term) }} />
                   </div>
                 </div>
               );

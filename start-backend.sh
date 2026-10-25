@@ -7,4 +7,8 @@ if [ ! -f "../venv/bin/activate" ]; then
 else
   source ../venv/bin/activate
 fi
-exec uvicorn main:app --host 0.0.0.0 --port 10000
+# Production mode: tight CORS, no localhost dev origins.
+export ENV="${ENV:-production}"
+# --proxy-headers: honor X-Forwarded-* from our local nginx only, so the
+# client IP used for rate limiting is the real one, not nginx's 127.0.0.1.
+exec ../venv/bin/uvicorn main:app --host 0.0.0.0 --port "${PORT:-10000}" --workers 1 --proxy-headers --forwarded-allow-ips=127.0.0.1

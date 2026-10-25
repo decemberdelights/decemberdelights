@@ -119,8 +119,8 @@ export default function SettingsTab({ adminUsers, api, onRefresh }: SettingsTabP
       </div>
 
       {editingUser && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)" }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: "min(420px, 90vw)", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "clamp(16px, 4vw, 32px)", width: "min(420px, 90vw)", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
             <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 700, color: "#1b2b25", marginBottom: 4 }}>Edit: {editingUser.username}</h3>
             <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>Update username and/or password for this admin.</p>
 

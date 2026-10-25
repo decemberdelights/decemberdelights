@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import Image from "next/image";
 import { App } from "../types";
 import { API } from "@/lib/api";
 import FilterBar from "../FilterBar";
-import JSZip from "jszip";
 
 interface ApplicationsTabProps {
   type: "franchise" | "careers" | "contacts";
@@ -23,6 +23,23 @@ function docUrl(url: string) {
   return `${API}${url}`;
 }
 
+function franchiseEditionLabel(value?: string) {
+  const edition = value?.trim().toLowerCase();
+  if (edition === "highway" || edition === "highway edition") return "Highway Edition";
+  if (edition === "city" || edition === "city edition") return "City Edition";
+  return value || "—";
+}
+
+function escapeHtml(value?: string) {
+  return (value || "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] || character);
+}
+
 const DOC_FIELDS: [string, string][] = [
   ["aadhaar", "Aadhaar Card"], ["pan", "PAN Card"], ["bank_statement", "Bank Statement"],
   ["address_proof", "Address Proof"], ["other_docs", "Other Documents"],
@@ -32,6 +49,8 @@ const DOC_FIELDS: [string, string][] = [
 export default function ApplicationsTab({ type, items, role, onApprove, onUnderProcess, onReject, onDelete }: ApplicationsTabProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [imgBlobs, setImgBlobs] = useState<Record<string, string>>({});
+  const imgBlobUrls = useRef<Record<string, string>>({});
+  const imgSrcUrls = useRef<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -43,7 +62,7 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
       if (statusFilter && item.status !== statusFilter) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        const searchable = [item.full_name, item.name, item.email, item.phone, item.position, item.subject, item.preferred_location].filter(Boolean).join(" ").toLowerCase();
+        const searchable = [item.full_name, item.name, item.email, item.phone, item.position, item.subject, item.preferred_location, item.franchise_type, item.investment_capability, item.business_experience, item.message].filter(Boolean).join(" ").toLowerCase();
         if (!searchable.includes(q)) return false;
       }
       return true;
@@ -59,13 +78,31 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
     if (!url) return;
     const fullUrl = docUrl(url);
     if (!fullUrl) return;
+    if (imgSrcUrls.current[key] === url && imgBlobUrls.current[key]) return; // already loaded
     try {
       const r = await fetch(fullUrl);
       if (!r.ok) return;
       const blob = await r.blob();
       const blobUrl = URL.createObjectURL(blob);
+      const prevUrl = imgBlobUrls.current[key];
+      imgBlobUrls.current[key] = blobUrl;
+      imgSrcUrls.current[key] = url;
+      if (prevUrl && prevUrl !== blobUrl) {
+        // Revoke the replaced URL only after React has swapped to the new one.
+        setTimeout(() => URL.revokeObjectURL(prevUrl), 1000);
+      }
       setImgBlobs(prev => ({ ...prev, [key]: blobUrl }));
     } catch { /* ignore */ }
+  }, []);
+
+  // Revoke every preview blob URL we created when the tab unmounts.
+  useEffect(() => {
+    const urls = imgBlobUrls.current;
+    return () => {
+      Object.values(urls).forEach(url => URL.revokeObjectURL(url));
+      imgBlobUrls.current = {};
+      imgSrcUrls.current = {};
+    };
   }, []);
 
   useEffect(() => {
@@ -75,11 +112,14 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
     if (type === "franchise") {
       for (const [key] of DOC_FIELDS) {
         const url = (item as unknown as Record<string, string>)[key];
-        if (url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) loadImage(url, `${item.id}-${key}`);
+        if (url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) {
+          void Promise.resolve().then(() => loadImage(url, `${item.id}-${key}`));
+        }
       }
     }
-    if (item.resume_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.resume_url)) {
-      loadImage(item.resume_url, `${item.id}-resume`);
+    const resumeUrl = item.resume_url;
+    if (resumeUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(resumeUrl)) {
+      void Promise.resolve().then(() => loadImage(resumeUrl, `${item.id}-resume`));
     }
   }, [expandedId, items, type, loadImage]);
 
@@ -144,11 +184,13 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
                 </div>
                 <div style={{ padding: 10, background: "#fff" }}>
                   {isImage && imgBlobs[imgKey] ? (
-                    <img src={imgBlobs[imgKey]} alt={label} style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
+                    <Image src={imgBlobs[imgKey]} alt={label} width={800} height={600} unoptimized style={{ width: "100%", height: "auto", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
                   ) : isVideo && fullUrl ? (
                     <video src={fullUrl} controls style={{ width: "100%", maxHeight: 300, borderRadius: 6, background: "#000" }} />
                   ) : isPdf && fullUrl ? (
-                    <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
+                    <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 6 }} />
+                  ) : /\.(docx|doc)$/i.test(url) && fullUrl ? (
+                    <iframe src={`https://docs.google.com/gview?url=${encodeURIComponent(fullUrl)}&embedded=true`} style={{ width: "100%", height: 400, border: "none", borderRadius: 6 }} title={label} />
                   ) : (
                     <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer", wordBreak: "break-all", overflow: "hidden" }} onClick={() => openFile(url)}>
                       {fileName} — Click View to open
@@ -165,27 +207,35 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
     if (!item.resume_url) return <div style={{ padding: 16, color: "#6b6f6a", fontSize: 14 }}>No resume uploaded.</div>;
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.resume_url);
     const isPdf = /\.pdf$/i.test(item.resume_url);
+    const isDocx = /\.(docx|doc)$/i.test(item.resume_url);
     const imgKey = `${item.id}-resume`;
     const fullUrl = docUrl(item.resume_url);
     const fileName = item.resume_url.split("/").pop() || "resume.pdf";
+    const googleDocsUrl = fullUrl ? `https://docs.google.com/gview?url=${encodeURIComponent(fullUrl)}&embedded=true` : "";
     return (
       <div style={{ padding: 16 }}>
         <div style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
           <div style={{ padding: "10px 16px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 14, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>Resume</span>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => openFile(item.resume_url!)} style={{ fontSize: 13, color: "#074134", fontWeight: 600, background: "#e4f0eb", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
+              <button onClick={() => { if (isDocx && googleDocsUrl) { window.open(googleDocsUrl, "_blank"); } else { openFile(item.resume_url!); } }} style={{ fontSize: 13, color: "#074134", fontWeight: 600, background: "#e4f0eb", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
               <button onClick={() => downloadFile(item.resume_url!, fileName)} style={{ fontSize: 13, color: "#fff", fontWeight: 600, background: "#173a30", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>Download</button>
             </div>
           </div>
           <div style={{ padding: 10, background: "#fff" }}>
             {isImage && imgBlobs[imgKey] ? (
-              <img src={imgBlobs[imgKey]} alt="Resume" style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
+              <Image src={imgBlobs[imgKey]} alt="Resume" width={800} height={600} unoptimized style={{ width: "100%", height: "auto", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
             ) : isPdf && fullUrl ? (
-              <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 300, borderRadius: 6 }} />
+              <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 6 }} />
+            ) : isDocx && googleDocsUrl ? (
+              <iframe src={googleDocsUrl} style={{ width: "100%", height: 400, border: "none", borderRadius: 6 }} title="Resume Preview" />
             ) : (
-              <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer", wordBreak: "break-all", overflow: "hidden" }} onClick={() => openFile(item.resume_url!)}>
-                {fileName} — Click View to open
+              <div style={{ padding: 20, textAlign: "center", color: "#6b6f6a", fontSize: 14 }}>
+                <div style={{ marginBottom: 8 }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <p style={{ margin: 0, fontWeight: 600 }}>{fileName}</p>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#999" }}>Click View to open in browser</p>
               </div>
             )}
           </div>
@@ -203,6 +253,7 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
   const downloadDocsZip = async (item: App) => {
     setDownloadingId(item.id);
     try {
+      const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
       const folder = zip.folder(`${item.full_name || "documents"}`) || zip;
 
@@ -223,14 +274,19 @@ body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;display:flex;justify-c
   <div class="hdr"><h1>DECEMBER DELIGHTS</h1><p>Franchise Application</p></div>
   <div class="body">
     <div class="row"><span class="lbl">Application ID</span><span class="val">#${item.id}</span></div>
-    <div class="row"><span class="lbl">Full Name</span><span class="val">${item.full_name || "—"}</span></div>
-    <div class="row"><span class="lbl">Email</span><span class="val">${item.email || "—"}</span></div>
-    <div class="row"><span class="lbl">Phone</span><span class="val">${item.phone || "—"}</span></div>
-    <div class="row"><span class="lbl">Preferred Location</span><span class="val">${item.preferred_location || "—"}</span></div>
-    <div class="row"><span class="lbl">Investment Capability</span><span class="val">${item.investment_capability || "—"}</span></div>
-    <div class="row"><span class="lbl">Status</span><span class="val">${item.status}</span></div>
-    <div class="row"><span class="lbl">Submitted On</span><span class="val">${item.created_at ? new Date(item.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</span></div>
-    ${item.admin_notes ? `<div class="row"><span class="lbl">Admin Notes</span><span class="val">${item.admin_notes}</span></div>` : ""}
+    <div class="row"><span class="lbl">Full Name</span><span class="val">${escapeHtml(item.full_name || "—")}</span></div>
+    <div class="row"><span class="lbl">Email</span><span class="val">${escapeHtml(item.email || "—")}</span></div>
+    <div class="row"><span class="lbl">Phone</span><span class="val">${escapeHtml(item.phone || "—")}</span></div>
+    <div class="row"><span class="lbl">Date of Birth</span><span class="val">${escapeHtml(item.dob || "—")}</span></div>
+    <div class="row"><span class="lbl">Preferred Location</span><span class="val">${escapeHtml(item.preferred_location || "—")}</span></div>
+    <div class="row"><span class="lbl">Franchise Edition</span><span class="val">${escapeHtml(franchiseEditionLabel(item.franchise_type))}</span></div>
+    <div class="row"><span class="lbl">Investment Range</span><span class="val">${escapeHtml(item.investment_capability || "—")}</span></div>
+    <div class="row"><span class="lbl">Business Experience</span><span class="val">${escapeHtml(item.business_experience || "—")}</span></div>
+    <div class="row"><span class="lbl">Additional Message</span><span class="val">${escapeHtml(item.message || "—")}</span></div>
+    <div class="row"><span class="lbl">Terms Accepted</span><span class="val">${item.tc_accepted ? "Yes" : "No"}</span></div>
+    <div class="row"><span class="lbl">Status</span><span class="val">${escapeHtml(item.status)}</span></div>
+    <div class="row"><span class="lbl">Submitted On</span><span class="val">${escapeHtml(item.created_at ? new Date(item.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—")}</span></div>
+    ${item.admin_notes ? `<div class="row"><span class="lbl">Admin Notes</span><span class="val">${escapeHtml(item.admin_notes)}</span></div>` : ""}
   </div>
 </div></body></html>`;
       folder.file("Submission_Form.html", formHtml);
@@ -310,7 +366,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;display:flex;justify-c
                 <span>{item.email}</span>
                 {item.phone && <span>{item.phone}</span>}
                 {item.preferred_location && <span style={{ color: "#074134", fontWeight: 500 }}>{item.preferred_location}</span>}
-                {item.investment_capability && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#854f0b", fontWeight: 600, background: "#FAEEDA", padding: "2px 10px", borderRadius: 20, fontSize: 13 }}>{item.investment_capability}</span>}
+                {item.franchise_type && <span style={{ padding: "2px 10px", borderRadius: 20, background: franchiseEditionLabel(item.franchise_type) === "Highway Edition" ? "#e8f5e9" : "#e3f2fd", color: franchiseEditionLabel(item.franchise_type) === "Highway Edition" ? "#1b5e20" : "#0d47a1", fontWeight: 600, fontSize: 12 }}>{franchiseEditionLabel(item.franchise_type).replace(" Edition", "")}</span>}
               </div>
               {item.admin_notes && <div style={{ fontSize: 13, color: "#6b6f6a", marginTop: 6, fontStyle: "italic" }}>Note: {item.admin_notes}</div>}
               {(item.razorpay_order_id || item.razorpay_payment_id) && (
@@ -357,6 +413,26 @@ body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;display:flex;justify-c
         </div>
         {isExpanded && (
           <div style={{ borderTop: "1px solid #e4e1d6", background: "#faf8f5" }}>
+            <div style={{ padding: 16 }}>
+              <h4 style={{ margin: "0 0 12px", color: "#1b3c33", fontSize: 14 }}>Application Details</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+                {[
+                  ["Date of Birth", item.dob || "—"],
+                  ["Preferred Location", item.preferred_location || "—"],
+                  ["Franchise Edition", franchiseEditionLabel(item.franchise_type)],
+                  ["Investment Range", item.investment_capability || "—"],
+                  ["Business Experience", item.business_experience || "—"],
+                  ["Additional Message", item.message || "—"],
+                  ["Terms Accepted", item.tc_accepted ? `Yes${item.tc_language ? ` (${item.tc_language})` : ""}` : "No"],
+                  ["Payment Status", item.payment_status || "—"],
+                ].map(([label, value]) => (
+                  <div key={label} style={{ minWidth: 0, padding: 12, borderRadius: 8, background: "#fff", border: "1px solid #e8e5e0" }}>
+                    <div style={{ marginBottom: 4, color: "#6b6f6a", fontSize: 12, fontWeight: 600 }}>{label}</div>
+                    <div style={{ color: "#1b2b25", fontSize: 13, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
             {renderDocs(item, true)}
           </div>
         )}
@@ -459,7 +535,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;display:flex;justify-c
       </div>
 
       {deleteTarget && (
-        <div className="overlay show" onClick={e => { if (e.target === e.currentTarget) setDeleteTarget(null); }}>
+        <div className="overlay show" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) setDeleteTarget(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h4>Delete Application</h4>
             <p>Are you sure you want to delete <strong>{deleteTarget.name}</strong> (ID: #{deleteTarget.id})? This cannot be undone.</p>

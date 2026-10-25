@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import ScrollFloat from "@/components/ScrollFloat";
 import Image from "next/image";
 import { API } from "@/lib/api";
+import { imageSrc, isLocalUpload } from "@/lib/utils";
 import { ProductCardSkeleton } from "@/components/Skeleton";
 
 interface Product {
@@ -15,6 +16,7 @@ interface Product {
   original_price: number;
   category: string;
   image_url: string;
+  extra_images?: string | string[];
   stock: number;
   offer: string;
 }
@@ -27,16 +29,16 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
   const gridRef = useRef<HTMLDivElement>(null);
 
   function generateParticles() {
-    return [...Array(20)].map(() => ({
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      width: `${4 + Math.random() * 6}px`,
-      height: `${4 + Math.random() * 6}px`,
-      animationDelay: `${Math.random() * 8}s`,
-      animationDuration: `${8 + Math.random() * 12}s`,
+    return Array.from({ length: 20 }, (_, i) => ({
+      left: `${(i * 37) % 100}%`,
+      top: `${(i * 53) % 100}%`,
+      width: `${4 + (i % 7)}px`,
+      height: `${4 + (i % 7)}px`,
+      animationDelay: `${(i * 3) % 8}s`,
+      animationDuration: `${8 + (i % 12)}s`,
     }));
   }
-  const [particles] = useState(generateParticles);
+  const particles = useMemo(() => shopEnabled ? generateParticles() : [], [shopEnabled]);
 
   useEffect(() => {
     if (!shopEnabled) return;
@@ -52,17 +54,32 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
+    let fallbackTimer = 0;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setRevealed(true);
           observer.unobserve(el);
+          window.clearTimeout(fallbackTimer);
         }
       },
-      { threshold: 0.1, rootMargin: "0px 0px -30px 0px" }
+      { threshold: 0.02, rootMargin: "0px 0px 140px 0px" }
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 150 && rect.bottom > -150) {
+      setRevealed(true);
+      observer.disconnect();
+    } else {
+      fallbackTimer = window.setTimeout(() => {
+        setRevealed(true);
+        observer.disconnect();
+      }, 900);
+    }
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(fallbackTimer);
+    };
   }, []);
 
   // Parallax scroll effect on product cards
@@ -171,10 +188,15 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
         ) : (
           <div ref={gridRef} className="shop-grid-3d">
             {products.map((product, idx) => (
-              <Link key={product.id} href="/shop" style={{ textDecoration: "none", color: "inherit" }}>
+              <Link
+                key={product.id}
+                href="/shop"
+                aria-label={`Shop ${product.name}`}
+                style={{ color: "inherit", cursor: "pointer", textDecoration: "none" }}
+              >
                 <div
                   className="shop-card-3d"
-                  style={{ transitionDelay: `${idx * 0.1}s` }}
+                  style={{ transitionDelay: `${idx * 0.04}s` }}
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -184,13 +206,14 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
                   <div className="shop-card-img-3d">
                     {product.image_url ? (
                       <Image
-                        src={product.image_url?.startsWith("http") ? product.image_url : `${API}${product.image_url}`}
+                        src={imageSrc(product.image_url, API)}
                         alt={product.name}
                         fill
                         priority={idx < 3}
                         loading={idx < 3 ? "eager" : "lazy"}
                         sizes="(max-width: 768px) 100vw, 33vw"
-                        style={{ objectFit: "cover" }}
+                        unoptimized={isLocalUpload(product.image_url)}
+                        style={{ objectFit: "contain" }}
                       />
                     ) : (
                       <div className="shop-card-placeholder">

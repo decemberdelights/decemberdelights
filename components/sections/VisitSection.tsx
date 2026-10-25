@@ -5,35 +5,35 @@ import LazyVideo from "@/components/LazyVideo";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function VisitSection() {
-  const revealRef = useScrollReveal(0.12, "0px 0px -40px 0px", { animation: "slideUp3D", stagger: 0.08 });
+  const revealRef = useScrollReveal(0.02, "0px 0px 240px 0px", { animation: "slideUp3D", duration: 0.4, stagger: 0.02 });
   return (
     <>
       <div data-bg="dark" id="visit" className="visit-section" data-parallax="0.05">
         <div ref={revealRef} className="visit-text section-reveal" data-parallax="-0.1">
-          <span data-reveal-child style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "6px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Visit Us</span>
+          <span data-reveal-child style={{ fontFamily: "var(--font-montserrat)", fontSize: "13px", fontWeight: 700, letterSpacing: "5px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>Visit Us</span>
           <div data-reveal-child style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
           <h2 className="visit-heading">
             <ScrollFloat animation="slideUp3D" containerClassName="!my-0">Let&apos;s Connect</ScrollFloat>
           </h2>
-          <p data-reveal-child style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "15px", fontWeight: 400, lineHeight: 1.8, color: "rgba(255,255,255,0.85)", marginBottom: "36px", maxWidth: "480px" }}>
+          <p data-reveal-child style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 400, lineHeight: 1.75, color: "rgba(255,255,255,0.85)", marginBottom: "36px", maxWidth: "480px" }}>
             We&apos;d love to see you at December Delights. Drop by for a cup of something wonderful.
           </p>
           <div data-reveal-child style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />
-              <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "15px", fontWeight: 500, color: "#fdf9f4" }}>Open Daily</p>
+              <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 500, color: "#fdf9f4" }}>Open Daily</p>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />
-              <a href="tel:+918801460641" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "15px", fontWeight: 500, color: "#fdf9f4", textDecoration: "none", transition: "color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#fdf9f4"; }}>+91 88014 60641</a>
+              <a href="tel:+918801460641" style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 500, color: "#fdf9f4", textDecoration: "none", transition: "color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#fdf9f4"; }}>+91 88014 60641</a>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />
-              <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "15px", fontWeight: 500, color: "#fdf9f4" }}>Follow us <a href="https://www.instagram.com/decemberdelights/" target="_blank" rel="noopener noreferrer" style={{ color: "#c8a97a", textDecoration: "none", borderBottom: "1px solid rgba(200,169,126,0.4)", transition: "border-color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(200,169,126,0.4)"; }}>@decemberdelights</a></p>
+              <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 500, color: "#fdf9f4" }}>Follow us <a href="https://www.instagram.com/decemberdelights/" target="_blank" rel="noopener noreferrer" style={{ color: "#c8a97a", textDecoration: "none", borderBottom: "1px solid rgba(200,169,126,0.4)", transition: "border-color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(200,169,126,0.4)"; }}>@decemberdelights</a></p>
             </div>
           </div>
           <div data-reveal-child className="visit-buttons">
-            <a href="https://www.instagram.com/decemberdelights/" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "14px 32px", fontFamily: "'Montserrat', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#074134", background: "#fdf9f4", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", transition: "all 0.3s ease" }}
+            <a href="https://www.instagram.com/decemberdelights/" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "14px 32px", fontFamily: "var(--font-montserrat)", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#074134", background: "#fdf9f4", border: "none", borderRadius: "999px", cursor: "pointer", textDecoration: "none", transition: "all 0.3s ease" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "#c8a97a"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "#fdf9f4"; }}
             >
