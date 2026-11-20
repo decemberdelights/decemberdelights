@@ -12,7 +12,20 @@ logger = logging.getLogger(__name__)
 GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "info@decemberdelights.in")
+ALTERNATE_ADMIN_EMAIL = os.environ.get(
+    "ALTERNATE_ADMIN_EMAIL", "praveennaraharishetty@gmail.com"
+)
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://www.decemberdelights.in")
+
+
+def _admin_recipients() -> list[str]:
+    return list(
+        dict.fromkeys(
+            email.strip()
+            for email in (ADMIN_EMAIL, ALTERNATE_ADMIN_EMAIL)
+            if email and email.strip()
+        )
+    )
 
 
 def _h(value) -> str:
@@ -58,14 +71,20 @@ def _get_smtp_connection():
         return None
 
 
-def _send_email(to_email: str, subject: str, html_body: str, plain_body: str = "") -> bool:
+def _send_email(to_email: str | list[str], subject: str, html_body: str, plain_body: str = "") -> bool:
     if not GMAIL_USER or not GMAIL_APP_PASSWORD:
         logger.warning("Gmail credentials not configured — skipping email")
         return False
 
+    recipients = [to_email] if isinstance(to_email, str) else to_email
+    recipients = list(dict.fromkeys(email.strip() for email in recipients if email and email.strip()))
+    if not recipients:
+        logger.error("Email has no valid recipients — skipping email")
+        return False
+
     msg = MIMEMultipart("alternative")
     msg["From"] = f"December Delights <{GMAIL_USER}>"
-    msg["To"] = to_email
+    msg["To"] = ", ".join(recipients)
     msg["Subject"] = subject
 
     if plain_body:
@@ -79,13 +98,13 @@ def _send_email(to_email: str, subject: str, html_body: str, plain_body: str = "
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as s:
                 s.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-                s.sendmail(GMAIL_USER, to_email, msg.as_string())
+                s.sendmail(GMAIL_USER, recipients, msg.as_string())
         else:
-            server.sendmail(GMAIL_USER, to_email, msg.as_string())
-        logger.info(f"Email sent to {to_email}: {subject}")
+            server.sendmail(GMAIL_USER, recipients, msg.as_string())
+        logger.info(f"Email sent to {', '.join(recipients)}: {subject}")
         return True
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
+        logger.error(f"Failed to send email to {', '.join(recipients)}: {e}")
         # Reset connection on failure
         _local.smtp = None
         return False
@@ -181,7 +200,7 @@ def send_franchise_admin_notification(full_name: str, email: str, phone: str, pr
       </div>
     </div>
     """
-    return _send_email(ADMIN_EMAIL, subject, html)
+    return _send_email(_admin_recipients(), subject, html)
 
 
 def send_contact_notification(name: str, email: str, phone: str, subject: str, message: str) -> bool:
@@ -355,6 +374,10 @@ def send_order_confirmation(to_email: str, customer_name: str, order_id: int, it
         <h2 style="color: #074134; margin: 0 0 16px; font-size: 20px;">Order Confirmed!</h2>
         <p style="color: #586159; line-height: 1.7; font-size: 15px;">Dear <strong>{safe_customer_name}</strong>,</p>
         <p style="color: #586159; line-height: 1.7; font-size: 15px;">Your order has been placed successfully.</p>
+        <div style="background: #f0faf4; border: 1px solid #c3e8d4; border-radius: 12px; padding: 18px 20px; margin: 20px 0;">
+          <p style="margin: 0 0 8px; color: #1a7a4a; font-weight: 700; font-size: 14px;">Delivery and tracking update</p>
+          <p style="margin: 0; color: #586159; line-height: 1.7; font-size: 14px;">Your order will be delivered within <strong>4–7 working days</strong>. Your consignment number will be sent by SMS within <strong>24–48 hours</strong>.</p>
+        </div>
         <div style="background: #fff; border: 1px solid rgba(7,65,52,0.1); border-radius: 12px; padding: 20px; margin: 24px 0;">
           <p style="margin: 0 0 8px; color: #586159; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Order Number</p>
           <p style="margin: 0; color: #074134; font-size: 20px; font-weight: 700;">#{order_id}</p>
@@ -397,7 +420,7 @@ def send_order_confirmation(to_email: str, customer_name: str, order_id: int, it
       </div>
     </div>
     """
-    plain = f"Dear {customer_name},\n\nYour order #{order_id} has been placed successfully.\n\nSubtotal: Rs. {subtotal:.2f}\nGST (5%): Rs. {gst_amount:.2f}\nDelivery: Rs. {delivery_charge:.2f}\nTotal: Rs. {total:.2f}\nPayment: {payment_method}\n\nTrack your order: {FRONTEND_URL}/track\n\n— December Delights"
+    plain = f"Dear {customer_name},\n\nYour order #{order_id} has been placed successfully. Your order will be delivered within 4-7 working days. Your consignment number will be sent by SMS within 24-48 hours.\n\nSubtotal: Rs. {subtotal:.2f}\nGST (5%): Rs. {gst_amount:.2f}\nDelivery: Rs. {delivery_charge:.2f}\nTotal: Rs. {total:.2f}\nPayment: {payment_method}\n\nTrack your order: {FRONTEND_URL}/track\n\n— December Delights"
     return _send_email(to_email, subject, html, plain)
 
 
@@ -460,7 +483,7 @@ def send_order_admin_notification(order_id: int, customer_name: str, customer_em
         + "".join(f"- {item.get('name', '')} x{item.get('quantity', 0)} = Rs. {item.get('price', 0) * item.get('quantity', 0):.2f}\n" for item in items)
         + f"\nSubtotal: Rs. {subtotal:.2f}\nGST (5%): Rs. {gst_amount:.2f}\nDelivery: Rs. {delivery_charge:.2f}\nTotal: Rs. {total:.2f}"
     )
-    return _send_email(ADMIN_EMAIL, subject, html, plain)
+    return _send_email(_admin_recipients(), subject, html, plain)
 
 
 def send_career_approved(to_email: str, full_name: str, position: str, admin_notes: str = "") -> bool:
@@ -492,6 +515,44 @@ def send_career_approved(to_email: str, full_name: str, position: str, admin_not
     </div>
     """
     plain = f"Dear {full_name},\n\nGreat news! Your career application for {position} has been approved.\n\nOur HR team will contact you shortly.\n\n— December Delights"
+    return _send_email(to_email, subject, html, plain)
+
+def send_career_application_received(to_email: str, full_name: str, position: str) -> bool:
+    """Confirm receipt of a career application to the applicant."""
+    safe_name = _h(full_name)
+    safe_position = _h(position or "the position you selected")
+    subject = "Career Application Received — December Delights"
+    html = f"""
+    <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#fdf9f4;border-radius:16px;overflow:hidden;">
+      <div style="background:#074134;padding:32px;text-align:center;">
+        <h1 style="color:#c8a97e;margin:0;font-size:24px;letter-spacing:2px;">DECEMBER DELIGHTS</h1>
+        <p style="color:#fdf9f4;margin:8px 0 0;font-size:13px;letter-spacing:1px;opacity:.8;">FINE COFFEE &amp; CUISINE</p>
+      </div>
+      <div style="padding:32px;">
+        <h2 style="color:#074134;margin:0 0 16px;font-size:20px;">Application Received</h2>
+        <p style="color:#586159;line-height:1.7;font-size:15px;">Dear <strong>{safe_name}</strong>,</p>
+        <p style="color:#586159;line-height:1.7;font-size:15px;">
+          Thank you for applying to join December Delights. We have received your application for
+          <strong>{safe_position}</strong> and our team will review it.
+        </p>
+        <p style="color:#586159;line-height:1.7;font-size:15px;">
+          We will contact you if your experience matches the role. Thank you for your interest in our team.
+        </p>
+        <hr style="border:none;border-top:1px solid rgba(7,65,52,.1);margin:24px 0;">
+        <p style="color:#999;font-size:12px;text-align:center;margin:0;">
+          December Delights — Fine Coffee &amp; Cuisine, Hyderabad<br>
+          This is an automated confirmation email.
+        </p>
+      </div>
+    </div>
+    """
+    plain = (
+        f"Dear {full_name},\n\n"
+        f"Thank you for applying to join December Delights. We have received your "
+        f"application for {position or 'the position you selected'} and our team will review it.\n\n"
+        "We will contact you if your experience matches the role.\n\n"
+        "— December Delights"
+    )
     return _send_email(to_email, subject, html, plain)
 
 

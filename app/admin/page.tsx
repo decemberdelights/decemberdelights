@@ -29,7 +29,6 @@ const EditModal = dynamic(() => import("@/components/admin/EditModal"), { loadin
 const NotificationSidebar = dynamic(() => import("@/components/admin/NotificationSidebar"), { loading: () => null });
 const RejectModal = dynamic(() => import("@/components/admin/Modals").then((m) => m.RejectModal), { loading: () => null });
 const ViewOrderModal = dynamic(() => import("@/components/admin/Modals").then((m) => m.ViewOrderModal), { loading: () => null });
-const CancelModal = dynamic(() => import("@/components/admin/Modals").then((m) => m.CancelModal), { loading: () => null });
 const ViewDocsModal = dynamic(() => import("@/components/admin/Modals").then((m) => m.ViewDocsModal), { loading: () => null });
 
 
@@ -64,7 +63,6 @@ export default function AdminPage() {
   const [editType, setEditType] = useState<"add" | "edit" | null>(null);
   const [rejectTarget, setRejectTarget] = useState<{ type: string; id: number } | null>(null);
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
-  const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
   const [viewingDocs, setViewingDocs] = useState<App | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tabError, setTabError] = useState(false);
@@ -381,24 +379,6 @@ export default function AdminPage() {
           api={api}
           onRefresh={refresh}
           onViewOrder={(o) => setViewingOrder(o)}
-          onCancelOrder={(id) => setCancelOrderId(id)}
-          onRefundOrder={async (id) => {
-            if (!window.confirm(`Issue a refund for order #${id}? This refunds the remaining amount to the original payment method.`)) return;
-            try {
-              const response = await api(`/api/admin/orders/${id}/refund`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ reason: "Refund issued by admin" }),
-              });
-              const result = await response.json().catch(() => ({}));
-              if (!response.ok) throw new Error(result.detail || "Refund could not be confirmed.");
-              window.alert(`Refund issued for order #${id}. Refund reference: ${result.refund_id || "check Razorpay dashboard"}`);
-              refresh();
-            } catch (error) {
-              window.alert(error instanceof Error ? error.message : "Refund could not be confirmed. Check Razorpay before retrying.");
-              refresh();
-            }
-          }}
         />
         <Pagination page={page} total={ordersTotal} perPage={perPage} onChange={setPage} />
       </>;
@@ -488,19 +468,6 @@ export default function AdminPage() {
       )}
 
       {viewingOrder && <ViewOrderModal order={viewingOrder} onClose={() => setViewingOrder(null)} />}
-
-      {cancelOrderId !== null && (
-        <CancelModal
-          orderId={cancelOrderId}
-          onConfirm={async (reason) => {
-            if (!cancelOrderId) return;
-            await api(`/api/admin/orders/${cancelOrderId}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "cancelled", admin_notes: reason }) });
-            setCancelOrderId(null);
-            refresh();
-          }}
-          onCancel={() => setCancelOrderId(null)}
-        />
-      )}
 
       {editingItem && editType && (
         <div className="overlay show" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget && !savingItem) { setEditingItem(null); setEditType(null); } }}>

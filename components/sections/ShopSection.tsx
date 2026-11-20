@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
-import ScrollFloat from "@/components/ScrollFloat";
 import Image from "next/image";
 import { API } from "@/lib/api";
-import { imageSrc, isLocalUpload } from "@/lib/utils";
+import { imageSrc } from "@/lib/utils";
 import { ProductCardSkeleton } from "@/components/Skeleton";
 
 interface Product {
@@ -25,8 +24,12 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(!shopEnabled ? false : true);
   const [revealed, setRevealed] = useState(false);
+  const [productCardsRevealed, setProductCardsRevealed] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const carouselDragRef = useRef<{ pointerId: number; pointerX: number; startOffset: number } | null>(null);
+  const carouselOffsetRef = useRef(0);
 
   function generateParticles() {
     return Array.from({ length: 20 }, (_, i) => ({
@@ -82,6 +85,19 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
     };
   }, []);
 
+  useEffect(() => {
+    if (!shopEnabled || loading || products.length === 0) return;
+
+    let firstFrame = 0;
+    const secondFrame = window.requestAnimationFrame(() => {
+      firstFrame = window.requestAnimationFrame(() => setProductCardsRevealed(true));
+    });
+    return () => {
+      window.cancelAnimationFrame(secondFrame);
+      window.cancelAnimationFrame(firstFrame);
+    };
+  }, [shopEnabled, loading, products.length]);
+
   // Parallax scroll effect on product cards
   useEffect(() => {
     if (!shopEnabled || loading || products.length === 0) return;
@@ -89,20 +105,92 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
     if (!grid) return;
 
     const handleScroll = () => {
-      const cards = grid.querySelectorAll<HTMLElement>(".shop-card-3d");
+      const cards = grid.querySelectorAll<HTMLElement>(".shop-card-3d-wrap");
       cards.forEach((card, i) => {
         const rect = card.getBoundingClientRect();
         const viewH = window.innerHeight;
         const center = rect.top + rect.height / 2;
         const offset = ((center - viewH / 2) / viewH) * (15 + (i % 3) * 8);
-        card.style.transform = `translateY(${offset}px)`;
+        card.style.setProperty("--card-parallax-y", `${offset}px`);
       });
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [shopEnabled, loading, products.length]);
+  }, [shopEnabled, loading, products.length, productCardsRevealed]);
+
+  useEffect(() => {
+    if (!shopEnabled || loading || products.length < 2 || !productCardsRevealed) return;
+    const track = carouselRef.current;
+    if (!track) return;
+
+    let frameId = 0;
+    let previousTime = 0;
+    const animate = (time: number) => {
+      const group = track.querySelector<HTMLElement>(".shop-carousel-group");
+      const loopWidth = group?.getBoundingClientRect().width ?? 0;
+      if (!carouselDragRef.current && loopWidth > 0) {
+        const elapsed = previousTime ? Math.min((time - previousTime) / 1000, 0.05) : 0;
+        carouselOffsetRef.current -= elapsed * 40;
+        if (carouselOffsetRef.current <= -loopWidth) carouselOffsetRef.current += loopWidth;
+        track.style.transform = `translate3d(${carouselOffsetRef.current}px, 0, 0)`;
+      }
+      previousTime = time;
+      frameId = window.requestAnimationFrame(animate);
+    };
+
+    const mediaQuery = window.matchMedia("(max-width: 480px) and (prefers-reduced-motion: no-preference)");
+    const syncAnimation = () => {
+      if (mediaQuery.matches && !frameId) {
+        previousTime = 0;
+        frameId = window.requestAnimationFrame(animate);
+      } else if (!mediaQuery.matches && frameId) {
+        window.cancelAnimationFrame(frameId);
+        frameId = 0;
+        previousTime = 0;
+      }
+    };
+
+    syncAnimation();
+    window.addEventListener("resize", syncAnimation);
+    mediaQuery.addEventListener("change", syncAnimation);
+    return () => {
+      window.removeEventListener("resize", syncAnimation);
+      mediaQuery.removeEventListener("change", syncAnimation);
+      if (frameId) window.cancelAnimationFrame(frameId);
+    };
+  }, [shopEnabled, loading, products.length, productCardsRevealed]);
+
+  const handleCarouselPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" || !carouselRef.current) return;
+    carouselDragRef.current = {
+      pointerId: event.pointerId,
+      pointerX: event.clientX,
+      startOffset: carouselOffsetRef.current,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleCarouselPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = carouselDragRef.current;
+    const track = carouselRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || !track) return;
+
+    const group = track.querySelector<HTMLElement>(".shop-carousel-group");
+    const loopWidth = group?.getBoundingClientRect().width ?? 0;
+    if (!loopWidth) return;
+
+    let offset = drag.startOffset + event.clientX - drag.pointerX;
+    offset = ((offset % loopWidth) + loopWidth) % loopWidth - loopWidth;
+    carouselOffsetRef.current = offset;
+    track.style.transform = `translate3d(${offset}px, 0, 0)`;
+  };
+
+  const handleCarouselPointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (carouselDragRef.current?.pointerId !== event.pointerId) return;
+    carouselDragRef.current = null;
+  };
 
   // 3D card tilt on mouse move
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -161,9 +249,7 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
             <span className="shop-label-line" />
           </div>
           <h2 className="shop-heading-3d">
-            <ScrollFloat animation="slideUp3D" containerClassName="!my-0" textClassName="pb-2">
-              Premium Products
-            </ScrollFloat>
+            Premium Products
           </h2>
           <p className="shop-desc-3d">
             Discover our carefully curated collection of premium coffee, artisanal chocolates, and cafe essentials. Crafted with passion and delivered fresh.
@@ -186,33 +272,44 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
             <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "clamp(1.5rem, 3vw, 2.5rem)", color: "#fdf9f4", letterSpacing: "0.08em", margin: 0 }}>Brewing Soon</h3>
           </div>
         ) : (
-          <div ref={gridRef} className="shop-grid-3d">
-            {products.map((product, idx) => (
+          <div
+            ref={gridRef}
+            className={`shop-grid-3d ${products.length > 1 ? "shop-carousel-active" : ""} ${productCardsRevealed ? "shop-products-revealed" : ""}`}
+            onPointerDown={handleCarouselPointerDown}
+            onPointerMove={handleCarouselPointerMove}
+            onPointerUp={handleCarouselPointerEnd}
+            onPointerCancel={handleCarouselPointerEnd}
+          >
+            <div ref={carouselRef} className="shop-carousel-track">
+              {[0, 1].map((groupIndex) => (
+                <div key={groupIndex} className="shop-carousel-group" aria-hidden={groupIndex === 1}>
+                  {products.map((product, idx) => (
               <Link
-                key={product.id}
+                key={`${groupIndex}-${product.id}`}
                 href="/shop"
                 aria-label={`Shop ${product.name}`}
+                tabIndex={groupIndex === 1 ? -1 : undefined}
                 style={{ color: "inherit", cursor: "pointer", textDecoration: "none" }}
               >
                 <div
-                  className="shop-card-3d"
-                  style={{ transitionDelay: `${idx * 0.04}s` }}
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={handleMouseLeave}
+                  className="shop-card-3d-wrap"
                 >
-                  {/* Card glow effect */}
-                  <div className="shop-card-glow" />
-                  
+                  <div
+                    className="shop-card-3d"
+                    style={{ transitionDelay: `${idx * 0.04}s` }}
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <div className="shop-card-glow" />
+
                   <div className="shop-card-img-3d">
                     {product.image_url ? (
                       <Image
                         src={imageSrc(product.image_url, API)}
                         alt={product.name}
                         fill
-                        priority={idx < 3}
-                        loading={idx < 3 ? "eager" : "lazy"}
+                        loading={idx < 2 ? "eager" : "lazy"}
                         sizes="(max-width: 768px) 100vw, 33vw"
-                        unoptimized={isLocalUpload(product.image_url)}
                         style={{ objectFit: "contain" }}
                       />
                     ) : (
@@ -245,8 +342,12 @@ export default function ShopSection({ shopEnabled = true }: { shopEnabled?: bool
                     </div>
                   </div>
                 </div>
+                </div>
               </Link>
-            ))}
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

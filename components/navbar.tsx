@@ -7,15 +7,27 @@ import Image from "next/image";
 import { Building2, CircleEllipsis, House, Info, ShoppingBag } from "lucide-react";
 import { useSiteSettings } from "@/lib/useSiteSettings";
 
+const NAV_BASE_LINKS = [
+  { label: "Home", href: "/#hero" },
+  { label: "Shop", href: "/shop" },
+  { label: "Careers", href: "/careers" },
+  { label: "About Us", href: "/#our-story" },
+  { label: "Feedback", href: "/contact" },
+  { label: "Menu", href: "/menu" },
+];
+
 export default function Navbar() {
   const pathname = usePathname();
   const { shop_enabled } = useSiteSettings();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [darkBg, setDarkBg] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [navVisible, setNavVisible] = useState(false);
   const bgElsRef = useRef<Element[]>([]);
   const navRef = useRef<HTMLElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const scan = () => {
@@ -57,17 +69,35 @@ export default function Navbar() {
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!moreOpen) return;
+
+    const closeOnOutsideTap = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (!moreMenuRef.current?.contains(target) && !moreButtonRef.current?.contains(target)) {
+        setMoreOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideTap);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideTap);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [moreOpen]);
+
   const links = [
-    { label: "Home", href: "/" },
-    { label: "Shop", href: "/shop" },
-    { label: "Careers", href: "/careers" },
-    { label: "About Us", href: "/#our-story" },
-    { label: "Feedback", href: "/contact" },
-    { label: "Menu", href: "/menu" },
+    ...NAV_BASE_LINKS,
     ...(shop_enabled ? [
       { label: "Track Order", href: "/track" },
     ] : []),
   ];
+  const moreLinks = links.filter(({ label }) => !["Home", "Shop", "Franchise", "About Us"].includes(label));
 
   if (pathname?.startsWith("/admin")) return null;
 
@@ -339,6 +369,9 @@ export default function Navbar() {
           transform: translateX(8px);
           opacity: 1;
         }
+        .dd-mobile-menu a.dd-mobile-cta {
+          color: #074134 !important;
+        }
 
         .dd-mobile-divider {
           width: 40px; height: 1px;
@@ -358,6 +391,10 @@ export default function Navbar() {
         .dd-mobile-menu.open .dd-mobile-cta {
           opacity: 1;
           transform: translateY(0);
+        }
+
+        .dd-more-menu {
+          display: none;
         }
 
         @media (max-width: 900px) {
@@ -380,6 +417,54 @@ export default function Navbar() {
             min-height: 44px;
             min-width: 44px;
             padding: 10px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .dd-more-menu {
+            position: fixed;
+            display: flex;
+            flex-direction: column;
+            top: auto;
+            right: 12px;
+            bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+            left: auto;
+            z-index: 999;
+            width: min(220px, calc(100vw - 24px));
+            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            background: rgba(250, 248, 245, 0.97);
+            box-shadow: 0 12px 32px rgba(15, 35, 28, 0.2);
+            -webkit-backdrop-filter: blur(18px) saturate(160%);
+            backdrop-filter: blur(18px) saturate(160%);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(8px);
+            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+          }
+          .dd-more-menu.open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0);
+          }
+          .dd-more-menu a {
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-radius: 12px;
+            color: #074134;
+            font-family: var(--font-montserrat);
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+          }
+          .dd-more-menu a:active,
+          .dd-more-menu a:hover {
+            background: rgba(9, 75, 61, 0.08);
           }
         }
 
@@ -428,17 +513,38 @@ export default function Navbar() {
         </Link>
 
         <button
+          type="button"
           className={`dd-hamburger ${menuOpen ? "open" : ""}`}
-          onClick={() => setMenuOpen(!menuOpen)}
+          onClick={() => {
+            setMoreOpen(false);
+            setMenuOpen((open) => !open);
+          }}
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
+          aria-controls="mobile-nav-menu"
         >
           <span /><span /><span />
         </button>
       </nav>
 
-      <div className={`dd-mobile-menu ${menuOpen ? "open" : ""}`} role="dialog" aria-label="Navigation menu">
-        <button onClick={() => setMenuOpen(false)} aria-label="Close menu" style={{ position: "absolute", top: "calc(1.5rem + env(safe-area-inset-top, 0px))", right: "calc(1.5rem + env(safe-area-inset-right, 0px))", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10, transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}>
+      <div ref={moreMenuRef} id="mobile-more-menu" className={`dd-more-menu ${moreOpen ? "open" : ""}`} role="menu" aria-label="More navigation options" aria-hidden={!moreOpen}>
+        {moreLinks.map((link) => (
+          <Link key={link.label} href={link.href} role="menuitem" onClick={() => setMoreOpen(false)}>
+            {link.label}
+          </Link>
+        ))}
+      </div>
+
+      <div
+        id="mobile-nav-menu"
+        className={`dd-mobile-menu ${menuOpen ? "open" : ""}`}
+        role="dialog"
+        aria-label="Navigation menu"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setMenuOpen(false);
+        }}
+      >
+        <button type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu" style={{ position: "absolute", top: "calc(1.5rem + env(safe-area-inset-top, 0px))", right: "calc(1.5rem + env(safe-area-inset-right, 0px))", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10, transition: "background 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </button>
         <Image src="/logo-icon.png" alt="" width={48} height={48} style={{ marginBottom: "0.5rem", opacity: 0.9 }} />
@@ -472,12 +578,12 @@ export default function Navbar() {
 
       <nav className="dd-tabbar" aria-label="Mobile navigation">
           {[
-            { label: "Home", href: "/", Icon: House },
+            { label: "Home", href: "/#hero", Icon: House },
             { label: "Shop", href: "/shop", Icon: ShoppingBag },
             { label: "Franchise", href: "/franchise", Icon: Building2 },
             { label: "About Us", href: "/#our-story", Icon: Info },
           ].map(({ label, href, Icon }) => {
-            const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
+            const active = label === "Home" ? pathname === "/" : pathname?.startsWith(href);
             return (
               <Link key={label} href={href} aria-current={active ? "page" : undefined} className={active ? "active" : ""}>
                 <Icon size={19} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
@@ -485,8 +591,11 @@ export default function Navbar() {
               </Link>
             );
           })}
-          <button type="button" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen} aria-label={menuOpen ? "Close more navigation options" : "Open more navigation options"} className={menuOpen ? "active" : ""}>
-            <CircleEllipsis size={19} strokeWidth={menuOpen ? 2.2 : 1.8} aria-hidden="true" />
+          <button ref={moreButtonRef} type="button" onClick={() => {
+            setMenuOpen(false);
+            setMoreOpen((open) => !open);
+          }} aria-expanded={moreOpen} aria-controls="mobile-more-menu" aria-label={moreOpen ? "Close more navigation options" : "Open more navigation options"} className={moreOpen ? "active" : ""}>
+            <CircleEllipsis size={19} strokeWidth={moreOpen ? 2.2 : 1.8} aria-hidden="true" />
             <span>More</span>
           </button>
       </nav>

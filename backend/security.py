@@ -7,6 +7,8 @@ from store import RateLimiter
 
 login_limiter = RateLimiter(max_attempts=5, window_seconds=300)
 franchise_limiter = RateLimiter(max_attempts=5, window_seconds=300)
+# Stricter limiter for franchise login (phone + DOB is guessable).
+franchise_login_limiter = RateLimiter(max_attempts=3, window_seconds=600)
 careers_track_limiter = RateLimiter(max_attempts=10, window_seconds=60)
 
 
@@ -62,7 +64,7 @@ def validate_phone(phone: str) -> bool:
 
 def validate_order_status(status: str) -> bool:
     """Validate order status value."""
-    return status in ("pending", "confirmed", "preparing", "packed", "ready", "dispatched", "delivered", "cancelled")
+    return status in ("pending", "confirmed", "preparing", "packed", "ready", "dispatched", "delivered")
 
 
 def validate_application_status(status: str) -> bool:

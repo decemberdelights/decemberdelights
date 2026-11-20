@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { API } from "@/lib/api";
 import { formatPriceINR, getProductWeightGrams, gstBill, imageSrc, isLocalUpload } from "@/lib/utils";
 import { generateOrderReceipt } from "@/lib/receipt";
+import { loadRazorpayScript } from "@/lib/razorpay";
 import { ProductCardSkeleton } from "@/components/Skeleton";
 import ProductDetailModal from "@/components/shop/ProductDetailModal";
 
@@ -60,20 +60,6 @@ function syncCartWithProducts(cart: CartItem[], products: Product[]): CartItem[]
   return changed ? next : cart;
 }
 
-function loadRazorpayScript(): Promise<boolean> {
-  if (typeof window === "undefined") return Promise.resolve(false);
-  if (window.Razorpay) return Promise.resolve(true);
-  return new Promise((resolve) => {
-    const existing = document.querySelector("script[src='https://checkout.razorpay.com/v1/checkout.js']");
-    if (existing) { resolve(true); return; }
-    const s = document.createElement("script");
-    s.src = "https://checkout.razorpay.com/v1/checkout.js";
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
-    document.body.appendChild(s);
-  });
-}
-
 function loadCart(): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
@@ -102,7 +88,6 @@ const INDIAN_STATES = [
 ];
 
 export default function ShopPage() {
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
@@ -140,7 +125,6 @@ export default function ShopPage() {
   const [formError, setFormError] = useState("");
   const [addedId, setAddedId] = useState<number | null>(null);
   const [shopEnabled, setShopEnabled] = useState(true);
-  const redirectTimer = useRef<NodeJS.Timeout | null>(null);
   const cartBadgeTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -283,6 +267,7 @@ export default function ShopPage() {
 
   const submitOrder = async (form: ShopCheckoutForm, termsVersion: string, method: string, rpOrderId?: string, rpPaymentId?: string, rpSignature?: string) => {
     const customerAddress = `${form.customer_house_number}, ${form.customer_address}`;
+    const idempotencyKey = `order_${form.customer_phone}_${Date.now()}`;
     const r = await fetch(`${API}/api/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -302,6 +287,7 @@ export default function ShopPage() {
         razorpay_order_id: rpOrderId || "",
         razorpay_payment_id: rpPaymentId || "",
         razorpay_signature: rpSignature || "",
+        idempotency_key: idempotencyKey,
       }),
     });
     const data = await r.json();
@@ -332,9 +318,6 @@ export default function ShopPage() {
         .then((r2) => r2.json())
         .then((fresh) => setProducts(fresh))
         .catch(() => {});
-      redirectTimer.current = setTimeout(() => {
-        router.push(`/track?phone=${encodeURIComponent(phone)}`);
-      }, 4000);
     } else {
       throw new Error(data.detail || "Order failed. Please try again.");
     }
@@ -351,6 +334,7 @@ export default function ShopPage() {
         setSaving(false);
         return;
       }
+      const idempotencyKey = `shop_${form.customer_phone}_${Date.now()}`;
       const rpRes = await fetch(`${API}/api/orders/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -359,6 +343,7 @@ export default function ShopPage() {
           customer_phone: form.customer_phone,
           terms_accepted: true,
           terms_version: termsVersion,
+          idempotency_key: idempotencyKey,
         }),
       });
       const rpData = await rpRes.json();
@@ -400,10 +385,6 @@ export default function ShopPage() {
     }
   };
 
-  useEffect(() => {
-    return () => { if (redirectTimer.current) clearTimeout(redirectTimer.current); };
-  }, []);
-
   if (!shopEnabled) {
     return <ShopComingSoonPage />;
   }
@@ -414,29 +395,28 @@ export default function ShopPage() {
       <main data-bg="light" style={{ minHeight: "100vh", background: "#fff", padding: "8rem 0 4rem" }}>
           <section data-bg="dark" style={{ background: dark, color: "#fdf9f4", padding: "5rem 5%", textAlign: "center" }}>
             <p style={{ fontFamily: fontOutfit, color: accent, fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Shop</p>
-            <h1 style={{ fontFamily: fontBebas, fontSize: "clamp(1.8rem, 6vw, 4.5rem)", color: "#fdf9f4" }}>Premium Coffee & Products</h1>
+            <h1 className="shop-page-title" style={{ fontFamily: fontBebas, fontSize: "clamp(1.8rem, 6vw, 4.5rem)", color: "#fdf9f4" }}>Premium Coffee & Products</h1>
             <p style={{ fontFamily: fontOutfit, fontSize: "1.1rem", color: "#e8e5e0", maxWidth: "500px", margin: "1rem auto 0" }}>
               Handpicked coffee beans, blends, and accessories delivered to your doorstep.
             </p>
           </section>
         </main>
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); setOrderSuccess(false); }} />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} onClick={() => setOrderSuccess(false)} />
           <div style={{ background: "#fff", borderRadius: "24px", padding: "clamp(1.5rem, 5vw, 3rem) clamp(1.5rem, 5vw, 2rem)", width: "440px", maxWidth: "92vw", position: "relative", boxShadow: "0 25px 60px rgba(0,0,0,0.35)", textAlign: "center" }}>
             <div style={{ width: "72px", height: "72px", borderRadius: "50%", background: dark, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem", animation: "successPop 0.5s ease forwards, successPulse 2s ease infinite 0.5s" }}>
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "checkDraw 0.6s ease 0.3s both" }}>
                 <polyline points="20 6 9 17 4 12" strokeDasharray="30" strokeDashoffset="30" style={{ animation: "checkDraw 0.4s ease 0.5s forwards" }} />
               </svg>
             </div>
-            <h2 style={{ fontFamily: fontBebas, fontSize: "clamp(1.5rem, 4vw, 2rem)", color: dark, letterSpacing: "0.05em", marginBottom: "0.5rem", animation: "fadeSlideUp 0.5s ease 0.3s both" }}>Order Accepted!</h2>
-            <p style={{ fontFamily: fontOutfit, color: muted, fontSize: "0.95rem", lineHeight: 1.6, marginBottom: "0.5rem", animation: "fadeSlideUp 0.5s ease 0.4s both" }}>
-              Your order <strong style={{ color: dark }}>#{orderId}</strong> has been placed successfully.
+            <h2 style={{ fontFamily: fontBebas, fontSize: "clamp(1.5rem, 4vw, 2rem)", color: dark, letterSpacing: "0.05em", marginBottom: "0.5rem", animation: "fadeSlideUp 0.5s ease 0.3s both" }}>Order placed successfully!</h2>
+            <p style={{ fontFamily: fontOutfit, color: muted, fontSize: "0.95rem", lineHeight: 1.6, marginBottom: "0.75rem", animation: "fadeSlideUp 0.5s ease 0.4s both" }}>
+              Your order <strong style={{ color: dark, fontVariantNumeric: "lining-nums tabular-nums" }}>#{orderId}</strong> is confirmed.
             </p>
-            <p style={{ fontFamily: fontOutfit, color: "#999", fontSize: "0.8rem", marginBottom: "1.5rem", animation: "fadeSlideUp 0.5s ease 0.45s both" }}>
-              Redirecting to tracking in a few seconds...
+            <p style={{ fontFamily: fontOutfit, color: muted, fontSize: "0.88rem", lineHeight: 1.65, marginBottom: "1.5rem", animation: "fadeSlideUp 0.5s ease 0.45s both" }}>
+              Your order will be delivered within <strong>4–7 working days</strong>. Your consignment number will be sent by SMS within <strong>24–48 hours</strong>.
             </p>
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap", animation: "fadeSlideUp 0.5s ease 0.5s both" }}>
-              <button onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); router.push(`/track?phone=${encodeURIComponent(orderPhone)}`); }} style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "none", background: dark, color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", transition: "background 0.2s" }}>Track Now</button>
               <button
                 onClick={() => {
                   generateOrderReceipt({
@@ -449,14 +429,14 @@ export default function ShopPage() {
                     paymentMethod: "razorpay",
                     paymentStatus: "paid",
                     orderDate: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-                  });
+                  }, { paperSize: "A4" });
                 }}
                 style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "none", background: "#27ae60", color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.5rem", transition: "background 0.2s" }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Download Receipt
               </button>
-              <button onClick={() => { if (redirectTimer.current) clearTimeout(redirectTimer.current); setOrderSuccess(false); }} style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "1.5px solid #ddd", background: "#fff", color: muted, fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Continue Shopping</button>
+              <button onClick={() => setOrderSuccess(false)} style={{ padding: "0.85rem 2rem", borderRadius: "100px", border: "1.5px solid #ddd", background: "#fff", color: muted, fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Continue Shopping</button>
             </div>
           </div>
         </div>
@@ -469,7 +449,7 @@ export default function ShopPage() {
       <main data-bg="light" style={{ minHeight: "100vh", background: "#fff", padding: "8rem 0 4rem" }}>
         <section data-bg="dark" style={{ background: dark, color: "#fdf9f4", padding: "5rem 5%", textAlign: "center" }}>
           <p style={{ fontFamily: fontOutfit, color: accent, fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Shop</p>
-          <h1 style={{ fontFamily: fontBebas, fontSize: "clamp(1.8rem, 6vw, 4.5rem)", color: "#fdf9f4" }}>Premium Coffee & Products</h1>
+          <h1 className="shop-page-title" style={{ fontFamily: fontBebas, fontSize: "clamp(1.8rem, 6vw, 4.5rem)", color: "#fdf9f4" }}>Premium Coffee & Products</h1>
           <p style={{ fontFamily: fontOutfit, fontSize: "1.1rem", color: "#e8e5e0", maxWidth: "500px", margin: "1rem auto 0" }}>
             Handpicked coffee beans, blends, and accessories delivered to your doorstep.
           </p>

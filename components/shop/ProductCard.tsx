@@ -86,16 +86,16 @@ export default function ProductCard({ product, inCart, onAddToCart, onUpdateQty,
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <button onClick={() => onUpdateQty(product.id, -1)} style={{ width: "44px", height: "44px", borderRadius: "10px", border: `1.5px solid ${dark}`, background: "#fff", color: dark, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", transition: "all 0.15s" }}>-</button>
+                  <button type="button" aria-label="Decrease quantity" disabled={inCart.quantity <= 1} onClick={() => onUpdateQty(product.id, -1)} style={{ width: "44px", height: "44px", borderRadius: "10px", border: `1.5px solid ${dark}`, background: "#fff", color: dark, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", transition: "all 0.15s" }}>-</button>
                   <span style={{ fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.95rem", minWidth: "28px", textAlign: "center" as const, color: dark }}>{inCart.quantity}</span>
-                  <button onClick={() => onUpdateQty(product.id, 1)} disabled={inCart.quantity >= product.stock} style={{ width: "44px", height: "44px", borderRadius: "10px", border: "none", background: dark, color: "#fff", fontWeight: 700, cursor: inCart.quantity >= product.stock ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", opacity: inCart.quantity >= product.stock ? 0.4 : 1, transition: "all 0.15s" }}>+</button>
+                  <button type="button" aria-label="Increase quantity" onClick={() => onUpdateQty(product.id, 1)} disabled={inCart.quantity >= product.stock} style={{ width: "44px", height: "44px", borderRadius: "10px", border: "none", background: dark, color: "#fff", fontWeight: 700, cursor: inCart.quantity >= product.stock ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", opacity: inCart.quantity >= product.stock ? 0.4 : 1, transition: "all 0.15s" }}>+</button>
                 </div>
                 {inCart.quantity >= product.stock && <span style={{ fontFamily: fontOutfit, fontSize: "0.7rem", color: "#999", whiteSpace: "nowrap" }}>Stock limit reached</span>}
               </div>
               <span style={{ fontFamily: fontOutfit, fontWeight: 800, fontSize: "0.9rem", color: dark }}>{formatPriceINR(product.price * inCart.quantity)}</span>
             </div>
           ) : (
-            <button onClick={() => onAddToCart(product)} disabled={product.stock <= 0} style={{ width: "100%", padding: "0.75rem", borderRadius: "12px", border: "none", background: product.stock > 0 ? dark : "#e0e0e0", color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.8rem", cursor: product.stock > 0 ? "pointer" : "not-allowed", letterSpacing: "0.03em", minHeight: "44px", transition: "all 0.2s" }}>
+            <button type="button" onClick={() => onAddToCart(product)} disabled={product.stock <= 0} style={{ width: "100%", padding: "0.75rem", borderRadius: "12px", border: "none", background: product.stock > 0 ? dark : "#e0e0e0", color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.8rem", cursor: product.stock > 0 ? "pointer" : "not-allowed", letterSpacing: "0.03em", minHeight: "44px", transition: "all 0.2s" }}>
               {product.stock > 0 ? "Add to Cart" : "Sold Out"}
             </button>
           )}

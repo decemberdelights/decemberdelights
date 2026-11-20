@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Instagram, Phone, Mail, ArrowRight, User, MessageSquare } from "@/components/icons";
+import { MapPin, Instagram, Mail, ArrowRight, User, MessageSquare } from "@/components/icons";
 import { API } from "@/lib/api";
 import { labelStyle } from "@/lib/styles";
 import SuccessState from "@/components/SuccessState";
@@ -22,7 +22,7 @@ const darkInputStyle = {
 };
 
 export default function ContactPage() {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,14 +30,6 @@ export default function ContactPage() {
     setStatus("submitting");
     setErrorMsg("");
     try {
-      if (form.phone) {
-        const cleanedPhone = form.phone.replace(/[\s\-+]/g, "");
-        if (!/^\d{7,15}$/.test(cleanedPhone)) {
-          setStatus("error");
-          setErrorMsg("Please enter a valid phone number (7-15 digits)");
-          return;
-        }
-      }
       const r = await fetch(`${API}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,7 +49,7 @@ export default function ContactPage() {
       <SuccessState
         title="Feedback Sent!"
         description="Thank you for your feedback. We appreciate you taking the time to share your thoughts with us."
-        actions={[{ label: "Send Another Feedback", onClick: () => { setForm({ name: "", email: "", phone: "", subject: "", message: "" }); setStatus("idle"); }, primary: true }]}
+        actions={[{ label: "Send Another Feedback", onClick: () => { setForm({ name: "", email: "", subject: "", message: "" }); setStatus("idle"); }, primary: true }]}
       />
     );
   }
@@ -87,13 +79,15 @@ export default function ContactPage() {
           .contact-card { padding: 2rem 1.25rem; }
         }
         @media (max-width: 768px) {
-          .contact-hero-section { min-height: auto !important; padding-top: 7rem !important; padding-bottom: 3rem !important; }
+          .contact-hero-section { min-height: auto !important; padding-top: 5.5rem !important; padding-bottom: 3rem !important; }
+          .contact-hero-content { padding: 0 5% 2rem !important; }
           .contact-cards-section { padding: 4rem 5% !important; }
           .contact-cta-section { padding: 4rem 5% !important; }
         }
         @media (max-width: 640px) {
           .contact-form-grid { grid-template-columns: 1fr; }
-          .contact-hero-section { padding: 6.5rem 4% 2.5rem !important; }
+          .contact-hero-section { padding: 5.5rem 4% 2.5rem !important; }
+          .contact-hero-content { padding: 0 4% 1.5rem !important; }
           .contact-cards-section { padding: 3rem 4% !important; }
           .contact-cta-section { padding: 3rem 4% !important; }
         }
@@ -112,7 +106,7 @@ export default function ContactPage() {
         <div style={{ position: "absolute", bottom: "20%", left: "8%", width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle, rgba(253,249,244,0.05) 0%, transparent 70%)", animation: "contact-float 9s ease-in-out infinite 3s", willChange: "transform", transform: "translate3d(0,0,0)" }} />
 
         {/* hero content */}
-        <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "8rem 5% 5rem", willChange: "transform,opacity", transform: "translate3d(0,0,0)" }}>
+        <div className="contact-hero-content" style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "8rem 5% 5rem", willChange: "transform,opacity", transform: "translate3d(0,0,0)" }}>
           <div className="contact-hero-grid">
             {/* Left — heading */}
             <div>
@@ -124,18 +118,9 @@ export default function ContactPage() {
                 Feedback
               </h1>
               <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(253,249,244,0.6)", fontSize: "1.05rem", lineHeight: 1.8, maxWidth: "420px", marginBottom: "2.5rem" }}>
-                Visit us at our cafe, give us a call, or send us your feedback. We would love to hear from you.
+                Email us or send your feedback. We would love to hear from you.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <a href="tel:+918801460641" style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1rem", borderRadius: "12px", background: "rgba(253,249,244,0.06)", border: "1px solid rgba(253,249,244,0.08)", textDecoration: "none", transition: "background 0.2s" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.1)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.06)"; }}>
-                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(234,185,106,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#eab96a", flexShrink: 0 }}><Phone size={20} /></div>
-                  <div>
-                    <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(253,249,244,0.45)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", margin: 0 }}>Call Us</p>
-                    <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#fdf9f4", fontSize: "0.9rem", fontWeight: 500, margin: 0 }}>+91 88014 60641</p>
-                  </div>
-                </a>
                 <a href="mailto:info@decemberdelights.in" style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1rem", borderRadius: "12px", background: "rgba(253,249,244,0.06)", border: "1px solid rgba(253,249,244,0.08)", textDecoration: "none", transition: "background 0.2s" }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.1)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.06)"; }}>
@@ -172,10 +157,6 @@ export default function ContactPage() {
                   <div>
                     <label style={darkLabelStyle}><Mail size={14} /> Email *</label>
                     <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="dd-contact-input" style={darkInputStyle} placeholder="you@example.com" />
-                  </div>
-                  <div>
-                    <label style={darkLabelStyle}><Phone size={14} /> Phone</label>
-                    <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="dd-contact-input" style={darkInputStyle} placeholder="+91 XXXXX XXXXX" />
                   </div>
                   <div>
                     <label style={darkLabelStyle}><MessageSquare size={14} /> Subject</label>
@@ -238,14 +219,6 @@ export default function ContactPage() {
             <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>@decemberdelights<br />Stay updated with our latest posts.</p>
             <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#e1306c", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.05em" }}>Follow Us &rarr;</span>
           </a>
-          <a href="tel:+918801460641" className="contact-card" style={{ background: "#fff", border: "1px solid rgba(27,60,51,0.08)" }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(27,60,51,0.1)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 24px rgba(27,60,51,0.04)"; }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(39,174,96,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#27ae60" }}><Phone size={28} /></div>
-            <h3 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#1b3c33", fontSize: "1.4rem", letterSpacing: "0.03em" }}>Call Us</h3>
-            <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(27,60,51,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>+91 88014 60641</p>
-            <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#27ae60", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.05em" }}>Call Now &rarr;</span>
-          </a>
         </div>
       </section>
 
@@ -270,10 +243,10 @@ export default function ContactPage() {
               onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
               Follow on Instagram
             </a>
-            <a href="tel:+918801460641" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.5rem", borderRadius: "100px", border: "1.5px solid rgba(27,60,51,0.2)", background: "transparent", color: "#1b3c33", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.95rem", textDecoration: "none", transition: "transform 0.3s, border-color 0.3s" }}
+            <a href="mailto:info@decemberdelights.in" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.5rem", borderRadius: "100px", border: "1.5px solid rgba(27,60,51,0.2)", background: "transparent", color: "#1b3c33", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700, fontSize: "0.95rem", textDecoration: "none", transition: "transform 0.3s, border-color 0.3s" }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = "rgba(27,60,51,0.4)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(27,60,51,0.2)"; }}>
-              Call +91 88014 60641
+              Email Us
             </a>
           </div>
         </div>

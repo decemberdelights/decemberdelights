@@ -30,6 +30,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.supabase.co",
       },
+      {
+        protocol: "https",
+        hostname: "www.decemberdelights.in",
+      },
+      {
+        protocol: "https",
+        hostname: "decemberdelights.in",
+      },
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30,

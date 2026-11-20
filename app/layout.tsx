@@ -59,9 +59,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  alternates: {
-    canonical: siteUrl,
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -72,7 +69,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
   viewportFit: "cover",
   themeColor: "#074134",
   userScalable: true,
@@ -81,7 +77,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={fontVariables}>
-      <body style={{ margin: 0, padding: 0 }}>
+      <body>
         <Analytics />
         <LocalBusinessJsonLd />
         <OrganizationJsonLd />

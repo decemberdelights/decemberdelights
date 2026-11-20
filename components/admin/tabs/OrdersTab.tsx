@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Order, OrderStats } from "../types";
 import FilterBar from "../FilterBar";
 
@@ -10,18 +10,17 @@ interface OrdersTabProps {
   api: (path: string, opts?: RequestInit) => Promise<Response>;
   onRefresh: () => void;
   onViewOrder: (order: Order & { parsedItems: unknown[] }) => void;
-  onCancelOrder: (id: number) => void;
-  onRefundOrder: (id: number) => void;
 }
 
-import { useState } from "react";
-
-export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOrder, onCancelOrder, onRefundOrder }: OrdersTabProps) {
+export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOrder }: OrdersTabProps) {
   const [statusFilter, setStatusFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusError, setStatusError] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+  const [dispatchOrder, setDispatchOrder] = useState<Order | null>(null);
+  const [consignment, setConsignment] = useState("");
+  const [consignmentError, setConsignmentError] = useState("");
 
   const parsedOrders = useMemo(() => {
     const filtered = orders.filter(o => {
@@ -41,21 +40,57 @@ export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOr
     });
   }, [orders, statusFilter, paymentFilter, searchQuery]);
 
-  const updateStatus = async (orderId: number, status: string) => {
+  /** Returns null on success, or the error message on failure. */
+  const updateStatus = async (orderId: number, status: string, consignmentNumber?: string): Promise<string | null> => {
     setStatusError("");
     setUpdatingOrderId(orderId);
     try {
-      const response = await api(`/api/admin/orders/${orderId}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+      const payload: { status: string; consignment_number?: string } = { status };
+      if (consignmentNumber) payload.consignment_number = consignmentNumber;
+      const response = await api(`/api/admin/orders/${orderId}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
         throw new Error(result.detail || "Could not update order status.");
       }
       onRefresh();
+      return null;
     } catch (error) {
-      setStatusError(error instanceof Error ? error.message : "Could not update order status.");
+      const message = error instanceof Error ? error.message : "Could not update order status.";
+      setStatusError(message);
+      return message;
     } finally {
       setUpdatingOrderId(null);
     }
+  };
+
+  const openDispatchModal = (order: Order) => {
+    setDispatchOrder(order);
+    setConsignment(order.consignment_number || "");
+    setConsignmentError("");
+  };
+
+  const closeDispatchModal = () => {
+    if (updatingOrderId !== null) return;
+    setDispatchOrder(null);
+    setConsignment("");
+    setConsignmentError("");
+  };
+
+  const confirmDispatch = async () => {
+    if (!dispatchOrder) return;
+    const value = consignment.trim();
+    if (value.length < 4) {
+      setConsignmentError("Consignment number is compulsory — enter at least 4 characters.");
+      return;
+    }
+    setConsignmentError("");
+    const error = await updateStatus(dispatchOrder.id, "dispatched", value);
+    if (error) {
+      setConsignmentError(error);
+      return;
+    }
+    setDispatchOrder(null);
+    setConsignment("");
   };
 
   if (!orderStats) return <div className="empty">Loading order stats...</div>;
@@ -108,7 +143,14 @@ export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOr
                     <button className="btn" onClick={() => onViewOrder(o)} style={{ fontSize: 11, padding: "3px 8px" }}>View Items</button>
                   </td>
                   <td>₹{o.total.toLocaleString()}</td>
-                  <td><span className={`status ${o.status}`}>{o.status === "pending" ? "Pending" : o.status === "preparing" ? "Packing" : o.status === "dispatched" ? "Dispatched" : o.status === "delivered" ? "Delivered" : o.status === "cancelled" ? "Cancelled" : o.status === "packed" ? "Packed" : o.status === "ready" ? "Ready" : o.status}</span></td>
+                  <td>
+                    <span className={`status ${o.status}`}>{o.status === "pending" ? "Pending" : o.status === "preparing" ? "Packing" : o.status === "dispatched" ? "Dispatched" : o.status === "delivered" ? "Delivered" : o.status === "cancelled" ? "Cancelled" : o.status === "packed" ? "Packed" : o.status === "ready" ? "Ready" : o.status}</span>
+                    {o.consignment_number && (
+                      <div title="India Post consignment number" style={{ marginTop: 4, fontFamily: "monospace", fontSize: 10, color: "#586159", whiteSpace: "nowrap" }}>
+                        AWB: {o.consignment_number}
+                      </div>
+                    )}
+                  </td>
                   <td><span className={`status ${o.payment_status === "paid" ? "approved" : "pending"}`}>{o.payment_status}</span></td>
                   <td>
                     {o.payment_method === "razorpay" ? (
@@ -124,11 +166,10 @@ export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOr
                   <td>{o.created_at ? new Date(o.created_at).toLocaleDateString("en-IN") : "—"}</td>
                   <td>
                     <div className="row-actions">
-                      {(o.status === "pending" || o.status === "confirmed") && <button className="btn approve" disabled={updatingOrderId === o.id} onClick={() => updateStatus(o.id, "preparing")}>{updatingOrderId === o.id ? "Updating..." : "Start Packing"}</button>}
-                      {(o.status === "preparing" || o.status === "packed" || o.status === "ready") && <button className="btn approve" disabled={updatingOrderId === o.id} onClick={() => updateStatus(o.id, "dispatched")}>{updatingOrderId === o.id ? "Updating..." : "Mark Dispatched"}</button>}
-                      {o.status === "dispatched" && <button className="btn approve" disabled={updatingOrderId === o.id} onClick={() => updateStatus(o.id, "delivered")}>{updatingOrderId === o.id ? "Updating..." : "Mark Delivered"}</button>}
-                      {o.payment_method === "razorpay" && o.payment_status === "paid" && <button className="btn danger" disabled={updatingOrderId === o.id} onClick={() => onRefundOrder(o.id)}>Refund</button>}
-                      {o.status !== "delivered" && o.status !== "cancelled" && <button className="btn danger" onClick={() => onCancelOrder(o.id)}>{o.payment_method === "razorpay" && o.payment_status === "paid" ? "Cancel + refund" : "Cancel"}</button>}
+                      {(o.status === "pending" || o.status === "confirmed") && <button className="btn approve" disabled={updatingOrderId === o.id} onClick={() => { void updateStatus(o.id, "preparing"); }}>{updatingOrderId === o.id ? "Updating..." : "Start Packing"}</button>}
+                      {(o.status === "preparing" || o.status === "packed" || o.status === "ready") && <button className="btn approve" disabled={updatingOrderId === o.id} onClick={() => openDispatchModal(o)}>{updatingOrderId === o.id ? "Updating..." : "Mark Dispatched"}</button>}
+                      {o.status === "dispatched" && <button className="btn approve" disabled={updatingOrderId === o.id} onClick={() => { void updateStatus(o.id, "delivered"); }}>{updatingOrderId === o.id ? "Updating..." : "Mark Delivered"}</button>}
+                      {o.status === "dispatched" && <button className="btn" disabled={updatingOrderId === o.id} onClick={() => openDispatchModal(o)}>Edit AWB</button>}
                     </div>
                   </td>
                 </tr>
@@ -139,6 +180,36 @@ export default function OrdersTab({ orders, orderStats, api, onRefresh, onViewOr
         </div>
         {orders.length === 0 && <div className="empty">No orders yet.</div>}
       </div>
+
+      {dispatchOrder && (
+        <div className="overlay show" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) closeDispatchModal(); }}>
+          <div className="modal" style={{ width: "min(460px, 95vw)" }} onClick={e => e.stopPropagation()}>
+            <h4>Dispatch Order #{dispatchOrder.id}</h4>
+            <p style={{ margin: "0 0 14px", fontSize: 12, color: "#586159", lineHeight: 1.6 }}>
+              Enter the India Post consignment number. It is <strong>compulsory</strong> — the customer will see it on the Track Order page.
+            </p>
+            <label htmlFor="consignment-number" style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#586159", marginBottom: 6 }}>
+              Consignment Number *
+            </label>
+            <input
+              id="consignment-number"
+              autoFocus
+              value={consignment}
+              onChange={e => { setConsignment(e.target.value); setConsignmentError(""); }}
+              onKeyDown={e => { if (e.key === "Enter") { void confirmDispatch(); } }}
+              placeholder="e.g. EE123456789IN"
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 8, border: `1px solid ${consignmentError ? "#e0a0a0" : "#d8d4c8"}`, fontFamily: "monospace", fontSize: 13, letterSpacing: "0.04em", color: "#1b2b25", background: "#fff" }}
+            />
+            {consignmentError && <div role="alert" style={{ marginTop: 8, fontSize: 12, color: "#a32d2d" }}>{consignmentError}</div>}
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button className="btn" onClick={closeDispatchModal} disabled={updatingOrderId !== null}>Cancel</button>
+              <button className="btn approve" onClick={() => { void confirmDispatch(); }} disabled={!consignment.trim() || updatingOrderId !== null}>
+                {updatingOrderId === dispatchOrder.id ? "Dispatching..." : dispatchOrder.status === "dispatched" ? "Save AWB" : "Mark Dispatched"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

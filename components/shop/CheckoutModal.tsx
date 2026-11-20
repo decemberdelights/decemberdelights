@@ -132,7 +132,7 @@ export default function CheckoutModal({ cart, cartTotal, formError, saving, onCl
     <div className="checkout-overlay" style={{ position: "fixed", inset: 0, zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={onClose} />
       <div data-lenis-prevent className="checkout-scroll" style={{ background: "#fff", borderRadius: "20px", padding: "clamp(1.25rem, 4vw, 2rem)", width: "460px", maxWidth: "95vw", position: "relative", maxHeight: "90dvh", overflowY: "auto", WebkitOverflowScrolling: "touch", boxShadow: "0 25px 60px rgba(0,0,0,0.3)", paddingBottom: "calc(clamp(1.25rem, 4vw, 2rem) + env(safe-area-inset-bottom, 0px))", overscrollBehavior: "contain" }}>
-        <button onClick={onClose} style={{ position: "absolute", top: "1rem", right: "1rem", width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #eee", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", color: muted }}>&times;</button>
+        <button type="button" onClick={onClose} aria-label="Close checkout" style={{ position: "absolute", top: "1rem", right: "1rem", width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #eee", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", color: muted }}>&times;</button>
         <h2 style={{ fontFamily: fontBebas, color: dark, fontSize: "1.5rem", marginBottom: "1.5rem" }}>Checkout</h2>
 
         <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "#faf8f5", borderRadius: "12px" }}>
@@ -209,7 +209,7 @@ export default function CheckoutModal({ cart, cartTotal, formError, saving, onCl
 
         {error && <p style={{ fontFamily: fontOutfit, color: "#e74c3c", fontSize: "0.85rem", marginTop: "1rem" }}>{error}</p>}
 
-        <button onClick={handlePay} disabled={saving} style={{ width: "100%", padding: "1rem", borderRadius: "14px", border: "none", background: saving ? "#999" : dark, color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.95rem", cursor: saving ? "not-allowed" : "pointer", marginTop: "1.5rem", boxShadow: saving ? "none" : "0 4px 16px rgba(27,60,51,0.2)" }}>{saving ? "Placing Order..." : `Pay ${formatPriceINR(bill.total)}`}</button>
+        <button type="button" onClick={handlePay} disabled={saving} style={{ width: "100%", padding: "1rem", borderRadius: "14px", border: "none", background: saving ? "#999" : dark, color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.95rem", cursor: saving ? "not-allowed" : "pointer", marginTop: "1.5rem", boxShadow: saving ? "none" : "0 4px 16px rgba(27,60,51,0.2)" }}>{saving ? "Placing Order..." : `Pay ${formatPriceINR(bill.total)}`}</button>
       </div>
     </div>
   );

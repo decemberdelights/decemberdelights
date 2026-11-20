@@ -92,6 +92,7 @@ class ScrollEngine {
       const { default: LenisCtor } = await import("lenis");
       if (this.destroyed) return;
 
+      const isTouch = window.matchMedia("(pointer: coarse)").matches;
       const lenis = new LenisCtor({
         // Frame-rate independent damping. IMPORTANT: do NOT also pass
         // `duration`/`easing` — Lenis prefers the duration+easing branch when
@@ -99,9 +100,10 @@ class ScrollEngine {
         // wheel tick, which makes the page lag behind the cursor.
         lerp: LERP,
         smoothWheel: true,
-        // Smooth touch input as well as mouse/trackpad wheel input.
-        // Lenis notes this can be unstable on iOS versions earlier than 16.
-        syncTouch: true,
+        // Keep Lenis on touch devices too, with a slightly snappier sync
+        // interpolation to reduce the feeling of lag on iOS Safari.
+        syncTouch: isTouch,
+        syncTouchLerp: 0.1,
         wheelMultiplier: 1,
         touchMultiplier: 1,
         autoResize: true,

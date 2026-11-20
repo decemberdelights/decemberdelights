@@ -107,8 +107,9 @@ export default function CareersPage() {
     if (resume) formData.append("resume", resume);
     try {
       const res = await fetch(`${API}/api/careers`, { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Submission failed");
+      const data = await res.json().catch(() => null) as { detail?: string; tracking_code?: string } | null;
+      if (!res.ok) throw new Error(data?.detail || "Application submission is temporarily unavailable. Please try again shortly.");
+      if (!data) throw new Error("The server returned an invalid response. Please try again.");
       setStatus("success");
       // Issue a private tracking code; never expose applications by phone alone.
       if (data.tracking_code) {
@@ -157,19 +158,29 @@ export default function CareersPage() {
         .careers-track-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;align-items:end}
         @media(max-width:768px){
           .careers-hero-grid{grid-template-columns:1fr;gap:2rem}
+          .careers-hero-content{height:auto!important;min-height:0!important;padding:0!important;align-items:flex-start!important}
+          .careers-hero-copy,.careers-hero-features{width:100%;min-width:0}
+          .careers-hero-copy>p{max-width:none!important;margin-bottom:1.5rem!important}
+          .careers-hero-title{font-size:clamp(3rem,12vw,3.75rem)!important;line-height:0.98!important}
+          .careers-hero-actions{display:flex;flex-direction:row;align-items:stretch;gap:0.65rem!important;flex-wrap:nowrap!important}
+          .careers-hero-actions a{width:auto;min-width:0;min-height:3.25rem;flex:1;justify-content:center;padding:0.8rem 0.6rem!important;font-size:0.85rem!important;text-align:center}
+          .careers-hero-features{gap:0.75rem!important}
+          .careers-hero-feature{width:100%;min-width:0;padding:1rem!important;gap:0.75rem!important}
+          .careers-hero-feature>div:last-child{min-width:0}
+          .careers-hero-feature p{line-height:1.45}
           .careers-form-grid{grid-template-columns:1fr}
           .careers-track-grid{grid-template-columns:1fr}
           .careers-form-card{padding:1.5rem!important}
           .careers-apply-btn{padding:0.85rem 1.8rem!important}
           .careers-track-btn{padding:1rem 2rem!important}
           .careers-track-card{padding:1.5rem!important}
-          .careers-hero-section{height:auto!important;min-height:100dvh!important;padding:6.5rem 4% 3rem!important}
+          .careers-hero-section{height:auto!important;min-height:0!important;padding:6.5rem 6% 1rem!important}
           .careers-jobs-section{padding:5rem 4%!important}
           .careers-apply-section{padding:5rem 4%!important}
           .careers-track-section{padding:5rem 4%!important}
         }
         @media(max-width:480px){
-          .careers-hero-section{padding:6rem 4% 2.5rem!important}
+          .careers-hero-section{padding:6rem 6% 1rem!important}
           .careers-jobs-section{padding:4rem 4%!important}
           .careers-apply-section{padding:4rem 4%!important}
           .careers-track-section{padding:4rem 4%!important}
@@ -191,20 +202,20 @@ export default function CareersPage() {
         <div ref={el => { floatingRef.current[2] = el; }} style={{ position: "absolute", top: "40%", left: "30%", width: 150, height: 150, borderRadius: "50%", background: "radial-gradient(circle, rgba(234,185,106,0.04) 0%, transparent 70%)", animation: "careers-float 11s ease-in-out infinite 4s", willChange: "transform", transform: "translate3d(0,0,0)" }} />
 
         {/* hero content */}
-        <div ref={contentRef} style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "0 5%", height: "100%", display: "flex", alignItems: "center", willChange: "transform,opacity", transform: "translate3d(0,0,0)" }}>
+        <div ref={contentRef} className="careers-hero-content" style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "0 5%", height: "100%", display: "flex", alignItems: "center", willChange: "transform,opacity", transform: "translate3d(0,0,0)" }}>
           <div className="careers-hero-grid" style={{ width: "100%" }}>
-            <div>
+            <div className="careers-hero-copy">
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
                 <span style={{ width: "40px", height: "1px", background: "#eab96a" }} />
                 <span style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#eab96a", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase", animation: "careers-pulse 3s ease infinite" }}>Join Our Team</span>
               </div>
-              <h1 style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#fdf9f4", fontSize: "clamp(2.5rem, 7vw, 6rem)", lineHeight: 1, letterSpacing: "0.03em", marginBottom: "1.5rem" }}>
+              <h1 className="careers-hero-title" style={{ fontFamily: "var(--font-bebas-neue), sans-serif", color: "#fdf9f4", fontSize: "clamp(2.5rem, 7vw, 6rem)", lineHeight: 1, letterSpacing: "0.03em", marginBottom: "1.5rem" }}>
                 We Are<br />Growing
               </h1>
               <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(253,249,244,0.85)", fontSize: "1.05rem", lineHeight: 1.8, maxWidth: "460px", marginBottom: "2.5rem" }}>
                 We are always looking for passionate individuals to help us redefine cafe culture. Grow with us.
               </p>
-              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+              <div className="careers-hero-actions" style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                 <a href="#apply" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "1rem 2.5rem", borderRadius: "100px", background: "#fdf9f4", color: "#074134", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.95rem", textDecoration: "none", letterSpacing: "0.03em", transition: "transform 0.3s, box-shadow 0.3s" }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.2)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
@@ -217,13 +228,13 @@ export default function CareersPage() {
                 </a>
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div className="careers-hero-features" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {[
                 { icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>, title: "Passion for Craft", desc: "We take pride in every cup we serve." },
                 { icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, title: "People First", desc: "A supportive environment where your growth matters." },
                 { icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, title: "Team Spirit", desc: "Work alongside passionate individuals." },
               ].map((v, i) => (
-                <div key={v.title} style={{ background: "rgba(253,249,244,0.08)", border: "1px solid rgba(253,249,244,0.12)", borderRadius: "16px", padding: "1.5rem", display: "flex", alignItems: "center", gap: "1rem", transition: "background 0.3s, transform 0.3s" }}
+                <div key={v.title} className="careers-hero-feature" style={{ background: "rgba(253,249,244,0.08)", border: "1px solid rgba(253,249,244,0.12)", borderRadius: "16px", padding: "1.5rem", display: "flex", alignItems: "center", gap: "1rem", transition: "background 0.3s, transform 0.3s" }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.12)"; e.currentTarget.style.transform = "translateX(6px)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(253,249,244,0.08)"; e.currentTarget.style.transform = "none"; }}>
                   <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "rgba(253,249,244,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#eab96a", animation: `careers-float 4s ease-in-out infinite ${i * 0.5}s` }}>{v.icon}</div>

@@ -18,29 +18,61 @@ function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
-function CustomDropdown({ value, options, onChange, style }: { value: number; options: { label: string; value: number }[]; onChange: (v: number) => void; style?: React.CSSProperties }) {
+function ScrollDropdown({
+  label,
+  value,
+  options,
+  onChange,
+  style,
+}: {
+  label: string;
+  value: number;
+  options: { label: string; value: number }[];
+  onChange: (value: number) => void;
+  style?: React.CSSProperties;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchMoved = useRef(false);
+  const touchResetTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selected = options.find(o => o.value === value);
+  useEffect(() => {
+    if (!open || !listRef.current) return;
+    const selectedOption = listRef.current.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (selectedOption) {
+      listRef.current.scrollTop = selectedOption.offsetTop
+        - listRef.current.offsetTop
+        - (listRef.current.clientHeight - selectedOption.offsetHeight) / 2;
+    }
+  }, [open]);
+
+  useEffect(() => () => {
+    if (touchResetTimer.current !== null) window.clearTimeout(touchResetTimer.current);
+  }, []);
+
+  const selected = options.find((option) => option.value === value);
 
   return (
-    <div ref={ref} style={{ ...style, position: "relative" }}>
+    <div ref={ref} style={{ ...style, position: "relative", minWidth: 0 }}>
       <button
         type="button"
-        aria-haspopup="true"
+        aria-label={label}
+        aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((isOpen) => !isOpen)}
         style={{
-          padding: "8px 12px",
+          width: "100%",
+          padding: "8px 10px",
           borderRadius: "10px",
           border: "1.5px solid rgba(7,65,52,0.15)",
           background: "#fdf9f4",
@@ -53,7 +85,6 @@ function CustomDropdown({ value, options, onChange, style }: { value: number; op
           alignItems: "center",
           justifyContent: "space-between",
           gap: "6px",
-          userSelect: "none" as const,
           textAlign: "left",
         }}
       >
@@ -61,45 +92,84 @@ function CustomDropdown({ value, options, onChange, style }: { value: number; op
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#074134" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9" /></svg>
       </button>
       {open && (
-        <div aria-label="Choose a date value" onWheel={(e) => e.stopPropagation()} style={{
-          position: "absolute",
-          top: "calc(100% + 4px)",
-          left: 0,
-          right: 0,
-          zIndex: 10,
-          background: "#fff",
-          borderRadius: "12px",
-          boxShadow: "0 8px 28px rgba(7,65,52,0.18)",
-          border: "1px solid rgba(7,65,52,0.08)",
-          maxHeight: "180px",
-          overflowY: "auto",
-          WebkitOverflowScrolling: "touch" as const,
-          padding: "4px",
-        }}>
-          {options.map(o => (
+        <div
+          ref={listRef}
+          role="listbox"
+          aria-label={`Choose ${label.toLowerCase()}`}
+          onWheel={(event) => event.stopPropagation()}
+          data-lenis-prevent
+          onTouchStart={(event) => {
+            touchStartY.current = event.touches[0]?.clientY ?? null;
+            touchMoved.current = false;
+            if (touchResetTimer.current !== null) window.clearTimeout(touchResetTimer.current);
+          }}
+          onTouchMove={(event) => {
+            const startY = touchStartY.current;
+            const currentY = event.touches[0]?.clientY;
+            if (startY !== null && currentY !== undefined && Math.abs(currentY - startY) > 8) {
+              touchMoved.current = true;
+            }
+          }}
+          onTouchEnd={() => {
+            touchStartY.current = null;
+            touchResetTimer.current = window.setTimeout(() => {
+              touchMoved.current = false;
+              touchResetTimer.current = null;
+            }, 350);
+          }}
+          onClickCapture={(event) => {
+            if (!touchMoved.current) return;
+            event.preventDefault();
+            event.stopPropagation();
+            touchMoved.current = false;
+            if (touchResetTimer.current !== null) {
+              window.clearTimeout(touchResetTimer.current);
+              touchResetTimer.current = null;
+            }
+          }}
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            background: "#fff",
+            borderRadius: "12px",
+            boxShadow: "0 8px 28px rgba(7,65,52,0.18)",
+            border: "1px solid rgba(7,65,52,0.08)",
+            maxHeight: "240px",
+            overflowY: "auto",
+            overscrollBehaviorY: "contain",
+            touchAction: "pan-y",
+            WebkitOverflowScrolling: "touch",
+            padding: "4px",
+          }}
+        >
+          {options.map((option) => (
             <button
               type="button"
-              aria-pressed={o.value === value}
-              key={o.value}
-              onClick={() => { onChange(o.value); setOpen(false); }}
+              role="option"
+              aria-selected={option.value === value}
+              key={option.value}
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
               style={{
                 padding: "8px 10px",
                 borderRadius: "8px",
                 fontFamily: "var(--font-outfit), sans-serif",
                 fontSize: "0.8rem",
-                fontWeight: o.value === value ? 700 : 500,
-                color: o.value === value ? "#fdf9f4" : "#1b3c33",
-                background: o.value === value ? "linear-gradient(135deg, #074134, #1b3c33)" : "transparent",
+                fontWeight: option.value === value ? 700 : 500,
+                color: option.value === value ? "#fdf9f4" : "#1b3c33",
+                background: option.value === value ? "linear-gradient(135deg, #074134, #1b3c33)" : "transparent",
                 cursor: "pointer",
-                transition: "background 0.15s",
                 width: "100%",
                 border: 0,
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => { if (o.value !== value) e.currentTarget.style.background = "rgba(234,185,106,0.12)"; }}
-              onMouseLeave={(e) => { if (o.value !== value) e.currentTarget.style.background = "transparent"; }}
             >
-              {o.label}
+              {option.label}
             </button>
           ))}
         </div>
@@ -153,10 +223,12 @@ export default function DatePicker({ value, onChange, max }: DatePickerProps) {
     setOpen(false);
   }
 
-  const monthOptions = MONTHS.map((m, i) => ({ label: m, value: i }));
   const yearOptions = [];
   for (let y = currentYear - 18; y >= 1940; y--) yearOptions.push({ label: String(y), value: y });
-
+  if (!yearOptions.some((year) => year.value === viewYear)) {
+    yearOptions.push({ label: String(viewYear), value: viewYear });
+    yearOptions.sort((a, b) => b.value - a.value);
+  }
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button
@@ -204,18 +276,20 @@ export default function DatePicker({ value, onChange, max }: DatePickerProps) {
             maxHeight: "90dvh",
             overflowY: "auto",
           }}>
-            {/* Custom Month/Year dropdowns */}
+            {/* Keep both lists compact and touch-scrollable on mobile. */}
             <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
-              <CustomDropdown
+              <ScrollDropdown
+                label="Month"
                 value={viewMonth}
-                options={monthOptions}
-                onChange={(v) => setViewMonth(v)}
+                options={MONTHS.map((month, index) => ({ label: month, value: index }))}
+                onChange={setViewMonth}
                 style={{ flex: 1.2 }}
               />
-              <CustomDropdown
+              <ScrollDropdown
+                label="Year"
                 value={viewYear}
                 options={yearOptions}
-                onChange={(v) => setViewYear(v)}
+                onChange={setViewYear}
                 style={{ flex: 1 }}
               />
             </div>

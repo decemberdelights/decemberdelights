@@ -31,7 +31,7 @@ else:
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from routers import menu, products, auth_router, admin, franchise, careers, admin_users, orders, terms, password_reset, files, system
+from routers import menu, products, auth_router, admin, franchise, careers, admin_users, orders, terms, password_reset, files, system, webhooks
 
 _health_cache = {"last_check": 0, "result": None}
 _HEALTH_CACHE_TTL = 30  # seconds
@@ -145,6 +145,7 @@ app.include_router(orders.router)
 app.include_router(terms.router)
 app.include_router(files.router)
 app.include_router(system.router)
+app.include_router(webhooks.router)
 
 # Dev fallback: serve /uploads/public/* via FastAPI (prod uses Nginx, same URL).
 # Private /uploads/private/* is NEVER mounted here — only via /api/files/* with admin auth.
@@ -187,8 +188,12 @@ async def health_check():
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         result = JSONResponse(status_code=503, content={"status": "unhealthy", "database": "disconnected"})
-    _health_cache["last_check"] = now
-    _health_cache["result"] = result
+
+    # Only cache plain dicts — a cached JSONResponse object would be re-served
+    # with stale status codes and is not a valid cache value.
+    if isinstance(result, dict):
+        _health_cache["last_check"] = now
+        _health_cache["result"] = result
     return result
 
 

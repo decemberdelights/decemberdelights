@@ -127,6 +127,7 @@ export interface Order {
   payment_status: string;
   razorpay_order_id: string;
   razorpay_payment_id: string;
+  consignment_number?: string;
   notes: string;
   created_at: string;
   updated_at: string;

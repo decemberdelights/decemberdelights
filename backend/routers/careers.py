@@ -2,12 +2,13 @@ import os
 import uuid
 import re
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form, Request
 from supabase_client import supabase
 from auth import require_super_admin, get_current_admin
 from activity import log_activity
 from security import validate_email, validate_phone, sanitize_input, careers_track_limiter, RateLimiter
 from local_storage import STORAGE_MODE, save_private_doc as save_private_doc_local, delete_local_file, is_local_url
+from file_validation import validated_document_content_type
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,7 +17,6 @@ router = APIRouter()
 
 careers_submit_limiter = RateLimiter(max_attempts=5, window_seconds=60)
 
-ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
@@ -24,6 +24,15 @@ def _sanitize_filename(name: str) -> str:
     name = re.sub(r'[^\w\s-]', '', name)
     name = re.sub(r'\s+', '_', name.strip())
     return name[:80] if name else "applicant"
+
+
+def _is_missing_tracking_code_column(error: Exception) -> bool:
+    details = str(error).lower()
+    return (
+        "pgrst204" in details
+        and "tracking_code" in details
+        and "career_applications" in details
+    )
 
 
 def _sync_upload(filename: str, content: bytes, content_type: str) -> str:
@@ -100,6 +109,7 @@ def track_career_application(tracking_code: str = "", phone: str = "", request: 
 @router.post("/api/careers")
 async def create_career(
     request: Request,
+    background_tasks: BackgroundTasks,
     full_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
@@ -128,14 +138,11 @@ async def create_career(
     resume_url = ""
     tracking_code = uuid.uuid4().hex[:10].upper()
     if resume and resume.filename:
-        ext = os.path.splitext(resume.filename)[1].lower()
-        if ext not in ALLOWED_EXTENSIONS:
-            raise HTTPException(status_code=400, detail=f"File type {ext} not allowed")
         content = await resume.read()
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File too large (max 5MB)")
-        if resume.content_type and resume.content_type not in {"application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}:
-            raise HTTPException(status_code=400, detail=f"File content type {resume.content_type} not allowed")
+        ext = os.path.splitext(resume.filename)[1].lower()
+        content_type = validated_document_content_type(resume.filename, resume.content_type, content)
         if STORAGE_MODE in ("hybrid", "local"):
             try:
                 # Blocking disk write in an async handler — run in a worker thread.
@@ -143,12 +150,16 @@ async def create_career(
                     save_private_doc_local, content, resume.filename, "career"
                 )
             except Exception as e:
-                logger.warning(f"Local resume save failed: {e}")
+                logger.error(f"Local resume save failed: {e}")
                 if STORAGE_MODE == "local":
-                    raise
+                    raise HTTPException(status_code=503, detail="Resume storage is temporarily unavailable") from e
         if not resume_url:
             filename = f"{_sanitize_filename(full_name)}_resume_{uuid.uuid4().hex[:8]}{ext}"
-            resume_url = await asyncio.to_thread(_sync_upload, filename, content, resume.content_type)
+            try:
+                resume_url = await asyncio.to_thread(_sync_upload, filename, content, content_type)
+            except Exception as e:
+                logger.error(f"Resume upload failed: {e}")
+                raise HTTPException(status_code=503, detail="Resume storage is temporarily unavailable") from e
 
     data = {
         "full_name": full_name,
@@ -159,10 +170,48 @@ async def create_career(
         "resume_url": resume_url,
         "tracking_code": tracking_code,
     }
-    result = await asyncio.to_thread(
-        lambda: supabase.table("career_applications").insert(data).execute()
+    tracking_code_saved = True
+    try:
+        try:
+            result = await asyncio.to_thread(
+                lambda: supabase.table("career_applications").insert(data).execute()
+            )
+        except Exception as e:
+            if not _is_missing_tracking_code_column(e):
+                raise
+            logger.warning(
+                "Supabase schema is missing career_applications.tracking_code; "
+                "retrying application insert without tracking support"
+            )
+            tracking_code_saved = False
+            legacy_data = {key: value for key, value in data.items() if key != "tracking_code"}
+            result = await asyncio.to_thread(
+                lambda: supabase.table("career_applications").insert(legacy_data).execute()
+            )
+        if not result.data or not result.data[0].get("id"):
+            raise RuntimeError("Career application insert returned no row")
+    except Exception as e:
+        logger.error(f"Failed to save career application: {e}")
+        raise HTTPException(status_code=503, detail="Application submission is temporarily unavailable. Please try again shortly.") from e
+    response = {"ok": True, "id": result.data[0]["id"]}
+    if tracking_code_saved:
+        response["tracking_code"] = tracking_code
+    background_tasks.add_task(
+        _send_career_application_received,
+        email,
+        full_name,
+        position,
     )
-    return {"ok": True, "id": result.data[0]["id"], "tracking_code": tracking_code}
+    return response
+
+
+def _send_career_application_received(email: str, full_name: str, position: str) -> None:
+    try:
+        from email_service import send_career_application_received
+        if not send_career_application_received(email, full_name, position):
+            logger.error("Career application confirmation email was not sent")
+    except Exception:
+        logger.exception("Career application confirmation email task failed")
 
 
 @router.get("/api/admin/jobs")

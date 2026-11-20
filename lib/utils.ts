@@ -32,10 +32,15 @@ export function productImages(p: { image_url?: string; extra_images?: string | s
   return out.slice(0, 4);
 }
 
-/** Prefix a raw image URL with API host unless absolute. */
+/** Resolve local uploads through the site origin so Next can optimize them. */
 export function imageSrc(url: string, apiBase: string): string {
   if (!url) return "";
-  return url.startsWith("http") ? url : `${apiBase}${url}`;
+  if (url.startsWith("http")) return url;
+  if (isLocalUpload(url)) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.decemberdelights.in";
+    return `${siteUrl.replace(/\/+$/, "")}${url}`;
+  }
+  return `${apiBase}${url}`;
 }
 
 /** True for Hostinger-disk photos (/uploads/...) served directly by nginx.

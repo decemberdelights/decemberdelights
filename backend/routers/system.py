@@ -72,7 +72,7 @@ def system_status(_=Depends(get_current_admin)):
 
     qlen = queue_count()
     if qlen > 0:
-        warnings.append(f"{qlen} franchise apps queued locally (Supabase was full) — POST /api/admin/queue/sync after freeing space.")
+        warnings.append(f"{qlen} franchise apps queued locally for reconciliation — POST /api/admin/queue/sync after resolving the database issue.")
 
     return {
         "supabase_ok": supabase_ok,
@@ -106,6 +106,19 @@ def queue_sync(request: Request, admin=Depends(require_super_admin)):
         qid = it.get("qid")
         data = it.get("data") or {}
         try:
+            payment_id = data.get("razorpay_payment_id")
+            if payment_id:
+                existing = (
+                    supabase.table("franchise_applications")
+                    .select("id")
+                    .eq("razorpay_payment_id", payment_id)
+                    .limit(1)
+                    .execute()
+                )
+                if existing.data:
+                    queue_pop(qid)
+                    ok += 1
+                    continue
             supabase.table("franchise_applications").insert(data).execute()
             queue_pop(qid)
             ok += 1

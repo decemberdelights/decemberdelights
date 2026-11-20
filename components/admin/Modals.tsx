@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { App, Order } from "./types";
-import { API } from "@/lib/api";
-import { generateOrderReceipt } from "@/lib/receipt";
+import { documentApiUrl } from "@/lib/api";
+import { generateAdminParcelLabel } from "@/lib/receipt";
 
 function useEscapeKey(handler: () => void, enabled: boolean) {
   useEffect(() => {
@@ -87,29 +87,16 @@ export function ViewOrderModal({ order, onClose }: ViewOrderModalProps) {
   if (!order) return null;
 
   const isOnline = order.payment_method === "razorpay";
-  const orderDate = order.created_at ? new Date(order.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
 
-  const handleDownloadReceipt = () => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    generateOrderReceipt({
+  const handlePrintParcelLabel = () => {
+    generateAdminParcelLabel({
       orderId: order.id,
       customerName: order.customer_name,
       customerPhone: order.customer_phone,
-      customerEmail: order.customer_email,
       customerAddress: order.customer_address,
       customerDistrict: order.customer_district || "",
       customerState: order.customer_state || "",
       customerPincode: order.customer_pincode || "",
-      items: (order.parsedItems || []).map((val) => { const item = val as Record<string, unknown>; return { name: String(item?.name || ""), quantity: Number(item?.quantity || item?.qty || 0), price: Number(item?.price || 0) }; }),
-      total: order.total,
-      paymentMethod: order.payment_method || "cash",
-      paymentStatus: order.payment_status || "unpaid",
-      razorpayOrderId: order.razorpay_order_id || "",
-      razorpayPaymentId: order.razorpay_payment_id || "",
-      orderDate,
-    }, {
-      logoUrl: `${origin}/logo.png`,
-      artUrl: `${origin}/DDprintpaper-art.png`,
     });
   };
 
@@ -192,56 +179,18 @@ export function ViewOrderModal({ order, onClose }: ViewOrderModalProps) {
             {order.razorpay_payment_id && <div style={{ fontSize: 12, color: "#586159" }}><span style={{ color: "#999" }}>Payment ID:</span> <span style={{ fontFamily: "monospace", fontSize: 11 }}>{order.razorpay_payment_id}</span></div>}
           </div>
         )}
+        {order.consignment_number && (
+          <div style={{ marginTop: 8, padding: "10px 12px", background: "#f0f7f4", borderRadius: 8, border: "1px solid #d4e8de" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#074134", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>India Post Consignment</div>
+            <div style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "#1b2b25", letterSpacing: "0.04em" }}>{order.consignment_number}</div>
+          </div>
+        )}
         <div className="modal-actions" style={{ marginTop: 16 }}>
           <button className="btn" onClick={onClose}>Close</button>
-          <button className="btn approve" onClick={handleDownloadReceipt} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <button className="btn approve" onClick={handlePrintParcelLabel} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download Receipt
+            Print Parcel Label
           </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface CancelModalProps {
-  orderId: number | null;
-  onConfirm: (reason: string) => void;
-  onCancel: () => void;
-}
-
-export function CancelModal({ orderId, onConfirm, onCancel }: CancelModalProps) {
-  const [reason, setReason] = useState("");
-  const cancel = useCallback(() => {
-    setReason("");
-    onCancel();
-  }, [onCancel]);
-  useEscapeKey(cancel, !!orderId);
-
-  if (!orderId) return null;
-
-  return (
-    <div className="overlay show" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) cancel(); }}>
-      <div className="modal" style={{ width: "min(420px, 95vw)" }} onClick={e => e.stopPropagation()}>
-        <h4>Cancel Order #{orderId}</h4>
-        <p style={{ fontSize: 12, color: "#6b6f6a", margin: "0 0 12px" }}>Please provide a cancellation reason. Cancelling a paid online order will also refund the remaining amount to the original payment method.</p>
-        <textarea
-          value={reason}
-          onChange={e => setReason(e.target.value)}
-          placeholder="Enter cancellation reason..."
-          style={{ width: "100%", minHeight: 80, padding: 10, border: "1px solid #e4e1d6", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box" as const }}
-        />
-        <div className="modal-actions" style={{ marginTop: 16 }}>
-          <button className="btn" onClick={cancel}>Back</button>
-          <button
-            className="btn danger"
-            disabled={!reason.trim()}
-            onClick={() => {
-              if (!reason.trim()) return;
-              setReason("");
-              onConfirm(reason);
-            }}
-          >Confirm Cancel</button>
         </div>
       </div>
     </div>
@@ -253,7 +202,7 @@ function DocPreview({ url, label, blobUrl, onOpen }: { url: string; label: strin
   const isPdf = /\.pdf$/i.test(url);
   const isVideo = /\.(mp4|webm|mov)$/i.test(url);
   const fileName = url.split("/").pop() || label;
-  const fullUrl = `${API}${url}`;
+  const fullUrl = documentApiUrl(url);
 
   return (
     <div style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
@@ -266,8 +215,21 @@ function DocPreview({ url, label, blobUrl, onOpen }: { url: string; label: strin
           <Image src={blobUrl} alt={label} width={800} height={600} unoptimized style={{ width: "100%", height: "auto", maxHeight: 300, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
         ) : isVideo ? (
           <video src={fullUrl} controls style={{ width: "100%", maxHeight: 300, borderRadius: 6, background: "#000" }} />
-        ) : isPdf ? (
-          <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 6 }} />
+        ) : isPdf && blobUrl ? (
+          <iframe
+            src={blobUrl}
+            title={`${label} PDF preview`}
+            style={{
+              display: "block",
+              width: "100%",
+              height: "min(70vh, 700px)",
+              minHeight: 420,
+              border: 0,
+              borderRadius: 6,
+              touchAction: "pan-y",
+              overscrollBehavior: "contain",
+            }}
+          />
         ) : (
           <div style={{ padding: 16, textAlign: "center", color: "#6b6f6a", fontSize: 12, cursor: "pointer" }} onClick={() => onOpen(url)}>
             {fileName} — Click Open to view
@@ -309,7 +271,7 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
     if (blobsRef.current[key]) return;
     const gen = genRef.current;
     try {
-      const r = await fetch(`${API}${url}`, { credentials: "include" });
+      const r = await fetch(documentApiUrl(url), { credentials: "same-origin" });
       if (!r.ok) return;
       const blob = await r.blob();
       const blobUrl = URL.createObjectURL(blob);
@@ -320,7 +282,7 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
   }, []);
 
   const openFile = useCallback((url: string) => {
-    window.open(`${API}${url}`, "_blank");
+    window.open(documentApiUrl(url), "_blank");
   }, []);
 
   useEffect(() => {
@@ -328,12 +290,12 @@ export function ViewDocsModal({ docs, onClose }: ViewDocsModalProps) {
     const docFields = ["aadhaar", "pan", "bank_statement", "address_proof", "other_docs"] as const;
     for (const key of docFields) {
       const url = (docs as unknown as Record<string, string>)[key];
-      if (url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) {
+      if (url && /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(url)) {
         void Promise.resolve().then(() => loadDoc(url, key));
       }
     }
     const resumeUrl = docs.resume_url;
-    if (resumeUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(resumeUrl)) {
+    if (resumeUrl && /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(resumeUrl)) {
       void Promise.resolve().then(() => loadDoc(resumeUrl, "resume"));
     }
   }, [docs, loadDoc]);
@@ -423,7 +385,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;display:flex;justify-c
         const url = (docs as unknown as Record<string, string>)[key];
         if (!url) continue;
         try {
-          const r = await fetch(`${API}${url}`, { credentials: "include" });
+          const r = await fetch(documentApiUrl(url), { credentials: "same-origin" });
           if (!r.ok) continue;
           const blob = await r.blob();
           const ext = url.split(".").pop() || "bin";

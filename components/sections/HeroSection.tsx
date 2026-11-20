@@ -10,6 +10,8 @@ const emptySubscribe = () => () => {};
 export default function HeroSection() {
   const bgRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const videoPlaybackAllowedRef = useRef(false);
+  const heroVisibleRef = useRef(true);
   const [videoReady, setVideoReady] = useState(false);
   const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
@@ -39,11 +41,30 @@ export default function HeroSection() {
       return;
     }
 
+    videoPlaybackAllowedRef.current = true;
     const onCanPlay = () => setVideoReady(true);
     v.addEventListener("canplaythrough", onCanPlay, { once: true });
     v.preload = "auto";
     void v.play().catch(() => {});
-    return () => v.removeEventListener("canplaythrough", onCanPlay);
+
+    let resumeTimer = 0;
+    const pauseDuringScroll = () => {
+      v.pause();
+      window.clearTimeout(resumeTimer);
+      resumeTimer = window.setTimeout(() => {
+        if (videoPlaybackAllowedRef.current && heroVisibleRef.current) {
+          void v.play().catch(() => {});
+        }
+      }, 220);
+    };
+    window.addEventListener("scroll", pauseDuringScroll, { passive: true });
+    return () => {
+      videoPlaybackAllowedRef.current = false;
+      window.clearTimeout(resumeTimer);
+      window.removeEventListener("scroll", pauseDuringScroll);
+      v.removeEventListener("canplaythrough", onCanPlay);
+      v.pause();
+    };
   }, [mounted]);
 
   // Fade the hero out as you scroll away — driven by the shared scroll
@@ -53,6 +74,8 @@ export default function HeroSection() {
     if (!bg) return;
     const vh = state.viewport || window.innerHeight;
     const progress = Math.min(state.scroll / vh, 1);
+    heroVisibleRef.current = progress < 1;
+    if (!heroVisibleRef.current) videoRef.current?.pause();
     bg.style.opacity = String(Math.max(1 - progress, 0));
   });
 

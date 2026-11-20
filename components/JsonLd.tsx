@@ -26,7 +26,6 @@ export function LocalBusinessJsonLd() {
         logo: `${siteUrl}/logo.png`,
         image: `${siteUrl}/logo.png`,
         email: "info@decemberdelights.in",
-        telephone: "+918801460641",
         address: {
           "@type": "PostalAddress",
           addressLocality: "Hyderabad",
@@ -70,7 +69,6 @@ export function OrganizationJsonLd() {
         logo: `${siteUrl}/logo.png`,
         contactPoint: {
           "@type": "ContactPoint",
-          telephone: "+918801460641",
           contactType: "customer service",
           email: "info@decemberdelights.in",
         },

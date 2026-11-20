@@ -39,6 +39,10 @@ def test_dispatched_is_a_valid_order_status():
     assert validate_order_status("dispatched")
 
 
+def test_cancelled_is_not_a_valid_order_status():
+    assert not validate_order_status("cancelled")
+
+
 def test_cart_items_are_merged_and_sorted_for_payment_verification():
     assert normalize_cart_items([
         {"id": 9, "quantity": 1},

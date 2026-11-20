@@ -1,6 +1,6 @@
-"""Local spillover queue: if Supabase is full/down, keep accepting on Hostinger disk.
+"""Local spillover queue for captured franchise applications Supabase cannot save.
 - Queue dir: UPLOAD_ROOT/queue/franchise/*.json + files already under uploads/private/franchise/*
-- submit_application() calls queue_push() on quota/full errors, returns {ok, queued:true}
+- submit_application() queues failed database writes and returns {ok, queued:true}
 - Admin: GET /api/admin/queue/status, POST /api/admin/queue/sync (pushes back to Supabase when space freed)
 Stdlib only, works on 1vCPU, no Redis needed.
 NOTE: named local_queue.py (not queue.py) to avoid shadowing Python's stdlib `queue` module.

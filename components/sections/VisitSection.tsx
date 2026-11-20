@@ -15,17 +15,17 @@ export default function VisitSection() {
           <h2 className="visit-heading">
             <ScrollFloat animation="slideUp3D" containerClassName="!my-0">Let&apos;s Connect</ScrollFloat>
           </h2>
-          <p data-reveal-child style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 400, lineHeight: 1.75, color: "rgba(255,255,255,0.85)", marginBottom: "36px", maxWidth: "480px" }}>
+          <p data-reveal-child className="visit-intro" style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 400, lineHeight: 1.75, color: "rgba(255,255,255,0.85)", marginBottom: "36px", maxWidth: "480px" }}>
             We&apos;d love to see you at December Delights. Drop by for a cup of something wonderful.
           </p>
-          <div data-reveal-child style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div data-reveal-child className="visit-details" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />
               <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 500, color: "#fdf9f4" }}>Open Daily</p>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />
-              <a href="tel:+918801460641" style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 500, color: "#fdf9f4", textDecoration: "none", transition: "color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#fdf9f4"; }}>+91 88014 60641</a>
+              <a href="mailto:info@decemberdelights.in" style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 500, color: "#fdf9f4", textDecoration: "none", transition: "color 0.3s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#c8a97a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#fdf9f4"; }}>info@decemberdelights.in</a>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "3px", height: "28px", background: "#c8a97a", borderRadius: "2px" }} />

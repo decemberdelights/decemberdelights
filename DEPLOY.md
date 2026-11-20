@@ -110,6 +110,7 @@ settings include:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Project Settings → API |
 | `GMAIL_USER`, `GMAIL_APP_PASSWORD` | Gmail account and its App Password (optional; required for email) |
 | `ADMIN_EMAIL` | Inbox for franchise/admin notifications |
+| `ALTERNATE_ADMIN_EMAIL` | Additional inbox for order and franchise-registration alerts (defaults to `praveennaraharishetty@gmail.com`) |
 
 Keep `SUPABASE_URL` and `FRONTEND_URL` correct for your project/domain.
 Save: Ctrl+O, Enter, then Ctrl+X. The file should remain mode 600. Restart:
@@ -179,24 +180,35 @@ scp .\decemberdelights-deploy.tar.gz SSH_USER@SERVER_IP:/tmp/
 ```
 
 On the VPS, pause the frontend while replacing its build files so requests
-cannot receive server-rendered HTML and JavaScript from different releases:
+cannot receive server-rendered HTML and JavaScript from different releases.
+Stop the backend too so it cannot serve requests while its code is being
+replaced:
 
 ```bash
-sudo systemctl stop dd-frontend
+sudo systemctl stop dd-frontend dd-backend
 sudo tar -xzf /tmp/decemberdelights-deploy.tar.gz -C /var/www/decemberdelights
 sudo chown -R www-data:www-data /var/www/decemberdelights/frontend
+sudo systemctl start dd-backend
 sudo systemctl start dd-frontend
-sudo systemctl --no-pager --full status dd-frontend
+sudo systemctl --no-pager --full status dd-backend dd-frontend
+curl -fsS http://127.0.0.1:10000/api/ready
 curl -I http://127.0.0.1:3000/
 ```
 
-If extraction fails after stopping the service, run
-`sudo systemctl start dd-frontend` to bring the existing installation back up,
-then inspect the error before retrying. The archive updates application files;
-it does not contain or replace `backend/.env`, `.data/`, or `uploads/`. Apply
-any new database migration separately. After the service is healthy, hard
-refresh the site (`Ctrl+Shift+R`) to discard any page or JavaScript cached from
-the previous release.
+If extraction fails after stopping the services, run
+`sudo systemctl start dd-backend dd-frontend` to bring the existing installation
+back up, then inspect the error before retrying. The archive updates application
+files; it does not contain or replace `backend/.env`, `.data/`, or `uploads/`.
+Apply any new database migration separately. Since the existing career
+application schema was missing `tracking_code`, run
+`backend/migrations/005_career_tracking_token.sql` in Supabase Dashboard →
+SQL Editor if it has not already been applied; the statement is safe to rerun.
+Without that column, applications can still be submitted, but career tracking
+codes cannot be saved or used. Private career and franchise documents are
+viewed through authenticated backend routes; deployment must update both
+backend and frontend for those previews to work. After both services are
+healthy, hard refresh the site (`Ctrl+Shift+R`) to discard any page or
+JavaScript cached from the previous release.
 
 ---
 

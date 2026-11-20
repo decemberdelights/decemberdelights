@@ -119,7 +119,7 @@ export default function ChartsTab({ stats, orderStats }: ChartsTabProps) {
       </div>
 
       <div className="pie-row">
-        <div className="panel">
+        <div className="panel" style={{ overflow: "visible" }}>
           <h3>Order Status</h3>
           {orderStatusPie.length > 0 ? (
             <>
@@ -142,7 +142,7 @@ export default function ChartsTab({ stats, orderStats }: ChartsTabProps) {
           )}
         </div>
 
-        <div className="panel">
+        <div className="panel" style={{ overflow: "visible" }}>
           <h3>Franchise Applications</h3>
           {franchisePieData.length > 0 ? (
             <>
@@ -165,7 +165,7 @@ export default function ChartsTab({ stats, orderStats }: ChartsTabProps) {
           )}
         </div>
 
-        <div className="panel">
+        <div className="panel" style={{ overflow: "visible" }}>
           <h3>Career Applications</h3>
           {careersPieData.length > 0 ? (
             <>

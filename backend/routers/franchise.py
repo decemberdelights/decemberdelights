@@ -4,6 +4,8 @@ import re
 import logging
 import asyncio
 
+from datetime import datetime
+
 import razorpay
 
 from fastapi import APIRouter, HTTPException, Response, UploadFile, File, Form, Cookie, Request, BackgroundTasks
@@ -13,12 +15,13 @@ from supabase_client import supabase
 from schemas import FranchiseLogin, FranchiseOut
 from auth import create_token, decode_token, SESSION_COOKIE_MAX_AGE
 from security import (
-    franchise_limiter, get_client_ip, validate_email, validate_phone,
+    franchise_limiter, franchise_login_limiter, get_client_ip, validate_email, validate_phone,
     sanitize_input, is_settings_not_configured,
 )
 from csrf import generate_csrf_token, set_csrf_cookie, validate_csrf
 from email_service import send_franchise_confirmation, send_franchise_admin_notification
 from local_storage import STORAGE_MODE, save_private_doc as save_private_doc_local, delete_local_file, is_local_url
+from file_validation import validated_document_content_type
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -27,11 +30,6 @@ RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
 FRANCHISE_FEE_PAISE = 999900 + 179982  # ₹9999 + 18% GST = ₹11799 = 1,179,900 paise
 
-ALLOWED_DOC_EXT = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
-ALLOWED_DOC_MIME = {
-    "application/pdf", "image/jpeg", "image/png",
-    "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-}
 ALLOWED_VIDEO_EXT = {".mp4", ".webm", ".mov"}
 MAX_DOC_SIZE = 5 * 1024 * 1024
 MAX_VIDEO_SIZE = 15 * 1024 * 1024
@@ -64,25 +62,26 @@ def _upload_sync(filename: str, content: bytes, content_type: str) -> str:
 async def _upload_file(file: Optional[UploadFile], name: str, field: str) -> str:
     if not file or not file.filename:
         return ""
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in ALLOWED_DOC_EXT:
-        raise HTTPException(400, f"{field}: file type {ext} not allowed")
     content = await file.read()
     if len(content) > MAX_DOC_SIZE:
         raise HTTPException(400, f"{field}: file too large (max 5MB)")
-    if file.content_type and file.content_type not in ALLOWED_DOC_MIME:
-        raise HTTPException(400, f"{field}: content type not allowed")
+    ext = os.path.splitext(file.filename)[1].lower()
+    content_type = validated_document_content_type(file.filename, file.content_type, content)
     # Hybrid: sensitive docs go to private local vault (no Supabase bandwidth, not public).
     # Served only via GET /api/files/franchise/{filename} (admin auth).
     if STORAGE_MODE in ("hybrid", "local"):
         try:
             return save_private_doc_local(content, file.filename, "franchise")
         except Exception as e:
-            logger.warning(f"Local private save failed, Supabase fallback: {e}")
+            logger.error(f"Local private save failed, Supabase fallback: {e}")
             if STORAGE_MODE == "local":
-                raise
+                raise HTTPException(status_code=503, detail=f"{field}: document storage is temporarily unavailable") from e
     filename = f"{_safe_name(name)}_{field}_{uuid.uuid4().hex[:8]}{ext}"
-    return await asyncio.to_thread(_upload_sync, filename, content, file.content_type or "application/octet-stream")
+    try:
+        return await asyncio.to_thread(_upload_sync, filename, content, content_type)
+    except Exception as e:
+        logger.error(f"Franchise document upload failed for {field}: {e}")
+        raise HTTPException(status_code=503, detail=f"{field}: document storage is temporarily unavailable") from e
 
 
 def delete_app_files(app: dict):
@@ -139,6 +138,22 @@ async def create_order(body: CreateOrderReq, request: Request):
     if not validate_phone(phone):
         raise HTTPException(400, "Invalid phone")
 
+    # Reject duplicates BEFORE charging. The same check exists on submit, but by
+    # then the ₹11,799 fee is already captured and the applicant would have to
+    # wait for an auto-refund.
+    try:
+        existing = await asyncio.to_thread(
+            lambda: supabase.table("franchise_applications").select("id,login_id").eq("phone", phone).execute()
+        )
+    except Exception as e:
+        logger.error(f"Failed to check existing franchise application: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Application service is temporarily unavailable. Please try again shortly.",
+        ) from e
+    if existing.data and existing.data[0].get("login_id"):
+        raise HTTPException(400, "Application already exists for this phone number")
+
     try:
         client = _get_client()
         order = await asyncio.to_thread(
@@ -179,6 +194,9 @@ async def submit_application(
     other_docs: Optional[UploadFile] = File(None),
     tc_video: Optional[UploadFile] = File(None),
 ):
+    if tc_accepted.strip().lower() != "true":
+        raise HTTPException(status_code=400, detail="Please accept the franchise terms and conditions")
+
     # Check if franchise applications are enabled. Fail CLOSED on unexpected
     # errors — the old `except Exception: pass` re-opened a closed franchise
     # form on any transient DB error.
@@ -209,6 +227,23 @@ async def submit_application(
         raise HTTPException(400, "Invalid email")
     if not validate_phone(phone):
         raise HTTPException(400, "Invalid phone")
+    # DOB is the applicant's login credential for /api/franchise/status.
+    # Without a well-formed value the application can never be accessed.
+    dob = sanitize_input(dob, 20).strip()
+    try:
+        datetime.strptime(dob, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(400, "Date of birth is required (YYYY-MM-DD)")
+    # The four documents the UI marks as mandatory must actually be present,
+    # otherwise an application reaches admin review with nothing to assess.
+    for field_name, upload in (
+        ("aadhaar", aadhaar),
+        ("pan", pan),
+        ("bank_statement", bank_statement),
+        ("address_proof", address_proof),
+    ):
+        if not upload or not upload.filename:
+            raise HTTPException(400, f"{field_name} document is required")
     normalized_franchise_type = sanitize_input(franchise_type, 50).strip().lower()
     if normalized_franchise_type in ("highway", "highway edition"):
         normalized_franchise_type = "highway"
@@ -221,7 +256,12 @@ async def submit_application(
     if not razorpay_order_id or not razorpay_payment_id:
         raise HTTPException(400, "Payment is required")
     # Blocking Supabase lookups in an async handler — run in a worker thread.
-    if await asyncio.to_thread(_check_payment_used, razorpay_payment_id, razorpay_order_id):
+    try:
+        payment_already_used = await asyncio.to_thread(_check_payment_used, razorpay_payment_id, razorpay_order_id)
+    except Exception as e:
+        logger.error(f"Failed to check franchise payment reuse: {e}")
+        raise HTTPException(status_code=503, detail="Payment verification is temporarily unavailable. Please try again shortly.") from e
+    if payment_already_used:
         raise HTTPException(400, "This payment has already been used")
     if not await asyncio.to_thread(_verify_signature, razorpay_order_id, razorpay_payment_id, razorpay_signature):
         raise HTTPException(400, "Payment verification failed")
@@ -233,6 +273,18 @@ async def submit_application(
         logger.error(f"Payment fetch failed: {e}")
         raise HTTPException(400, "Could not verify payment")
 
+    if payment.get("status") == "authorized":
+        # Late authorization / manual-capture accounts leave the payment in the
+        # "authorized" state. Capture it here so the application can complete.
+        try:
+            await asyncio.to_thread(
+                lambda: client.payment.capture(razorpay_payment_id, {"amount": payment.get("amount") or 0})
+            )
+            payment = await asyncio.to_thread(lambda: client.payment.fetch(razorpay_payment_id))
+            logger.info(f"Captured previously-authorized franchise payment {razorpay_payment_id}")
+        except Exception as e:
+            logger.warning(f"Could not capture authorized franchise payment {razorpay_payment_id}: {e}")
+
     if payment.get("status") != "captured":
         raise HTTPException(400, f"Payment not captured (status: {payment.get('status')})")
     if payment.get("amount", 0) != FRANCHISE_FEE_PAISE:
@@ -240,9 +292,13 @@ async def submit_application(
     if payment.get("currency") != "INR":
         raise HTTPException(400, "Invalid currency")
 
-    existing = await asyncio.to_thread(
-        lambda: supabase.table("franchise_applications").select("id,login_id").eq("phone", phone).execute()
-    )
+    try:
+        existing = await asyncio.to_thread(
+            lambda: supabase.table("franchise_applications").select("id,login_id").eq("phone", phone).execute()
+        )
+    except Exception as e:
+        logger.error(f"Failed to check existing franchise application: {e}")
+        raise HTTPException(status_code=503, detail="Application service is temporarily unavailable. Please try again shortly.") from e
     if existing.data and existing.data[0].get("login_id"):
         raise HTTPException(400, "Application already exists for this phone number")
 
@@ -254,23 +310,29 @@ async def submit_application(
 
     tc_video_url = ""
     if tc_video and tc_video.filename:
+        # Reject instead of silently dropping: the applicant explicitly chose
+        # this file and must not believe it was uploaded when it was not.
         ext = os.path.splitext(tc_video.filename)[1].lower()
-        if ext in ALLOWED_VIDEO_EXT:
-            content = await tc_video.read()
-            if len(content) <= MAX_VIDEO_SIZE:
-                if STORAGE_MODE in ("hybrid", "local"):
-                    try:
-                        # Blocking disk write — keep off the event loop.
-                        tc_video_url = await asyncio.to_thread(
-                            save_private_doc_local, content, tc_video.filename, "franchise"
-                        )
-                    except Exception as e:
-                        logger.warning(f"Local video save failed: {e}")
-                        if STORAGE_MODE == "local":
-                            raise
-                if not tc_video_url:
-                    filename = f"{_safe_name(full_name)}_tc_video_{uuid.uuid4().hex[:8]}{ext}"
-                    tc_video_url = await asyncio.to_thread(_upload_sync, filename, content, tc_video.content_type or "video/mp4")
+        if ext not in ALLOWED_VIDEO_EXT:
+            raise HTTPException(400, "tc_video: unsupported format (use MP4, WebM or MOV)")
+        content = await tc_video.read()
+        if not content:
+            raise HTTPException(400, "tc_video: empty file uploaded")
+        if len(content) > MAX_VIDEO_SIZE:
+            raise HTTPException(400, "tc_video: file too large (max 15MB)")
+        if STORAGE_MODE in ("hybrid", "local"):
+            try:
+                # Blocking disk write — keep off the event loop.
+                tc_video_url = await asyncio.to_thread(
+                    save_private_doc_local, content, tc_video.filename, "franchise"
+                )
+            except Exception as e:
+                logger.warning(f"Local video save failed: {e}")
+                if STORAGE_MODE == "local":
+                    raise
+        if not tc_video_url:
+            filename = f"{_safe_name(full_name)}_tc_video_{uuid.uuid4().hex[:8]}{ext}"
+            tc_video_url = await asyncio.to_thread(_upload_sync, filename, content, tc_video.content_type or "video/mp4")
 
     login_id = f"DD-{uuid.uuid4().hex[:12].upper()}"
 
@@ -311,19 +373,37 @@ async def submit_application(
             app_id = result.data[0]["id"]
     except Exception as e:
         logger.error(f"DB insert failed: {e}")
-        # Spillover: Supabase full/down but payment already captured + files already on Hostinger disk.
-        # Keep accepting locally so 200k spike never loses a paid user. Sync later via POST /api/admin/queue/sync.
+        # Payment is already captured. Preserve the application locally for
+        # admin reconciliation instead of losing the paid submission.
         try:
-            from local_queue import queue_push, _is_quota_error
-            if _is_quota_error(e):
-                qid = queue_push(data)
-                logger.warning(f"Supabase full, queued franchise {login_id} as {qid}")
-                background_tasks.add_task(send_franchise_confirmation, email, full_name, login_id, phone)
-                return {"ok": True, "id": 0, "login_id": login_id, "queued": True, "queue_id": qid,
-                        "note": "Saved locally — will sync when database space is freed."}
-        except Exception as qe:
-            logger.error(f"Queue fallback also failed: {qe}")
-        raise HTTPException(500, "Failed to save application")
+            from local_queue import queue_push
+            qid = queue_push(data)
+        except Exception as queue_err:
+            logger.critical(
+                "Could not persist captured franchise payment %s to local queue: %s",
+                razorpay_payment_id,
+                queue_err,
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Payment was received, but the application could not be saved. "
+                    f"Contact support with payment reference {razorpay_payment_id}."
+                ),
+            ) from queue_err
+        logger.warning(
+            "Supabase application save failed; queued captured franchise payment %s as %s",
+            razorpay_payment_id,
+            qid,
+        )
+        return {
+            "ok": True,
+            "id": 0,
+            "login_id": login_id,
+            "queued": True,
+            "queue_id": qid,
+            "note": "Payment verified; application saved locally for administrator reconciliation.",
+        }
 
     background_tasks.add_task(
         send_franchise_confirmation, email, full_name, login_id, phone
@@ -344,7 +424,8 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response)
     # throttled even when the attacker rotates or spoofs IPs. Digits-only key
     # so "+91 98765-43210" and "9876543210" share one bucket.
     account_key = f"franchise_acc:{re.sub(r'[^0-9]', '', creds.phone or '')}"
-    franchise_limiter.check(account_key)
+    # Stricter per-account limiter for DOB guessing (3 attempts per 10 minutes).
+    franchise_login_limiter.check(account_key)
 
     result = supabase.table("franchise_applications").select("*").eq("phone", creds.phone).execute()
     if not result.data:
@@ -356,7 +437,10 @@ def franchise_login(request: Request, creds: FranchiseLogin, response: Response)
 
     # Successful login clears the per-account counter (same pattern as admin
     # login): only someone who knows the correct DOB can reset it.
-    franchise_limiter.reset(account_key)
+    # NOTE: this must be franchise_login_limiter — the limiter account_key was
+    # actually checked against. Resetting franchise_limiter here was a no-op,
+    # so a correct DOB stayed locked out for the rest of the window.
+    franchise_login_limiter.reset(account_key)
 
     token = create_token({"sub": str(app["id"]), "type": "franchise"})
     response.set_cookie("franchise_session", token, httponly=True, samesite="lax", max_age=SESSION_COOKIE_MAX_AGE, secure=True, path="/")

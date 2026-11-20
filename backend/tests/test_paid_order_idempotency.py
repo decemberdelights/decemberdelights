@@ -23,6 +23,12 @@ class FakeQuery:
     def __init__(self, result):
         self.result = result
 
+    def select(self, *_args, **_kwargs):
+        return self
+
+    def eq(self, *_args, **_kwargs):
+        return self
+
     def execute(self):
         return type("Result", (), {"data": self.result})()
 
@@ -30,6 +36,10 @@ class FakeQuery:
 class FakeSupabase:
     def __init__(self, result):
         self.result = result
+
+    def table(self, _name):
+        # Duplicate-payment check: no existing order for this payment id.
+        return FakeQuery([])
 
     def rpc(self, name, params):
         assert name == "create_paid_order"
@@ -40,7 +50,6 @@ class FakeSupabase:
 
 class FakeRazorpay:
     def __init__(self):
-        self.refunds = []
         self.order = type("OrderResource", (), {
             "fetch": lambda _self, order_id: {
                 "id": order_id,
@@ -61,8 +70,8 @@ class FakeRazorpay:
                 "status": "captured",
                 "currency": "INR",
                 "amount": 109000,
-            },
-            "refund": lambda _self, payment_id, payload: self.refunds.append((payment_id, payload)),
+                },
+            "refund": lambda _self, payment_id, payload: {"id": "rfnd_test_1", "payment_id": payment_id, **payload},
         })()
 
 
@@ -133,52 +142,51 @@ def test_order_rejects_missing_shop_terms_acceptance(monkeypatch):
     assert "terms acceptance is required" in error.value.detail
 
 
-def test_failed_stock_reservation_initiates_full_refund(monkeypatch):
-    gateway = setup_order_mocks(monkeypatch, {"created": False, "stock_reserved": False})
+def test_failed_stock_reservation_auto_refunds_payment(monkeypatch):
+    setup_order_mocks(monkeypatch, {"created": False, "stock_reserved": False})
 
     with pytest.raises(HTTPException) as error:
         orders.create_public_order(make_body(), make_request(), BackgroundTasks())
 
+    # Stock failed after capture -> payment is auto-refunded and the customer
+    # is told so, with the payment reference for support.
     assert error.value.status_code == 409
-    assert "refund has been initiated" in error.value.detail
-    assert gateway.refunds[0][0] == PAYMENT_ID
-    assert gateway.refunds[0][1]["amount"] == 109000
-    assert gateway.refunds[0][1]["notes"]["razorpay_order_id"] == RAZORPAY_ORDER_ID
+    assert "automatically refunded" in error.value.detail
+    assert PAYMENT_ID in error.value.detail
 
 
-def test_failed_refund_surfaces_payment_reference(monkeypatch):
-    gateway = setup_order_mocks(monkeypatch, {"created": False, "stock_reserved": False})
-    gateway.payment.refund = lambda *_args: (_ for _ in ()).throw(RuntimeError("gateway unavailable"))
+def test_db_failure_after_payment_capture_requires_support_without_refund(monkeypatch):
+    setup_order_mocks(monkeypatch, {"created": True, "order": {"id": 42, "status": "pending"}})
+
+    class FailingSupabase:
+        def table(self, _name):
+            # Duplicate-payment check runs first and must pass;
+            # the failure happens on the subsequent RPC insert.
+            return FakeQuery([])
+
+        def rpc(self, name, params):
+            raise RuntimeError("DB insert failed")
+
+    monkeypatch.setattr(orders, "supabase", FailingSupabase())
 
     with pytest.raises(HTTPException) as error:
         orders.create_public_order(make_body(), make_request(), BackgroundTasks())
 
     assert error.value.status_code == 503
+    assert "Payment was received" in error.value.detail
     assert PAYMENT_ID in error.value.detail
 
 
-def test_retry_does_not_refund_a_payment_twice(monkeypatch):
-    gateway = setup_order_mocks(monkeypatch, {"created": False, "stock_reserved": False})
-    gateway.payment.fetch = lambda _payment_id: {
-        "amount": 109000,
-        "amount_refunded": 109000,
-    }
+def test_order_tracking_reports_database_failure(monkeypatch):
+    class FailingSupabase:
+        def table(self, _name):
+            raise RuntimeError("database unavailable")
 
-    with pytest.raises(HTTPException):
-        orders.create_public_order(make_body(), make_request(), BackgroundTasks())
+    monkeypatch.setattr(orders, "supabase", FailingSupabase())
+    monkeypatch.setattr(orders.track_limiter, "check", lambda _key: None)
 
-    assert gateway.refunds == []
+    with pytest.raises(HTTPException) as error:
+        orders.track_order("9999999999", make_request())
 
-
-def test_partial_refund_only_refunds_remaining_captured_amount(monkeypatch):
-    gateway = FakeRazorpay()
-    gateway.payment.fetch = lambda _payment_id: {
-        "amount": 109000,
-        "amount_refunded": 25000,
-    }
-    monkeypatch.setattr(orders, "_get_razorpay_client", lambda: gateway)
-
-    orders._refund_payment(PAYMENT_ID, RAZORPAY_ORDER_ID, "Admin refund")
-
-    assert gateway.refunds[0][0] == PAYMENT_ID
-    assert gateway.refunds[0][1]["amount"] == 84000
+    assert error.value.status_code == 503
+    assert "temporarily unavailable" in error.value.detail

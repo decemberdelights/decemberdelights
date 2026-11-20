@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { App } from "../types";
-import { API } from "@/lib/api";
+import { documentApiUrl } from "@/lib/api";
 import FilterBar from "../FilterBar";
 
 interface ApplicationsTabProps {
@@ -18,9 +18,7 @@ interface ApplicationsTabProps {
 }
 
 function docUrl(url: string) {
-  if (!url) return "";
-  if (url.startsWith("http")) return url;
-  return `${API}${url}`;
+  return url ? documentApiUrl(url) : "";
 }
 
 function franchiseEditionLabel(value?: string) {
@@ -80,8 +78,11 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
     if (!fullUrl) return;
     if (imgSrcUrls.current[key] === url && imgBlobUrls.current[key]) return; // already loaded
     try {
-      const r = await fetch(fullUrl);
-      if (!r.ok) return;
+      const r = await fetch(fullUrl, { credentials: "same-origin" });
+      if (!r.ok) {
+        console.error(`Document preview request failed (${r.status})`);
+        return;
+      }
       const blob = await r.blob();
       const blobUrl = URL.createObjectURL(blob);
       const prevUrl = imgBlobUrls.current[key];
@@ -92,7 +93,9 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
         setTimeout(() => URL.revokeObjectURL(prevUrl), 1000);
       }
       setImgBlobs(prev => ({ ...prev, [key]: blobUrl }));
-    } catch { /* ignore */ }
+    } catch (error) {
+      console.error("Document preview request failed", error);
+    }
   }, []);
 
   // Revoke every preview blob URL we created when the tab unmounts.
@@ -112,13 +115,13 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
     if (type === "franchise") {
       for (const [key] of DOC_FIELDS) {
         const url = (item as unknown as Record<string, string>)[key];
-        if (url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) {
+        if (url && /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(url)) {
           void Promise.resolve().then(() => loadImage(url, `${item.id}-${key}`));
         }
       }
     }
     const resumeUrl = item.resume_url;
-    if (resumeUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(resumeUrl)) {
+    if (resumeUrl && /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(resumeUrl)) {
       void Promise.resolve().then(() => loadImage(resumeUrl, `${item.id}-resume`));
     }
   }, [expandedId, items, type, loadImage]);
@@ -187,10 +190,25 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
                     <Image src={imgBlobs[imgKey]} alt={label} width={800} height={600} unoptimized style={{ width: "100%", height: "auto", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
                   ) : isVideo && fullUrl ? (
                     <video src={fullUrl} controls style={{ width: "100%", maxHeight: 300, borderRadius: 6, background: "#000" }} />
-                  ) : isPdf && fullUrl ? (
-                    <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 6 }} />
+                  ) : isPdf && imgBlobs[imgKey] ? (
+                    <iframe
+                      src={imgBlobs[imgKey]}
+                      title={`${label} PDF preview`}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        height: "min(70vh, 700px)",
+                        minHeight: 420,
+                        border: 0,
+                        borderRadius: 6,
+                        touchAction: "pan-y",
+                        overscrollBehavior: "contain",
+                      }}
+                    />
                   ) : /\.(docx|doc)$/i.test(url) && fullUrl ? (
-                    <iframe src={`https://docs.google.com/gview?url=${encodeURIComponent(fullUrl)}&embedded=true`} style={{ width: "100%", height: 400, border: "none", borderRadius: 6 }} title={label} />
+                    <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14 }}>
+                      Preview isn’t available for Word documents. Use View or Download to access this private file.
+                    </div>
                   ) : (
                     <div style={{ padding: 14, textAlign: "center", color: "#6b6f6a", fontSize: 14, cursor: "pointer", wordBreak: "break-all", overflow: "hidden" }} onClick={() => openFile(url)}>
                       {fileName} — Click View to open
@@ -209,33 +227,44 @@ export default function ApplicationsTab({ type, items, role, onApprove, onUnderP
     const isPdf = /\.pdf$/i.test(item.resume_url);
     const isDocx = /\.(docx|doc)$/i.test(item.resume_url);
     const imgKey = `${item.id}-resume`;
-    const fullUrl = docUrl(item.resume_url);
     const fileName = item.resume_url.split("/").pop() || "resume.pdf";
-    const googleDocsUrl = fullUrl ? `https://docs.google.com/gview?url=${encodeURIComponent(fullUrl)}&embedded=true` : "";
     return (
       <div style={{ padding: 16 }}>
         <div style={{ border: "1px solid #e4e1d6", borderRadius: 8, overflow: "hidden" }}>
           <div style={{ padding: "10px 16px", background: "#f9f7f2", borderBottom: "1px solid #e4e1d6", fontSize: 14, fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>Resume</span>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { if (isDocx && googleDocsUrl) { window.open(googleDocsUrl, "_blank"); } else { openFile(item.resume_url!); } }} style={{ fontSize: 13, color: "#074134", fontWeight: 600, background: "#e4f0eb", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
+              <button onClick={() => openFile(item.resume_url!)} style={{ fontSize: 13, color: "#074134", fontWeight: 600, background: "#e4f0eb", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>View</button>
               <button onClick={() => downloadFile(item.resume_url!, fileName)} style={{ fontSize: 13, color: "#fff", fontWeight: 600, background: "#173a30", padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer" }}>Download</button>
             </div>
           </div>
           <div style={{ padding: 10, background: "#fff" }}>
             {isImage && imgBlobs[imgKey] ? (
               <Image src={imgBlobs[imgKey]} alt="Resume" width={800} height={600} unoptimized style={{ width: "100%", height: "auto", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#f4f1ea" }} />
-            ) : isPdf && fullUrl ? (
-              <embed src={fullUrl} type="application/pdf" style={{ width: "100%", height: 400, borderRadius: 6 }} />
-            ) : isDocx && googleDocsUrl ? (
-              <iframe src={googleDocsUrl} style={{ width: "100%", height: 400, border: "none", borderRadius: 6 }} title="Resume Preview" />
+            ) : isPdf && imgBlobs[imgKey] ? (
+              <iframe
+                src={imgBlobs[imgKey]}
+                title="Resume PDF preview"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "min(70vh, 700px)",
+                  minHeight: 420,
+                  border: 0,
+                  borderRadius: 6,
+                  touchAction: "pan-y",
+                  overscrollBehavior: "contain",
+                }}
+              />
             ) : (
               <div style={{ padding: 20, textAlign: "center", color: "#6b6f6a", fontSize: 14 }}>
                 <div style={{ marginBottom: 8 }}>
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </div>
                 <p style={{ margin: 0, fontWeight: 600 }}>{fileName}</p>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#999" }}>Click View to open in browser</p>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#999" }}>
+                  {isDocx ? "Word preview is not available. Use View or Download." : "Loading preview, or use View to open the file."}
+                </p>
               </div>
             )}
           </div>

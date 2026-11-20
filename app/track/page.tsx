@@ -30,11 +30,172 @@ interface Order {
   payment_method?: string;
   razorpay_order_id?: string;
   razorpay_payment_id?: string;
+  consignment_number?: string;
   created_at: string;
 }
 
 function parseItems(items: string): OrderItem[] {
   try { return JSON.parse(items); } catch { return []; }
+}
+
+const TRACK_STEPS = [
+  { key: "placed", label: "Order Placed", description: "We received your order" },
+  { key: "packing", label: "Packing", description: "Your order is being packed" },
+  { key: "dispatched", label: "Dispatched", description: "Handed to India Post" },
+  { key: "delivered", label: "Delivered", description: "Enjoy your order" },
+];
+
+function statusStepIndex(status: string): number {
+  switch (status) {
+    case "preparing":
+    case "packed":
+    case "ready":
+      return 1;
+    case "dispatched":
+      return 2;
+    case "delivered":
+      return 3;
+    default:
+      return 0;
+  }
+}
+
+function statusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    pending: "Order Placed",
+    confirmed: "Confirmed",
+    preparing: "Packing",
+    packed: "Packed",
+    ready: "Ready to Ship",
+    dispatched: "Dispatched",
+    delivered: "Delivered",
+    cancelled: "Cancelled",
+  };
+  return labels[status] || status;
+}
+
+function statusColors(status: string): { bg: string; fg: string; border: string } {
+  switch (status) {
+    case "delivered":
+      return { bg: "#f0faf4", fg: "#1a7a4a", border: "#c3e8d4" };
+    case "dispatched":
+      return { bg: "#e6f4f1", fg: "#0f6b5c", border: "#bfe0d8" };
+    case "preparing":
+    case "packed":
+    case "ready":
+      return { bg: "#e6f1fb", fg: "#185fa5", border: "#c3ddf2" };
+    case "cancelled":
+      return { bg: "#fef3f2", fg: "#a32d2d", border: "#f5c6c6" };
+    default:
+      return { bg: "#FAEEDA", fg: "#854f0b", border: "#f0d9a8" };
+  }
+}
+
+function StatusTimeline({ status }: { status: string }) {
+  const current = statusStepIndex(status);
+
+  if (status === "cancelled") {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", padding: "0.9rem 1rem", borderRadius: "12px", background: "#fef3f2", border: "1px solid #f5c6c6" }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a32d2d" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+        <div>
+          <p style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "#a32d2d" }}>Order Cancelled</p>
+          <p style={{ margin: "0.15rem 0 0", fontFamily: "'Montserrat', sans-serif", fontSize: "0.75rem", color: "#8a4a4a" }}>This order was cancelled. Contact us if you need help.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="track-timeline" style={{ display: "flex", alignItems: "flex-start", padding: "0.35rem 0 0.1rem" }}>
+      {TRACK_STEPS.map((step, i) => {
+        const reached = i <= current;
+        const active = i === current;
+        return (
+          <div key={step.key} className="track-timeline-step" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative", textAlign: "center" }}>
+            {i > 0 && (
+              <div aria-hidden="true" style={{ position: "absolute", top: 15, right: "50%", width: "100%", height: 3, background: reached ? "#1b3c33" : "#e8e4dc", zIndex: 0, transition: "background 0.3s" }} />
+            )}
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              zIndex: 1,
+              display: "grid",
+              placeItems: "center",
+              background: reached ? "#1b3c33" : "#fff",
+              border: active ? "3px solid #c8a97a" : reached ? "3px solid #1b3c33" : "3px solid #e8e4dc",
+              color: reached ? "#fff" : "#b5b1a8",
+              fontFamily: "'Montserrat', sans-serif",
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              boxShadow: active ? "0 0 0 4px rgba(200,169,122,0.2)" : "none",
+              transition: "all 0.3s",
+            }}>
+              {i < current ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+              ) : (i + 1)}
+            </div>
+            <p style={{ margin: "0.55rem 0 0", fontFamily: "'Montserrat', sans-serif", fontSize: "0.72rem", fontWeight: reached ? 700 : 500, color: reached ? "#1b3c33" : "#aaa79e", lineHeight: 1.35 }}>{step.label}</p>
+            {active && (
+              <p className="track-timeline-desc" style={{ margin: "0.15rem 0 0", fontFamily: "'Montserrat', sans-serif", fontSize: "0.65rem", color: "#8a7a5c", lineHeight: 1.35 }}>{step.description}</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ConsignmentBox({ number }: { number: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(number);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = number;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try { document.execCommand("copy"); } catch { /* ignore */ }
+      document.body.removeChild(textarea);
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{ marginTop: "1rem", padding: "1rem 1.15rem", borderRadius: "14px", background: "linear-gradient(135deg, #f5faf7, #fff)", border: "1px solid #dcebe4" }}>
+      <p style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", color: "#999", fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>India Post Consignment Number</p>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+        <code style={{ fontFamily: "monospace", fontSize: "1rem", fontWeight: 700, letterSpacing: "0.06em", color: "#1b3c33", background: "#fff", border: "1px dashed #b9d6c8", borderRadius: "8px", padding: "0.45rem 0.75rem", overflowWrap: "anywhere" }}>
+          {number}
+        </code>
+        <button
+          onClick={() => { void copy(); }}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", minHeight: 38, padding: "0.45rem 0.8rem", borderRadius: "9px", border: "1px solid #c8ddd3", background: "#fff", color: "#1b3c33", fontFamily: "'Montserrat', sans-serif", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+        >
+          {copied ? (
+            <>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a7a4a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+              Copied
+            </>
+          ) : (
+            <>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+              Copy
+            </>
+          )}
+        </button>
+      </div>
+      <p style={{ margin: "0.55rem 0 0", fontFamily: "'Montserrat', sans-serif", color: "#586159", fontSize: "0.75rem", lineHeight: 1.5 }}>
+        Use this number on the India Post website to see live delivery updates.
+      </p>
+    </div>
+  );
 }
 
 function TrackContent() {
@@ -92,6 +253,8 @@ function TrackContent() {
         @media (max-width: 480px) {
           .track-order-card { padding: 1rem !important; }
           .track-order-details { padding: 0 1rem 1rem !important; }
+          .track-timeline-step p { font-size: 0.62rem !important; }
+          .track-timeline-desc { display: none !important; }
         }
       `}</style>
 
@@ -186,10 +349,20 @@ function TrackContent() {
                 <div key={order.id} style={{ background: "#fff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 24px rgba(27,60,51,0.06)", border: "1px solid rgba(27,60,51,0.04)", animation: `fadeSlideUp 0.4s ease ${idx * 0.1}s both` }}>
                   {/* Header */}
                   <div className="track-order-card" style={{ padding: "1.5rem 1.75rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
                       <div>
                         <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "0.9rem", color: "#999", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Order</p>
-                        <h3 style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.5rem", fontWeight: 600 }}>#{order.id}</h3>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                          <h3 style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.5rem", fontWeight: 600 }}>#{order.id}</h3>
+                          {(() => {
+                            const colors = statusColors(order.status);
+                            return (
+                              <span style={{ display: "inline-flex", alignItems: "center", padding: "0.25rem 0.65rem", borderRadius: "999px", background: colors.bg, color: colors.fg, border: `1px solid ${colors.border}`, fontFamily: "'Montserrat', sans-serif", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                                {statusLabel(order.status)}
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <p style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.4rem", fontWeight: 700 }}>{formatPriceINR(order.total)}</p>
@@ -197,6 +370,11 @@ function TrackContent() {
                       </div>
                     </div>
 
+                    <div style={{ marginTop: "1.4rem", paddingTop: "1.1rem", borderTop: "1px solid #f0ede8" }}>
+                      <StatusTimeline status={order.status} />
+                    </div>
+
+                    {order.consignment_number && <ConsignmentBox number={order.consignment_number} />}
                   </div>
 
                   {/* Expanded Details */}
@@ -233,47 +411,6 @@ function TrackContent() {
                           <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, color: "#1b3c33", fontSize: "0.9rem" }}>Total</span>
                           <span style={{ fontFamily: "'Cormorant Garamond', serif", color: "#1b3c33", fontSize: "1.3rem", fontWeight: 700 }}>{formatPriceINR(order.total)}</span>
                         </div>
-                      </div>
-
-                      <div style={{ marginTop: "1rem", padding: "1.25rem", background: "linear-gradient(135deg, #f5faf7, #fff)", borderRadius: "16px", border: "1px solid #dcebe4" }}>
-                          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                            <span style={{ width: 42, height: 42, flex: "0 0 42px", display: "grid", placeItems: "center", borderRadius: "13px", background: "#e7f3ed", color: "#1b3c33" }}>
-                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7h11v10H3z" /><path d="M14 10h4l3 3v4h-7z" /><circle cx="7.5" cy="19" r="1.5" /><circle cx="17.5" cy="19" r="1.5" /></svg>
-                            </span>
-                            <div style={{ minWidth: 0 }}>
-                              <h4 style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", color: "#1b3c33", fontSize: "0.95rem", fontWeight: 700 }}>Ship via India Post</h4>
-                              <p style={{ margin: "0.4rem 0 0", fontFamily: "'Montserrat', sans-serif", color: "#586159", fontSize: "0.82rem", lineHeight: 1.6 }}>
-                                Use India Post tracking after your order has been shipped. Enter the consignment number shared with you by email or SMS.
-                              </p>
-                            </div>
-                          </div>
-                          <a
-                            href="https://www.indiapost.gov.in/#trackandtrace"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", minHeight: 44, marginTop: "1rem", padding: "0.7rem 1rem", borderRadius: "11px", background: "#1b3c33", color: "#fff", fontFamily: "'Montserrat', sans-serif", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none" }}
-                          >
-                            Track on India Post
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg>
-                          </a>
-                          <div style={{ marginTop: "1rem", paddingTop: "0.85rem", borderTop: "1px solid #e5eee9" }}>
-                            <p style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", color: "#1b3c33", fontSize: "0.8rem", fontWeight: 700 }}>How to track</p>
-                            <ol style={{ margin: "0.5rem 0 0", paddingLeft: "1.25rem", fontFamily: "'Montserrat', sans-serif", color: "#586159", fontSize: "0.78rem", lineHeight: 1.7 }}>
-                              <li>Click the button above to open India Post tracking.</li>
-                              <li>Enter your consignment number (sent via email/SMS).</li>
-                              <li>View real-time tracking updates.</li>
-                            </ol>
-                          </div>
-                        </div>
-
-                      {/* Payment Info & Download Receipt */}
-                      <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
-                        {order.payment_method === "razorpay" && <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.4rem 0.85rem", borderRadius: "8px", background: "#f0faf4", border: "1px solid #c3e8d4" }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={order.payment_method === "razorpay" ? "#27ae60" : "#e67e22"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-                          </svg>
-                          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "0.75rem", fontWeight: 700, color: "#1a7a4a" }}>Secure online payment</span>
-                        </div>}
                         <button
                           onClick={() => {
                             generateOrderReceipt({
@@ -291,15 +428,58 @@ function TrackContent() {
                               razorpayOrderId: order.razorpay_order_id || "",
                               razorpayPaymentId: order.razorpay_payment_id || "",
                               orderDate: new Date(order.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-                            });
+                            }, { paperSize: "A4" });
                           }}
-                          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "10px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "'Montserrat', sans-serif", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }}
+                          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", minHeight: 44, marginTop: "0.85rem", padding: "0.65rem 1rem", borderRadius: "10px", border: "none", background: "#1b3c33", color: "#fff", fontFamily: "'Montserrat', sans-serif", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = "#063a2f"; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = "#1b3c33"; }}
                         >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                           Download Receipt
                         </button>
+                      </div>
+
+                      <div style={{ marginTop: "1rem", padding: "1.25rem", background: "linear-gradient(135deg, #f5faf7, #fff)", borderRadius: "16px", border: "1px solid #dcebe4" }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+                            <span style={{ width: 42, height: 42, flex: "0 0 42px", display: "grid", placeItems: "center", borderRadius: "13px", background: "#e7f3ed", color: "#1b3c33" }}>
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7h11v10H3z" /><path d="M14 10h4l3 3v4h-7z" /><circle cx="7.5" cy="19" r="1.5" /><circle cx="17.5" cy="19" r="1.5" /></svg>
+                            </span>
+                            <div style={{ minWidth: 0 }}>
+                              <h4 style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", color: "#1b3c33", fontSize: "0.95rem", fontWeight: 700 }}>Ship via India Post</h4>
+                              <p style={{ margin: "0.4rem 0 0", fontFamily: "'Montserrat', sans-serif", color: "#586159", fontSize: "0.82rem", lineHeight: 1.6 }}>
+                                {order.consignment_number
+                                  ? "Your consignment number is shown above. Copy it and paste it on the India Post website to see live delivery updates."
+                                  : "Your consignment number will appear here as soon as your order is dispatched. You will also receive it by email or SMS."}
+                              </p>
+                            </div>
+                          </div>
+                          <a
+                            href="https://www.indiapost.gov.in/#trackandtrace"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", minHeight: 44, marginTop: "1rem", padding: "0.7rem 1rem", borderRadius: "11px", background: "#1b3c33", color: "#fff", fontFamily: "'Montserrat', sans-serif", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none" }}
+                          >
+                            Track on India Post
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg>
+                          </a>
+                          <div style={{ marginTop: "1rem", paddingTop: "0.85rem", borderTop: "1px solid #e5eee9" }}>
+                            <p style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", color: "#1b3c33", fontSize: "0.8rem", fontWeight: 700 }}>How to track</p>
+                            <ol style={{ margin: "0.5rem 0 0", paddingLeft: "1.25rem", fontFamily: "'Montserrat', sans-serif", color: "#586159", fontSize: "0.78rem", lineHeight: 1.7 }}>
+                              <li>Click the button above to open India Post tracking.</li>
+                              <li>Enter the consignment number shown above.</li>
+                              <li>View real-time tracking updates.</li>
+                            </ol>
+                          </div>
+                        </div>
+
+                      {/* Payment Info */}
+                      <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+                        {order.payment_method === "razorpay" && <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.4rem 0.85rem", borderRadius: "8px", background: "#f0faf4", border: "1px solid #c3e8d4" }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={order.payment_method === "razorpay" ? "#27ae60" : "#e67e22"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                          </svg>
+                          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "0.75rem", fontWeight: 700, color: "#1a7a4a" }}>Secure online payment</span>
+                        </div>}
                       </div>
                     </div>
                 </div>

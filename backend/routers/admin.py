@@ -406,7 +406,10 @@ def _get_settings():
         return out
     except Exception as e:
         logger.error(f"Failed to read settings: {e}")
-        return {"shop_enabled": True, "franchise_enabled": True}
+        # Fail closed: if we cannot read the feature flags, report them as
+        # disabled so a closed shop/franchise never silently re-opens on a DB
+        # hiccup. The frontend falls back to its own cached/localStorage value.
+        return {"shop_enabled": False, "franchise_enabled": False, "_settings_error": True}
 
 
 @router.get("/api/settings")

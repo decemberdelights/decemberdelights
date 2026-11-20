@@ -57,6 +57,7 @@ Copy-Item backend\order_pricing.py deploy\backend\
 Copy-Item backend\cache.py deploy\backend\
 Copy-Item backend\local_storage.py deploy\backend\
 Copy-Item backend\local_queue.py deploy\backend\
+Copy-Item backend\file_validation.py deploy\backend\
 Copy-Item backend\requirements.txt deploy\backend\
 Copy-Item backend\routers\*.py deploy\backend\routers\
 Copy-Item backend\migrations\*.sql deploy\backend\migrations\

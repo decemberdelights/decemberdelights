@@ -11,6 +11,7 @@ import { User, Mail, Phone, Briefcase, MapPin, FileText, ArrowRight, Check } fro
 import SuccessState from "@/components/SuccessState";
 import DatePicker from "@/components/DatePicker";
 import { generateFranchiseReceipt, FranchiseReceiptData } from "@/lib/receipt";
+import { loadRazorpayScript } from "@/lib/razorpay";
 
 const STEPS = ["Personal", "Business", "Documents", "Review"];
 
@@ -83,6 +84,7 @@ export default function FranchisePage() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [tcAccepted, setTcAccepted] = useState(false);
   const [receiptData, setReceiptData] = useState<FranchiseReceiptData | null>(null);
+  const [applicationQueued, setApplicationQueued] = useState(false);
   const [franchiseEnabled, setFranchiseEnabled] = useState(true);
   const formRef = useRef<HTMLDivElement>(null);
   const rzpRef = useRef<RazorpayCheckout | null>(null);
@@ -124,15 +126,6 @@ export default function FranchisePage() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined" || window.Razorpay) return;
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
-  }, []);
-
-  useEffect(() => {
     if (formRestored && status === "idle") {
       try {
         sessionStorage.setItem("franchise_form", JSON.stringify({ step, form }));
@@ -151,13 +144,15 @@ export default function FranchisePage() {
   };
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024;
-  const ALLOWED_TYPES: Record<string, string> = {
-    "application/pdf": ".pdf",
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "application/msword": ".doc",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+  const ALLOWED_TYPES: Record<string, string[]> = {
+    "application/pdf": [".pdf"],
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/jpg": [".jpg", ".jpeg"],
+    "image/png": [".png"],
+    "application/msword": [".doc"],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
   };
+  const ALLOWED_EXTENSIONS = new Set(Object.values(ALLOWED_TYPES).flat());
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
@@ -211,7 +206,10 @@ export default function FranchisePage() {
         e.target.value = "";
         return;
       }
-      if (file.type && !ALLOWED_TYPES[file.type]) {
+      const extension = file.name.match(/\.[^.]+$/)?.[0].toLowerCase() ?? "";
+      const mimeTypeExtensions = ALLOWED_TYPES[file.type];
+      if (!ALLOWED_EXTENSIONS.has(extension) ||
+        (file.type && file.type !== "application/octet-stream" && !mimeTypeExtensions?.includes(extension))) {
         setErrorMsg(`File type "${file.type}" is not allowed. Accepted: PDF, JPG, PNG, DOC, DOCX.`);
         e.target.value = "";
         return;
@@ -331,8 +329,19 @@ export default function FranchisePage() {
 
           const submitUrl = backendBase ? `${backendBase}/api/franchise` : `${API}/api/franchise`;
           const res = await fetchWithRetry(submitUrl, { method: "POST", body: formData });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.detail || "Submission failed");
+          const data = await res.json().catch(() => null) as { detail?: string; queued?: boolean } | null;
+          if (!res.ok) {
+            const detail = data?.detail || "Application submission is temporarily unavailable. Please try again shortly.";
+            // A captured fee that never becomes an application is refunded by
+            // the payment webhook, so the applicant is not left guessing.
+            // (No refund note when nothing was actually charged.)
+            const noCharge = /not captured/i.test(detail);
+            const refundNote = res.status === 400 && !noCharge
+              ? " If the amount was deducted, it will be refunded automatically within 5 minutes (bank credit takes 5–7 working days)."
+              : "";
+            throw new Error(detail + refundNote);
+          }
+          if (!data) throw new Error("The server returned an invalid response. Please contact support if payment was captured.");
           setReceiptData({
             fullName: form.full_name,
             phone: form.phone,
@@ -342,6 +351,7 @@ export default function FranchisePage() {
             orderId: response.razorpay_order_id,
             applicationDate: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
           });
+          setApplicationQueued(data.queued === true);
           setStatus("success");
           try { sessionStorage.removeItem("franchise_form"); } catch {}
         } catch (err: unknown) {
@@ -374,14 +384,19 @@ export default function FranchisePage() {
     setErrorMsg("");
 
     try {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) throw new Error("Payment gateway failed to load. Please try again.");
       const orderUrl = backendBase ? `${backendBase}/api/franchise/create-order` : `${API}/api/franchise/create-order`;
       const orderRes = await fetchWithRetry(orderUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email, phone: form.phone }),
       });
-      const orderData = await orderRes.json();
-      if (!orderRes.ok) throw new Error(orderData.detail || "Failed to create payment order");
+      const orderData = await orderRes.json().catch(() => null) as { detail?: string; order_id?: string; amount?: number } | null;
+      if (!orderRes.ok) throw new Error(orderData?.detail || "Payment service is temporarily unavailable. Please try again shortly.");
+      if (!orderData?.order_id || typeof orderData.amount !== "number") {
+        throw new Error("The server returned an invalid payment response. Please try again.");
+      }
 
       openRazorpayCheckout(orderData.order_id, orderData.amount, language);
     } catch (err: unknown) {
@@ -416,11 +431,13 @@ export default function FranchisePage() {
   if (status === "success") {
     return (
       <SuccessState
-        title="Application Received"
-        description="Your franchise application has been submitted successfully. You can track your application status using your registered phone number and date of birth."
+        title={applicationQueued ? "Application Saved for Review" : "Application Received"}
+        description={applicationQueued
+          ? `Your payment was verified and your application has been saved securely for administrator reconciliation. It will appear in status tracking after it is synced. Keep payment reference ${receiptData?.paymentId || ""} for support.`
+          : "Your franchise application has been submitted successfully. You can track your application status using your registered phone number and date of birth."}
         actions={[
           { label: "Download Receipt", onClick: () => receiptData && generateFranchiseReceipt(receiptData) },
-          { label: "Check Status", onClick: () => router.push("/franchise/status"), primary: true },
+          ...(!applicationQueued ? [{ label: "Check Status", onClick: () => router.push("/franchise/status"), primary: true }] : []),
           { label: "Back to Home", onClick: () => router.push("/") },
         ]}
       />
@@ -452,6 +469,11 @@ export default function FranchisePage() {
         .franchise-benefits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; }
         .franchise-review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
         .franchise-step-labels { display: flex; justify-content: space-between; margin-top: 1rem; }
+        .franchise-hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+        @media (max-width: 480px) {
+          .franchise-hero-actions { flex-wrap: nowrap; gap: 0.5rem; }
+          .franchise-hero-actions a { flex: 1 1 0; min-width: 0; justify-content: center; padding: 0.85rem 0.5rem !important; font-size: 0.78rem !important; white-space: nowrap; }
+        }
         @media (max-width: 768px) {
           .franchise-form-grid { grid-template-columns: 1fr !important; }
           .franchise-docs-grid { grid-template-columns: 1fr !important; }
@@ -488,7 +510,7 @@ export default function FranchisePage() {
             <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "rgba(253,249,244,0.7)", fontSize: "1rem", lineHeight: 1.7, maxWidth: "440px", marginBottom: "2rem" }}>
               Bring the premium cafe experience to your city. We provide the brand, recipes, and complete support — you bring the passion.
             </p>
-            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <div className="franchise-hero-actions">
               <a href="#apply" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.9rem 2.25rem", borderRadius: "100px", background: "#fdf9f4", color: "#074134", fontFamily: "var(--font-outfit), sans-serif", fontWeight: 800, fontSize: "0.9rem", textDecoration: "none", letterSpacing: "0.03em", transition: "transform 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.02)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
                 Start Application <ArrowRight size={15} />
               </a>
@@ -696,7 +718,7 @@ export default function FranchisePage() {
                       <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.85rem" }}>Step 3 of 4</p>
                     </div>
                   </div>
-                   <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #f0ede8" }}>Upload your documents for verification. PDF, JPG, PNG accepted. Max 5MB per file.</p>
+                   <p style={{ fontFamily: "var(--font-outfit), sans-serif", color: "#999", fontSize: "0.8rem", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #f0ede8" }}>Upload your documents for verification. PDF, JPG/JPEG, PNG, DOC, or DOCX accepted. Max 5MB per file.</p>
                    <div className="franchise-docs-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                      {DOC_FIELDS.map(({ key, label, icon, required, hint }) => (
                         <label key={key} className={`doc-card ${files[key] ? "has-file" : ""}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", border: "1px solid #e4e1d6", borderRadius: "12px", cursor: "pointer", overflow: "hidden", transition: "all 0.2s" }}>

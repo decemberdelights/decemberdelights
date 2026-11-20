@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { getProductWeightGrams, gstBill, imageSrc, isLocalUpload } from "./utils";
 
 describe("product image URLs", () => {
-  it("uses the backend host for relative paths and bypasses Next optimization for VPS uploads", () => {
+  it("resolves VPS uploads through the site origin for Next image optimization", () => {
     const path = "/uploads/public/products/coffee.png";
-    expect(imageSrc(path, "https://api.example.com")).toBe(`https://api.example.com${path}`);
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.decemberdelights.in").replace(/\/+$/, "");
+    expect(imageSrc(path, "https://api.example.com")).toBe(`${siteUrl}${path}`);
     expect(isLocalUpload(path)).toBe(true);
   });
 

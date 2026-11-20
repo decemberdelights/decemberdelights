@@ -98,7 +98,7 @@ export default function ProductDetailModal({ product, inCart, onClose, onAddToCa
         }
       `}</style>
       <div className="pdm-card" data-lenis-prevent onClick={(e) => e.stopPropagation()}>
-        <button className="pdm-close" onClick={onClose} aria-label="Close">✕</button>
+        <button type="button" className="pdm-close" onClick={onClose} aria-label="Close">✕</button>
         <div
           className="pdm-img"
           onClick={() => { if (tapMoved.current) { tapMoved.current = false; return; } if (imgSrc) setZoomOpen(true); }}
@@ -132,7 +132,8 @@ export default function ProductDetailModal({ product, inCart, onClose, onAddToCa
           )}
           {gallery.length > 1 && (
             <>
-              <button onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label="Previous photo" style={{ position: "absolute", left: "0.6rem", top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(27,60,51,0.85)", color: "#fff", fontSize: "1.2rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>              <button onClick={(e) => { e.stopPropagation(); go(1); }} aria-label="Next photo" style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(27,60,51,0.85)", color: "#fff", fontSize: "1.2rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label="Previous photo" style={{ position: "absolute", left: "0.6rem", top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(27,60,51,0.85)", color: "#fff", fontSize: "1.2rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} aria-label="Next photo" style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(27,60,51,0.85)", color: "#fff", fontSize: "1.2rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
               <div style={{ position: "absolute", bottom: "0.75rem", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.35)", padding: "6px 10px", borderRadius: 999 }}>
                 {gallery.map((_, i) => (
                   <span key={i} onClick={(e) => { e.stopPropagation(); setIdx(i); }} style={{ width: i === idx ? 18 : 7, height: 7, borderRadius: 999, background: i === idx ? "#c8a97a" : "rgba(255,255,255,0.6)", cursor: "pointer", transition: "width 0.25s" }} />
@@ -166,13 +167,13 @@ export default function ProductDetailModal({ product, inCart, onClose, onAddToCa
             )}
             {inCart ? (
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <button onClick={() => onUpdateQty(product.id, -1)} style={{ width: "48px", height: "48px", borderRadius: "12px", border: `1.5px solid ${dark}`, background: "#fff", color: dark, fontWeight: 700, cursor: "pointer", fontSize: "1.1rem" }} aria-label="Decrease quantity">-</button>
+                <button type="button" onClick={() => onUpdateQty(product.id, -1)} style={{ width: "48px", height: "48px", borderRadius: "12px", border: `1.5px solid ${dark}`, background: "#fff", color: dark, fontWeight: 700, cursor: "pointer", fontSize: "1.1rem" }} aria-label={`Decrease quantity of ${product.name}`}>-</button>
                 <span style={{ fontFamily: fontOutfit, fontWeight: 700, fontSize: "1.1rem", minWidth: "32px", textAlign: "center", color: dark }}>{inCart.quantity}</span>
-                <button onClick={() => onUpdateQty(product.id, 1)} disabled={inCart.quantity >= product.stock} style={{ width: "48px", height: "48px", borderRadius: "12px", border: "none", background: dark, color: "#fff", fontWeight: 700, cursor: inCart.quantity >= product.stock ? "not-allowed" : "pointer", fontSize: "1.1rem", opacity: inCart.quantity >= product.stock ? 0.4 : 1 }} aria-label="Increase quantity">+</button>
+                <button type="button" onClick={() => onUpdateQty(product.id, 1)} disabled={inCart.quantity >= product.stock} style={{ width: "48px", height: "48px", borderRadius: "12px", border: "none", background: dark, color: "#fff", fontWeight: 700, cursor: inCart.quantity >= product.stock ? "not-allowed" : "pointer", fontSize: "1.1rem", opacity: inCart.quantity >= product.stock ? 0.4 : 1 }} aria-label={`Increase quantity of ${product.name}`}>+</button>
                 <span style={{ fontFamily: fontOutfit, fontWeight: 800, fontSize: "1rem", color: dark, marginLeft: "auto" }}>{formatPriceINR(product.price * inCart.quantity)}</span>
               </div>
             ) : (
-              <button onClick={() => { onAddToCart(product); onClose(); }} disabled={product.stock <= 0} style={{ width: "100%", padding: "1rem", borderRadius: "14px", border: "none", background: product.stock > 0 ? dark : "#e0e0e0", color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.9rem", cursor: product.stock > 0 ? "pointer" : "not-allowed", minHeight: "52px" }}>
+              <button type="button" onClick={() => { onAddToCart(product); onClose(); }} disabled={product.stock <= 0} style={{ width: "100%", padding: "1rem", borderRadius: "14px", border: "none", background: product.stock > 0 ? dark : "#e0e0e0", color: "#fff", fontFamily: fontOutfit, fontWeight: 700, fontSize: "0.9rem", cursor: product.stock > 0 ? "pointer" : "not-allowed", minHeight: "52px" }}>
                 {product.stock > 0 ? "Add to Cart" : "Sold Out"}
               </button>
             )}

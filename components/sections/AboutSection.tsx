@@ -1,6 +1,5 @@
 "use client";
 
-import ScrollFloat from "@/components/ScrollFloat";
 import Image from "next/image";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -12,11 +11,11 @@ export default function AboutSection() {
         <div ref={revealRef} className="about-content section-reveal" data-parallax="-0.08">
           <div className="about-text" data-parallax="-0.05">
             <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "13px", fontWeight: 700, letterSpacing: "5px", textTransform: "uppercase", color: "#c8a97a", marginBottom: "20px", display: "block" }}>
-              <ScrollFloat animation="slideUp3D" containerClassName="!my-0">Our Story</ScrollFloat>
+              Our Story
             </span>
             <div style={{ width: "60px", height: "3px", background: "#c8a97a", marginBottom: "32px" }} />
             <h2 style={{ fontFamily: "var(--font-cormorant)", fontSize: "clamp(32px, 5vw, 64px)", fontWeight: 700, lineHeight: 1.05, color: "#074134", textTransform: "uppercase" }}>
-              <ScrollFloat animation="slideUp3D" containerClassName="!my-0">NOT JUST A CAFE.</ScrollFloat>
+              NOT JUST A CAFE.
             </h2>
             <p data-reveal-child style={{ fontFamily: "var(--font-montserrat)", fontSize: "16px", fontWeight: 400, lineHeight: 1.75, color: "#1a1a1a", marginBottom: "24px", maxWidth: "540px" }}>
               December Delights was built on a simple belief: great coffee deserves a great experience.

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel
 from supabase_client import supabase
-from auth import get_current_admin, require_super_admin
+from auth import get_current_admin
 from security import (
     validate_order_status, sanitize_input, RateLimiter, validate_email,
     get_client_ip, is_settings_not_configured,
@@ -9,8 +9,9 @@ from security import (
 from csrf import validate_csrf
 from store import KVStore, _get_conn
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 import asyncio
+import hmac
+import hashlib
 import math
 import os
 import json
@@ -25,8 +26,46 @@ track_limiter = RateLimiter(max_attempts=10, window_seconds=60)
 order_limiter = RateLimiter(max_attempts=5, window_seconds=60)
 contact_limiter = RateLimiter(max_attempts=3, window_seconds=60)
 
+# The consignment_number column is added by
+# backend/migrations/add_consignment_number_to_orders.sql. Until that migration
+# has been applied, order queries must keep working, so we detect the column
+# once per process and omit it from selects when it is missing.
+_CONSIGNMENT_COLUMN_READY = None
+
+
+def _consignment_column_ready() -> bool:
+    global _CONSIGNMENT_COLUMN_READY
+    if _CONSIGNMENT_COLUMN_READY is None:
+        try:
+            supabase.table("orders").select("consignment_number").limit(1).execute()
+            _CONSIGNMENT_COLUMN_READY = True
+        except Exception as e:
+            logger.warning(f"consignment_number column unavailable: {e}")
+            _CONSIGNMENT_COLUMN_READY = False
+    return _CONSIGNMENT_COLUMN_READY
+
+
+def _clean_consignment_number(raw: str) -> str:
+    """Normalize an India Post consignment number: uppercase letters, digits,
+    spaces and hyphens only. Raises 400 when the value is unusable."""
+    cleaned = "".join(ch for ch in (raw or "").strip().upper() if ch.isalnum() or ch in " -")
+    cleaned = " ".join(cleaned.split())
+    if not cleaned:
+        return ""
+    if len(cleaned) < 4 or len(cleaned) > 40:
+        raise HTTPException(
+            status_code=400,
+            detail="Consignment number must be between 4 and 40 characters",
+        )
+    return cleaned
+
+
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
+
+# Idempotency: track recently processed idempotency keys to prevent double charges
+_idempotency_cache = KVStore(namespace="idempotency", default_ttl=86400)  # 24h TTL
 
 from order_pricing import calculate_order_totals, cart_fingerprint, normalize_cart_items, product_weight_grams
 
@@ -37,19 +76,28 @@ def _get_razorpay_client():
     return razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 
+def _refund_razorpay_payment(client, payment_id: str, amount_paise: int, reason: str) -> bool:
+    """Refund a captured Razorpay payment. Returns True on success."""
+    if not client or not payment_id:
+        return False
+    try:
+        client.payment.refund(payment_id, {
+            "amount": amount_paise,
+            "notes": {"reason": reason},
+        })
+        logger.warning("Refunded Razorpay payment %s: %s", payment_id, reason)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to refund Razorpay payment {payment_id}: {e}")
+        return False
+
+
 class RazorpayOrderRequest(BaseModel):
     items: list[dict]
     customer_phone: str
     terms_accepted: bool = False
     terms_version: str = ""
-
-
-class DeleteRequest(BaseModel):
-    reason: str = ""
-
-
-class RefundRequest(BaseModel):
-    reason: str = "Refund requested by admin"
+    idempotency_key: str = ""
 
 
 class CreateOrderRequest(BaseModel):
@@ -68,6 +116,7 @@ class CreateOrderRequest(BaseModel):
     razorpay_signature: str = ""
     terms_accepted: bool = False
     terms_version: str = ""
+    idempotency_key: str = ""
 
 
 class UpdateOrderRequest(BaseModel):
@@ -77,11 +126,13 @@ class UpdateOrderRequest(BaseModel):
     notes: str = ""
     customer_address: str = ""
     admin_notes: str = ""
+    consignment_number: str = ""
 
 
 class UpdateStatusRequest(BaseModel):
     status: str
     admin_notes: str = ""
+    consignment_number: str = ""
 
 
 class CreateAdminOrderRequest(BaseModel):
@@ -223,27 +274,6 @@ def _price_order_items(items: list[dict]) -> tuple[list[dict], float, float, flo
     return sanitized_items, *calculate_order_totals(subtotal, total_weight_grams)
 
 
-def _refund_payment(payment_id: str, order_id: str, reason: str) -> str:
-    client = _get_razorpay_client()
-    if not client:
-        raise RuntimeError("Razorpay client is unavailable")
-    payment = client.payment.fetch(payment_id)
-    remaining_amount = int(payment.get("amount", 0)) - int(payment.get("amount_refunded", 0))
-    if remaining_amount <= 0:
-        logger.info("Payment %s is already fully refunded", payment_id)
-        return ""
-    refund = client.payment.refund(payment_id, {
-        "amount": remaining_amount,
-        "notes": {
-            "reason": sanitize_input(reason, 200),
-            "razorpay_order_id": order_id,
-        },
-    })
-    if isinstance(refund, dict) and refund.get("error"):
-        raise RuntimeError(str(refund["error"]))
-    return refund.get("id", "") if isinstance(refund, dict) else ""
-
-
 def _ensure_shop_enabled() -> None:
     try:
         setting = supabase.table("site_settings").select("value").eq("key", "shop_enabled").execute()
@@ -269,6 +299,13 @@ async def create_shop_razorpay_order(body: RazorpayOrderRequest, request: Reques
     rate_key = f"shop_order:{client_ip}"
     # SQLite-backed limiter is blocking — keep it off the event loop (workers=1).
     await asyncio.to_thread(order_limiter.check, rate_key)
+
+    # Idempotency: if this key was already processed, return the same Razorpay order
+    if body.idempotency_key:
+        cached = _idempotency_cache.get(body.idempotency_key)
+        if cached and isinstance(cached, dict) and cached.get("type") == "shop_razorpay_order":
+            return cached["payload"]
+
     await asyncio.to_thread(_ensure_shop_enabled)
     terms_version = await asyncio.to_thread(
         _validate_shop_terms_acceptance,
@@ -310,7 +347,10 @@ async def create_shop_razorpay_order(body: RazorpayOrderRequest, request: Reques
             })
         )
         logger.info(f"Shop Razorpay order created: {order['id']} for phone={cleaned}")
-        return {"order_id": order["id"], "amount": amount_paise, "currency": "INR", "key_id": RAZORPAY_KEY_ID}
+        result = {"order_id": order["id"], "amount": amount_paise, "currency": "INR", "key_id": RAZORPAY_KEY_ID}
+        if body.idempotency_key:
+            _idempotency_cache.set(body.idempotency_key, {"type": "shop_razorpay_order", "payload": result})
+        return result
     except Exception as e:
         logger.error(f"Shop Razorpay order creation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to create payment order. Please try again.")
@@ -326,6 +366,12 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
     client_ip = get_client_ip(request)
     rate_key = f"order:{client_ip}"
     order_limiter.check(rate_key)
+
+    # Idempotency: if this key was already processed, return the existing order
+    if body.idempotency_key:
+        cached = _idempotency_cache.get(body.idempotency_key)
+        if cached and isinstance(cached, dict) and cached.get("type") == "paid_order":
+            return cached["payload"]
 
     data = body.model_dump()
     data["customer_name"] = sanitize_input(data["customer_name"], 200)
@@ -369,6 +415,13 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
     client = _get_razorpay_client()
     if not client:
         raise HTTPException(status_code=503, detail="Payment gateway verification is unavailable")
+
+    # Prevent double order creation if the same Razorpay payment was already used.
+    payment_used = supabase.table("orders").select("id,payment_status").eq("razorpay_payment_id", rp_payment_id).execute()
+    if payment_used.data:
+        existing = payment_used.data[0]
+        return {"id": existing["id"], "status": existing.get("payment_status", "paid"), "duplicate": True}
+
     expected_hash = cart_fingerprint([
         {"id": item["id"], "quantity": item["quantity"]}
         for item in sanitized_items
@@ -387,6 +440,15 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
         ):
             raise HTTPException(status_code=400, detail="Payment order does not match this cart")
         payment = client.payment.fetch(rp_payment_id)
+        # Late authorization / manual-capture setups leave the payment in the
+        # "authorized" state. Capture it here so the order can still complete.
+        if payment.get("status") == "authorized":
+            try:
+                client.payment.capture(rp_payment_id, {"amount": payment.get("amount") or 0})
+                payment = client.payment.fetch(rp_payment_id)
+                logger.info(f"Captured previously-authorized payment {rp_payment_id} during checkout")
+            except Exception as cap_err:
+                logger.warning(f"Could not capture authorized payment {rp_payment_id}: {cap_err}")
     except HTTPException:
         raise
     except Exception as e:
@@ -395,6 +457,12 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
             status_code=503,
             detail="Payment could not be verified. Please contact support before retrying.",
         ) from e
+    if payment.get("status") == "refunded" or int(payment.get("amount_refunded", 0) or 0) > 0:
+        logger.warning(f"Razorpay payment {rp_payment_id} already refunded — refusing to create order")
+        raise HTTPException(
+            status_code=400,
+            detail="This payment was already refunded. Please place a new order.",
+        )
     if (
         payment.get("status") != "captured"
         or payment.get("order_id") != rp_order_id
@@ -460,33 +528,17 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
         )
 
     if order_result_data.get("stock_reserved") is False:
-        try:
-            _refund_payment(
-                rp_payment_id,
-                rp_order_id,
-                "Order could not be fulfilled because stock reservation failed",
-            )
-        except Exception as refund_err:
-            logger.critical(
-                "Payment %s was captured but stock reservation failed and refund "
-                "could not be initiated: %s",
-                rp_payment_id,
-                refund_err,
-            )
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "Payment was received, but the order could not be placed and "
-                    f"the refund needs support follow-up. Payment reference: {rp_payment_id}"
-                ),
-            ) from refund_err
         logger.warning(
-            "Payment %s captured but stock reservation failed; refund initiated",
+            "Payment %s captured but stock reservation failed; initiating auto-refund",
             rp_payment_id,
         )
+        _refund_razorpay_payment(client, rp_payment_id, expected_paise, "stock reservation failed")
         raise HTTPException(
             status_code=409,
-            detail="Payment was received, but the item is no longer available. A refund has been initiated.",
+            detail=(
+                "Payment was received, but the item is no longer available. "
+                f"Your payment has been automatically refunded. Reference: {rp_payment_id}."
+            ),
         )
 
     result_data = order_result_data.get("order")
@@ -522,7 +574,10 @@ def create_public_order(body: CreateOrderRequest, request: Request, background_t
     except Exception as e:
         logger.warning(f"Failed to queue order confirmation email: {e}")
 
-    return {"id": result_data["id"], "status": result_data["status"]}
+    order_response = {"id": result_data["id"], "status": result_data["status"]}
+    if body.idempotency_key:
+        _idempotency_cache.set(body.idempotency_key, {"type": "paid_order", "payload": order_response})
+    return order_response
 
 
 @router.get("/api/orders/track/{phone}")
@@ -538,13 +593,18 @@ def track_order(phone: str, request: Request):
     # Public endpoint: NO internal columns (admin_notes, razorpay ids, notes,
     # payment_status stay admin-only).
     safe_cols = "id,customer_name,customer_phone,customer_address,customer_district,customer_pincode,customer_state,items,total,status,payment_method,created_at"
+    if _consignment_column_ready():
+        safe_cols += ",consignment_number"
 
     try:
         result = supabase.table("orders").select(safe_cols).eq("customer_phone", cleaned).order("created_at", desc=True).limit(5).execute()
         return result.data or []
     except Exception as e:
         logger.warning(f"Track query failed: {e}")
-        return []
+        raise HTTPException(
+            status_code=503,
+            detail="Order tracking is temporarily unavailable. Please try again shortly.",
+        ) from e
 
 
 @router.post("/api/contact")
@@ -577,15 +637,20 @@ def submit_contact(data: ContactRequest, request: Request, background_tasks: Bac
         send_contact_notification, name, email, phone, subject, message
     )
 
-    return {"ok": True, "id": result.data[0]["id"]}
+    inserted = result.data[0] if result.data else {}
+    return {"ok": True, "id": inserted.get("id")}
 
 
 @router.get("/api/admin/orders")
-def get_orders(limit: int = 100, offset: int = 0, _=Depends(get_current_admin)):
+def get_orders(limit: int = 100, offset: int = 0, admin=Depends(get_current_admin)):
     limit = min(limit, 200)
-    result = supabase.table("orders").select("*").order("created_at", desc=True).range(offset, offset + limit - 1).execute()
-    # count="exact" + tiny limit: PostgREST still returns the TOTAL count in the
-    # Content-Range header without shipping every order id to the app.
+    is_super = admin.get("role") == "super_admin"
+    # Normal admins must NOT see razorpay payment ids or internal admin_notes.
+    safe_cols = "id,customer_name,customer_phone,customer_email,customer_address,customer_district,customer_pincode,customer_state,items,total,subtotal,gst_amount,delivery_charge,status,payment_method,payment_status,terms_accepted,terms_version,created_at,updated_at"
+    if _consignment_column_ready():
+        safe_cols += ",consignment_number"
+    full_cols = "*"
+    result = supabase.table("orders").select(safe_cols if not is_super else full_cols).order("created_at", desc=True).range(offset, offset + limit - 1).execute()
     total = supabase.table("orders").select("id", count="exact").limit(1).execute()
     return {"orders": result.data or [], "total": total.count or 0}
 
@@ -679,9 +744,10 @@ def get_order_stats(_=Depends(get_current_admin)):
         month_orders_chart = [o for o in chart_orders if _parse_created_month(o) == (m, y)]
         monthly[key] = {"orders": len(month_orders_chart), "revenue": sum(o.get("total", 0) for o in month_orders_chart)}
 
-    # Status counts from today's orders
+    # Status counts from ALL recent orders (last 90 days via chart_orders),
+    # not just today's — so the admin dashboard shows real pipeline status.
     pending = preparing = delivered = cancelled = 0
-    for o in today_orders:
+    for o in chart_orders:
         status = o.get("status")
         if status == "pending":
             pending += 1
@@ -715,6 +781,10 @@ def get_order_stats(_=Depends(get_current_admin)):
 @router.post("/api/admin/orders")
 def create_order(data: CreateAdminOrderRequest, request: Request, _=Depends(get_current_admin)):
     validate_csrf(request)
+    if not validate_order_status(data.status):
+        raise HTTPException(status_code=400, detail="Invalid order status")
+    if "refund" in data.payment_status.strip().lower():
+        raise HTTPException(status_code=400, detail="Refund status updates are disabled")
     try:
         order_data = {
             "customer_name": sanitize_input(data.customer_name, 200),
@@ -754,6 +824,10 @@ def get_order(order_id: int, _=Depends(get_current_admin)):
 def update_order(order_id: int, data: UpdateOrderRequest, request: Request, _=Depends(get_current_admin)):
     validate_csrf(request)
     try:
+        if data.status and not validate_order_status(data.status):
+            raise HTTPException(status_code=400, detail="Invalid order status")
+        if "refund" in data.payment_status.strip().lower():
+            raise HTTPException(status_code=400, detail="Refund status updates are disabled")
         existing = supabase.table("orders").select("*").eq("id", order_id).execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Order not found")
@@ -770,6 +844,21 @@ def update_order(order_id: int, data: UpdateOrderRequest, request: Request, _=De
             update_data["customer_address"] = sanitize_input(data.customer_address, 500)
         if data.admin_notes:
             update_data["admin_notes"] = sanitize_input(data.admin_notes, 1000)
+        consignment = _clean_consignment_number(data.consignment_number)
+        if consignment:
+            if not _consignment_column_ready():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Database migration required: run backend/migrations/add_consignment_number_to_orders.sql in Supabase",
+                )
+            update_data["consignment_number"] = consignment
+        if data.status == "dispatched":
+            existing_consignment = str(existing.data[0].get("consignment_number") or "").strip()
+            if not consignment and not existing_consignment:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Consignment number is required before marking an order as dispatched",
+                )
         if not update_data:
             raise HTTPException(status_code=400, detail="No fields to update")
         supabase.table("orders").update(update_data).eq("id", order_id).execute()
@@ -782,88 +871,12 @@ def update_order(order_id: int, data: UpdateOrderRequest, request: Request, _=De
         raise HTTPException(status_code=500, detail="Failed to update order")
 
 
-@router.post("/api/admin/orders/{order_id}/refund")
-def refund_order(
-    order_id: int,
-    data: RefundRequest,
-    request: Request,
-    admin=Depends(get_current_admin),
-):
-    validate_csrf(request)
-    try:
-        result = supabase.table("orders").select("*").eq("id", order_id).limit(1).execute()
-        if not result.data:
-            raise HTTPException(status_code=404, detail="Order not found")
-        order = result.data[0]
-        if order.get("payment_method") != "razorpay" or not order.get("razorpay_payment_id"):
-            raise HTTPException(status_code=400, detail="This order has no refundable online payment")
-        if order.get("payment_status") == "refunded":
-            raise HTTPException(status_code=409, detail="This order has already been refunded")
-        if order.get("payment_status") != "paid":
-            raise HTTPException(status_code=409, detail="Only paid orders can be refunded")
-
-        claim = (
-            supabase.table("orders")
-            .update({"payment_status": "refund_pending"})
-            .eq("id", order_id)
-            .eq("payment_status", "paid")
-            .select("id")
-            .execute()
-        )
-        if not claim.data:
-            raise HTTPException(
-                status_code=409,
-                detail="A refund is already being processed. Verify its status in Razorpay before retrying.",
-            )
-
-        refund_id = _refund_payment(
-            order["razorpay_payment_id"],
-            str(order.get("razorpay_order_id", "")),
-            data.reason or "Refund requested by admin",
-        )
-        update_result = (
-            supabase.table("orders")
-            .update({"payment_status": "refunded"})
-            .eq("id", order_id)
-            .eq("payment_status", "refund_pending")
-            .select("id,payment_status")
-            .execute()
-        )
-        if not update_result.data:
-            logger.critical(
-                "Refund for order %s succeeded (refund %s), but order status could not be updated",
-                order_id,
-                refund_id,
-            )
-            raise HTTPException(
-                status_code=503,
-                detail=f"Refund was issued but order status update failed. Refresh and verify order #{order_id}.",
-            )
-        log_activity(
-            admin["username"],
-            "refund",
-            "order",
-            order_id,
-            f"Refunded order #{order_id}. Refund ID: {refund_id or 'already refunded'}",
-        )
-        _order_cache.invalidate()
-        return {"id": order_id, "payment_status": "refunded", "refund_id": refund_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception("Refund failed for order %s", order_id)
-        raise HTTPException(
-            status_code=502,
-            detail="Refund could not be confirmed. Check the Razorpay dashboard before retrying.",
-        ) from e
-
-
 @router.put("/api/admin/orders/{order_id}/status")
 def update_order_status(order_id: int, data: UpdateStatusRequest, request: Request, admin=Depends(get_current_admin)):
     validate_csrf(request)
     status_val = data.status
     if not validate_order_status(status_val):
-        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: pending, confirmed, preparing, packed, ready, dispatched, delivered, cancelled")
+        raise HTTPException(status_code=400, detail="Invalid order status")
     existing = supabase.table("orders").select("*").eq("id", order_id).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -874,132 +887,23 @@ def update_order_status(order_id: int, data: UpdateStatusRequest, request: Reque
     if data.admin_notes:
         update_data["admin_notes"] = sanitize_input(data.admin_notes, 1000)
 
-    if status_val == "cancelled" and old_status != "cancelled":
-        # Refund if order was paid online via Razorpay.
-        # This handler is sync (FastAPI runs it in the threadpool), so the
-        # refund must be a plain blocking call. The old code used
-        # asyncio.get_running_loop().run_in_executor(...) which raises
-        # RuntimeError (no running loop in a worker thread) — silently caught
-        # below — so NO refund was ever created, yet the order could still be
-        # marked refunded. A customer is now only marked refunded when the
-        # refund call actually succeeded.
-        if order.get("payment_method") == "razorpay" and order.get("payment_status") == "refund_pending":
+    consignment = _clean_consignment_number(data.consignment_number)
+    if status_val == "dispatched":
+        existing_consignment = str(order.get("consignment_number") or "").strip()
+        if not consignment and not existing_consignment:
             raise HTTPException(
-                status_code=409,
-                detail="A refund is already being processed. Verify its status in Razorpay before cancelling.",
+                status_code=400,
+                detail="Consignment number is required before marking an order as dispatched",
             )
-        if order.get("payment_method") == "razorpay" and order.get("payment_status") == "paid":
-            rp_payment_id = order.get("razorpay_payment_id", "")
-            if not rp_payment_id:
-                logger.error(
-                    f"Order {order_id} is marked paid via Razorpay but has no "
-                    f"razorpay_payment_id — cannot issue refund; cancelling WITHOUT refund mark"
-                )
-            elif not _get_razorpay_client():
-                logger.error(f"Razorpay not configured; cannot refund order {order_id}")
-                raise HTTPException(
-                    status_code=502,
-                    detail="Refund could not be issued (payment gateway not configured). "
-                           "The order was NOT cancelled — please retry later.",
-                )
-            else:
-                claim = (
-                    supabase.table("orders")
-                    .update({"payment_status": "refund_pending"})
-                    .eq("id", order_id)
-                    .eq("payment_status", "paid")
-                    .select("id")
-                    .execute()
-                )
-                if not claim.data:
-                    raise HTTPException(
-                        status_code=409,
-                        detail="A refund is already being processed. Verify its status in Razorpay before cancelling.",
-                    )
-                refund_ok = False
-                try:
-                    refund_id = _refund_payment(
-                        rp_payment_id,
-                        str(order.get("razorpay_order_id", "")),
-                        "Order cancelled by admin",
-                    )
-                    refund_ok = True
-                    logger.info(f"Refund created for order {order_id}, payment {rp_payment_id} ({refund_id})")
-                except Exception as refund_err:
-                    err_text = str(refund_err).lower()
-                    if "refund" in err_text and "already" in err_text:
-                        logger.warning(
-                            f"Refund already exists for order {order_id} payment {rp_payment_id}: {refund_err}"
-                        )
-                        raise HTTPException(
-                            status_code=502,
-                            detail="Refund status is uncertain. Check Razorpay before retrying cancellation.",
-                        ) from refund_err
-                    else:
-                        logger.error(f"Refund FAILED for order {order_id} (payment {rp_payment_id}): {refund_err}")
-                        raise HTTPException(
-                            status_code=502,
-                            detail="Refund could not be confirmed, so the order was NOT cancelled. "
-                                   "Check Razorpay before retrying.",
-                        )
-                if refund_ok:
-                    update_data["payment_status"] = "refunded"
-
-        # Stock was atomically reserved via the reserve_order_stock RPC when the
-        # order was created — releasing it back uses the atomic release_order_stock
-        # RPC (no read-then-write race on the stock counter). Only paid online
-        # orders held a reservation, so only those release stock here.
-        if (
-            status_val == "cancelled"
-            and old_status != "cancelled"
-            and order.get("payment_method") == "razorpay"
-            and order.get("payment_status") in ("paid", "refunded")
-        ):
-            items = order.get("items", "[]")
-            items_list = json.loads(items) if isinstance(items, str) else (items or [])
-            stock_items = [
-                {"id": item.get("id"), "quantity": item.get("quantity", 0)}
-                for item in items_list
-                if item.get("id") and item.get("quantity", 0) > 0
-            ]
-            if stock_items:
-                _release_order_stock(stock_items)
+    if consignment:
+        if not _consignment_column_ready():
+            raise HTTPException(
+                status_code=400,
+                detail="Database migration required: run backend/migrations/add_consignment_number_to_orders.sql in Supabase",
+            )
+        update_data["consignment_number"] = consignment
 
     supabase.table("orders").update(update_data).eq("id", order_id).execute()
     log_activity(admin["username"], f"status:{status_val}", "order", order_id, f"Order #{order_id} ({order.get('customer_name', '')}) → {status_val}")
     _order_cache.invalidate()
     return {**order, **update_data}
-
-
-@router.delete("/api/admin/orders/{order_id}")
-def delete_order(order_id: int, request: Request, data: Optional[DeleteRequest] = None, admin=Depends(require_super_admin)):
-    validate_csrf(request)
-    existing = supabase.table("orders").select("*").eq("id", order_id).execute()
-    if not existing.data:
-        raise HTTPException(status_code=404, detail="Order not found")
-    order = existing.data[0]
-    reason = data.reason if data else ""
-    log_activity(admin["username"], "delete", "order", order_id, f"Deleted order #{order_id} of {order.get('customer_name', '')} (₹{order.get('total', 0)}). Reason: {reason}")
-
-    # Restore product stock before deleting (only if not already cancelled)
-    if order.get("status") != "cancelled":
-        try:
-            items = order.get("items", "")
-            if items:
-                items_list = json.loads(items) if isinstance(items, str) else items
-                if items_list:
-                    ids = [item.get("id") for item in items_list if item.get("id")]
-                    stock_result = supabase.table("products").select("id,stock").in_("id", ids).execute() if ids else None
-                    stock_map = {p["id"]: p["stock"] for p in (stock_result.data or [])}
-                    for item in items_list:
-                        pid = item.get("id")
-                        qty = item.get("quantity", 0)
-                        if pid and qty > 0:
-                            new_stock = stock_map.get(pid, 0) + qty
-                            supabase.table("products").update({"stock": new_stock}).eq("id", pid).execute()
-        except Exception as e:
-            logger.error(f"Failed to restore stock for deleted order {order_id}: {e}")
-
-    supabase.table("orders").delete().eq("id", order_id).execute()
-    _order_cache.invalidate()
-    return {"ok": True}
